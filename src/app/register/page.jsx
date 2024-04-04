@@ -1,19 +1,17 @@
 "use client";
-
+import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
-import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+
 import EmblaCarousel from "@/components/Carousel";
 
 import { auth } from "../firebase/config";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
-
+import GoogleAuthButton from "@/components/GoogleAuth";
 
 
 export default function Register() {
@@ -21,27 +19,6 @@ export default function Register() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const router = useRouter();
-
-  const handleGoogleSignUp = async () => {
-    const provider = new GoogleAuthProvider();
-    try {
-      const result = await signInWithPopup(auth, provider);
-      // This gives you a Google Access Token. You can use it to access the Google API.
-      const credential = GoogleAuthProvider.credentialFromResult(result);
-      const token = credential.accessToken;
-      // The signed-in user info.
-      const user = result.user;
-      // Redirect the user or do something with the user info
-      console.log(user);
-      router.push("/dashboard");
-    } catch (error) {
-      const errorCode = error.code;
-      const errorMessage = error.message;
-      const email = error.email;
-      const credential = GoogleAuthProvider.credentialFromError(error);
-      console.error("Google sign in error", errorCode, errorMessage);
-    }
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -64,7 +41,7 @@ export default function Register() {
           <div className="text-center mb-6">
             <h1 className="text-3xl font-bold">Sign Up</h1>
           </div>
-          <form className="space-y-4" onSubmit={handleSubmit}>
+          <form className="space-y-4 mb-6" onSubmit={handleSubmit}>
             <div>
               <Label htmlFor="email">Email</Label>
               <Input
@@ -99,20 +76,10 @@ export default function Register() {
             <Button type="submit" className="w-full">
               Sign up
             </Button>
-            
           </form>
-          <Button 
-          variant="outline"
-              className="w-full"
-              onClick={handleGoogleSignUp}>
-              <Image
-                src="/image/google-logo.png"
-                alt="Google logo"
-                width={25}
-                height={25}
-              />
-              <span>Sign up with Google</span>
-            </Button>
+
+          <GoogleAuthButton redirectPath="/login" />
+
           <div className="mt-4 text-center text-sm">
             Don't have an account?{" "}
             <Link href="/login" className="underline">

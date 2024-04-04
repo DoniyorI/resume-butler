@@ -1,26 +1,13 @@
-// import { useAuthStore } from "react-firebase-hooks/auth";
-"use client";
-import { signOut } from "firebase/auth";
-import { auth } from "../firebase/config";
-import { Button } from "@/components/ui/button";
-import { useRouter } from "next/navigation";
+import React from 'react';
+import LogoutButton from '@/components/LogoutButton'; // Adjust the import path as necessary
 
-export default function Page() {
-  const router = useRouter();
-
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      router.push("/login");
-    } catch (error) {
-      console.error("Logout error", error);
-    }
-  };
-
+const SomePage = () => {
   return (
     <div>
-      {/* Correct event handler to onClick */}
-      <Button onClick={handleLogout}>Logout</Button>
+      {/* Other content */}
+      <LogoutButton />
     </div>
   );
-}
+};
+
+export default SomePage;

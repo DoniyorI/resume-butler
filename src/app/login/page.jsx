@@ -1,5 +1,4 @@
 "use client";
-import Image from "next/image";
 import Link from "next/link";
 
 import { useState } from "react";
@@ -14,33 +13,14 @@ import EmblaCarousel from "@/components/Carousel";
 // import { useSignInWithEmailAndPassword } from "react-firebase-hooks/auth";
 import { auth } from "../firebase/config";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+// import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+
+import GoogleAuthButton from "@/components/GoogleAuth";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const router = useRouter();
-
-  const handleGoogleSignUp = async () => {
-    const provider = new GoogleAuthProvider();
-    try {
-      const result = await signInWithPopup(auth, provider);
-      // This gives you a Google Access Token. You can use it to access the Google API.
-      const credential = GoogleAuthProvider.credentialFromResult(result);
-      const token = credential.accessToken;
-      // The signed-in user info.
-      const user = result.user;
-      // Redirect the user or do something with the user info
-      console.log(user);
-      router.push("/dashboard");
-    } catch (error) {
-      const errorCode = error.code;
-      const errorMessage = error.message;
-      const email = error.email;
-      const credential = GoogleAuthProvider.credentialFromError(error);
-      console.error("Google sign in error", errorCode, errorMessage);
-    }
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -89,19 +69,7 @@ export default function Login() {
               Login
             </Button>
           </form>
-          <Button
-              variant="outline"
-              className="w-full"
-              onClick={handleGoogleSignUp}
-            >
-              <Image
-                src="/image/google-logo.png"
-                alt="Google logo"
-                width={25}
-                height={25}
-              />
-              <span>Sign up with Google</span>
-            </Button>
+          <GoogleAuthButton redirectPath="/dashboard" />
           {/* Link to sign up */}
           <div className="text-center text-sm">
             Don&apos;t have an account?{" "}
