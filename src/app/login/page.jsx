@@ -1,5 +1,9 @@
+"use client";
 import Image from "next/image";
 import Link from "next/link";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,24 +11,62 @@ import { Label } from "@/components/ui/label";
 
 import EmblaCarousel from "@/components/Carousel";
 
+// import { useSignInWithEmailAndPassword } from "react-firebase-hooks/auth";
+import { auth } from "../firebase/config";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+
 export default function Login() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const router = useRouter();
+
+  const handleGoogleSignUp = async () => {
+    const provider = new GoogleAuthProvider();
+    try {
+      const result = await signInWithPopup(auth, provider);
+      // This gives you a Google Access Token. You can use it to access the Google API.
+      const credential = GoogleAuthProvider.credentialFromResult(result);
+      const token = credential.accessToken;
+      // The signed-in user info.
+      const user = result.user;
+      // Redirect the user or do something with the user info
+      console.log(user);
+      router.push("/dashboard");
+    } catch (error) {
+      const errorCode = error.code;
+      const errorMessage = error.message;
+      const email = error.email;
+      const credential = GoogleAuthProvider.credentialFromError(error);
+      console.error("Google sign in error", errorCode, errorMessage);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      router.push("/dashboard"); // Redirect the user after successful login, adjust as necessary
+    } catch (error) {
+      alert(error.message); // Inform the user in case of an error
+    }
+  };
   return (
     <div className="flex min-h-screen flex-col lg:flex-row">
-      
       <div className="flex w-full lg:w-6/12 items-center justify-center py-12">
         <div className="mx-auto w-[350px] space-y-6">
-          {/* Title and introduction text */}
           <div className="text-center space-y-2">
             <h1 className="text-3xl font-bold">Login</h1>
           </div>
-          {/* Form and its elements */}
-          <form className="space-y-4">
+          <form className="space-y-4" onSubmit={handleSubmit}>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 type="email"
                 placeholder="info@resumebutler.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 required
               />
             </div>
@@ -35,22 +77,31 @@ export default function Login() {
                   Forgot your password?
                 </Link>
               </div>
-              <Input id="password" type="password" required />
+              <Input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
             </div>
             <Button type="submit" className="w-full">
               Login
             </Button>
-            <Button variant="outline" className="w-full">
+          </form>
+          <Button
+              variant="outline"
+              className="w-full"
+              onClick={handleGoogleSignUp}
+            >
               <Image
                 src="/image/google-logo.png"
-                className="mr-2"
                 alt="Google logo"
                 width={25}
                 height={25}
               />
-              <span>Login with Google</span>
+              <span>Sign up with Google</span>
             </Button>
-          </form>
           {/* Link to sign up */}
           <div className="text-center text-sm">
             Don&apos;t have an account?{" "}
@@ -62,29 +113,29 @@ export default function Login() {
       </div>
       <div className="hidden lg:flex w-6/12 justify-center items-center bg-[#E7FEED]">
         <div className="w-7/12">
-        <EmblaCarousel
-          slides={[
-            {
-              src: "/image/c1.png",
-              alt: "Image 1",
-              width: 192,
-              height: 108,
-            },
-            {
-              src: "/image/c1.png",
-              alt: "Image 2",
-              width: 192,
-              height: 108,
-            },
-            {
-              src: "/image/c1.png",
-              alt: "Image 3",
-              width: 192,
-              height: 108,
-            },
-          ]}
-          options={{ loop: true }}
-        />
+          <EmblaCarousel
+            slides={[
+              {
+                src: "/image/c1.png",
+                alt: "Image 1",
+                width: 192,
+                height: 108,
+              },
+              {
+                src: "/image/c1.png",
+                alt: "Image 2",
+                width: 192,
+                height: 108,
+              },
+              {
+                src: "/image/c1.png",
+                alt: "Image 3",
+                width: 192,
+                height: 108,
+              },
+            ]}
+            options={{ loop: true }}
+          />
         </div>
       </div>
     </div>
