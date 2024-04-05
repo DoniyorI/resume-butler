@@ -1,13 +1,11 @@
-import React from 'react';
-import LogoutButton from '@/components/LogoutButton'; // Adjust the import path as necessary
-
-const SomePage = () => {
-  return (
+import TableDemo from './table';
+export default function dashboard() {
+  return(
     <div>
-      {/* Other content */}
-      <LogoutButton />
+      <h1>Dashboard</h1>
+      <p>View your recent job applications here.</p>
+
+      <TableDemo />
     </div>
   );
-};
-
-export default SomePage;
+}
