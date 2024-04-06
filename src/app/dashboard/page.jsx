@@ -1,11 +1,11 @@
-import TableDemo from './table';
+import ApplicationTable from './table';
 export default function dashboard() {
   return(
     <div>
-      <h1>Dashboard</h1>
+      <h1>Application</h1>
       <p>View your recent job applications here.</p>
 
-      <TableDemo />
+      <ApplicationTable />
     </div>
   );
 }
