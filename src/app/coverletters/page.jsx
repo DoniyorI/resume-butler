@@ -1,5 +1,8 @@
+import NavBar from "@/components/NavBar"
 export default function Page() {
     return (
-        <div>Cover Letter</div>
+        <>
+        <NavBar/>
+        </>
     )
 }

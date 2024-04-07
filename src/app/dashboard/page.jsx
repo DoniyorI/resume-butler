@@ -1,7 +1,7 @@
-import ApplicationTable from './table';
+import ApplicationTable from '../../components/Table';
 export default function dashboard() {
   return(
-    <div>
+    <div className=''>
       <h1>Application</h1>
       <p>View your recent job applications here.</p>
 

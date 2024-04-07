@@ -1,5 +1,8 @@
 "use client";
 import React, { useState } from "react";
+// import Image from "next/image";
+import { AiOutlineFilePdf } from "react-icons/ai";
+// import { Link } from "next/link";
 import {
   flexRender,
   getCoreRowModel,
@@ -8,14 +11,10 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import {
-  ArrowUpDown,
-  ChevronDown,
-  MoreHorizontal,
-} from "lucide-react";
+import { ArrowUpDown, ChevronDown, MoreHorizontal } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
+// import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -34,11 +33,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import AddApplicationDialog from "@/components/AddApplication";
 
 const data = [
   {
     id: "m5gr84i9",
-    resume: "resume_file_1.pdf",
+    resume: "",
     coverLetter: "coverletter_file_1.pdf",
     companyName: "Company A",
     role: "Software Engineer",
@@ -60,7 +60,7 @@ const data = [
   },
   {
     id: "m5gr84i9",
-    resume: "resume_file_3.pdf",
+    resume: "",
     coverLetter: "coverletter_file_1.pdf",
     companyName: "Company C",
     role: "Product Manager",
@@ -95,42 +95,27 @@ const data = [
 
 const columns = [
   {
-    id: "select",
-    header: ({ table }) => (
-      <Checkbox
-        checked={
-          table.getIsAllPageRowsSelected() ||
-          (table.getIsSomePageRowsSelected() && "indeterminate")
-        }
-        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-        aria-label="Select all"
-      />
-    ),
-    cell: ({ row }) => (
-      <Checkbox
-        checked={row.getIsSelected()}
-        onCheckedChange={(value) => row.toggleSelected(!!value)}
-        aria-label="Select row"
-      />
-    ),
-    enableSorting: false,
-    enableHiding: false,
-  },
-  {
     accessorKey: "resume",
     header: ({ column }) => {
       return (
         <Button
+          className='p-1'
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
           Resume
-          <ArrowUpDown className="ml-2 h-4 w-4" />
+          <ArrowUpDown className="ml-2 h-3 w-3" />
         </Button>
       );
     },
     cell: ({ row }) => (
-      <div className="">{row.getValue("resume")}</div>
+      <div className="flex justify-center">
+        {row.getValue("resume") && (
+          <a href={`/resumes/${row.getValue("resume")}`} className="text-red-700">
+            <AiOutlineFilePdf className="mx-auto" size={20} />
+          </a>
+        )}
+      </div>
     ),
   },
   {
@@ -138,16 +123,24 @@ const columns = [
     header: ({ column }) => {
       return (
         <Button
+          className='p-1'
+
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
           Cover Letter
-          <ArrowUpDown className="ml-2 h-4 w-4" />
+          <ArrowUpDown className="ml-2 h-3 w-3" />
         </Button>
       );
     },
     cell: ({ row }) => (
-      <div className="">{row.getValue("coverLetter")}</div>
+      <div className="flex justify-center">
+        {row.original.coverLetter && (
+          <a href={`/cover-letters/${row.original.coverLetter}`} className="text-green-700">
+            <AiOutlineFilePdf className="mx-auto" size={20} />
+          </a>
+        )}
+      </div>
     ),
   },
   {
@@ -159,7 +152,7 @@ const columns = [
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
           Company Name
-          <ArrowUpDown className="ml-2 h-4 w-4" />
+          <ArrowUpDown className="ml-2 h-3 w-3" />
         </Button>
       );
     },
@@ -176,7 +169,7 @@ const columns = [
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
           Role
-          <ArrowUpDown className="ml-2 h-4 w-4" />
+          <ArrowUpDown className="ml-2 h-3 w-3" />
         </Button>
       );
     },
@@ -191,14 +184,11 @@ const columns = [
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
           Status
-          <ArrowUpDown className="ml-2 h-4 w-4" />
+          <ArrowUpDown className="ml-2 h-3 w-3" />
         </Button>
       );
     },
-    cell: ({ row }) => (
-      
-      <div className="">{row.getValue("status")}</div>
-    ),
+    cell: ({ row }) => <div className="justify-center">{row.getValue("status")}</div>,
   },
   {
     accessorKey: "location",
@@ -209,13 +199,11 @@ const columns = [
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
           Location
-          <ArrowUpDown className="ml-2 h-4 w-4" />
+          <ArrowUpDown className="ml-2 h-3 w-3" />
         </Button>
       );
     },
-    cell: ({ row }) => (
-      <div className="">{row.getValue("location")}</div>
-    ),
+    cell: ({ row }) => <div className="">{row.getValue("location")}</div>,
   },
   {
     accessorKey: "date",
@@ -226,7 +214,7 @@ const columns = [
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
           Date
-          <ArrowUpDown className="ml-2 h-4 w-4" />
+          <ArrowUpDown className="ml-2 h-3 w-3" />
         </Button>
       );
     },
@@ -241,13 +229,11 @@ const columns = [
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
           Comments
-          <ArrowUpDown className="ml-2 h-4 w-4" />
+          <ArrowUpDown className="ml-2 h-3 w-3" />
         </Button>
       );
     },
-    cell: ({ row }) => (
-      <div className="">{row.getValue("comments")}</div>
-    ),
+    cell: ({ row }) => <div className="">{row.getValue("comments")}</div>,
   },
   {
     id: "actions",
@@ -271,7 +257,11 @@ const columns = [
               Copy application ID
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>View application details</DropdownMenuItem>
+            <DropdownMenuItem>
+              <a href={`/applications/${application.id}`}>
+              View application details
+              </a>
+              </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       );
@@ -305,13 +295,11 @@ function ApplicationTable() {
   });
 
   return (
-    <div className="w-full">
-      <div className="flex items-center py-4">
+    <div className="">
+      <div className="flex items-center py-4 mx-4">
         <Input
           placeholder="Filter by company name"
-          value={
-            (table.getColumn("companyName")?.getFilterValue() || "")
-          }
+          value={table.getColumn("companyName")?.getFilterValue() || ""}
           onChange={(event) =>
             table.getColumn("companyName")?.setFilterValue(event.target.value)
           }
@@ -319,7 +307,7 @@ function ApplicationTable() {
         />
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="ml-auto">
+            <Button variant="outline" className="ml-auto ">
               Columns <ChevronDown className="ml-2 h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -340,9 +328,9 @@ function ApplicationTable() {
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-      <div className="rounded-md border mx-2">
+      <div className="rounded-md border mx-4">
         <Table>
-          <TableHeader>
+          <TableHeader >
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
@@ -363,11 +351,13 @@ function ApplicationTable() {
               table.getRowModel().rows.map((row) => (
                 <TableRow
                   key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext()
+                      )}
                     </TableCell>
                   ))}
                 </TableRow>
@@ -385,7 +375,11 @@ function ApplicationTable() {
           </TableBody>
         </Table>
       </div>
-      <div className="flex items-center justify-end space-x-2 py-4 mx-2">
+
+      <div className="flex items-center justify-between space-x-2 py-4 mx-4">
+        <div>
+            <AddApplicationDialog />
+        </div>
         <div className="space-x-2 ">
           <Button
             variant="outline"
