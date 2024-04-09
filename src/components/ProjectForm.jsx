@@ -1,3 +1,12 @@
+// export default function Page() {
+//     return (
+//         <div className="flex flex-col items-center justify-center h-screen">
+//         <h1 className="text-4xl font-bold">Welcome to your CV</h1>
+//         <p className="text-lg text-gray-500">Create your CV here</p>
+//         </div>
+//     );
+// }
+
 "use client";
 import React, { useState } from "react";
 
@@ -22,13 +31,12 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 
-export default function ExpensesPage() {
-  const [experienceEntries, setExperienceEntries] = useState([
+export default function PersonalProjectsPage() {
+  const [projectEntries, setProjectEntries] = useState([
     {
-      companyName: "",
-      location: "",
+      projectName: "",
       position: "",
-      experienceType: "",
+      location: "",
       currentlyWorking: false,
       startDate: "",
       endDate: "",
@@ -36,14 +44,13 @@ export default function ExpensesPage() {
     },
   ]);
 
-  const addExperienceEntry = () => {
-    setExperienceEntries([
-      ...experienceEntries,
+  const addProjectEntry = () => {
+    setProjectEntries([
+      ...projectEntries,
       {
-        companyName: "",
-        location: "",
+        projectName: "",
         position: "",
-        experienceType: "",
+        location: "",
         currentlyWorking: false,
         startDate: "",
         endDate: "",
@@ -52,35 +59,35 @@ export default function ExpensesPage() {
     ]);
   };
 
-  const updateExperienceEntry = (index, field, value) => {
-    const updatedEntries = experienceEntries.map((entry, idx) => {
+  const updateProjectEntry = (index, field, value) => {
+    const updatedEntries = projectEntries.map((entry, idx) => {
       if (idx === index) {
         return { ...entry, [field]: value };
       }
       return entry;
     });
-    setExperienceEntries(updatedEntries);
+    setProjectEntries(updatedEntries);
   };
 
   const updateCurrentlyWorking = (index, checked) => {
-    const updatedEntries = experienceEntries.map((entry, idx) =>
+    const updatedEntries = projectEntries.map((entry, idx) =>
       idx === index ? { ...entry, currentlyWorking: checked } : entry
     );
-    setExperienceEntries(updatedEntries);
+    setProjectEntries(updatedEntries);
   };
 
   const addDescriptionBullet = (index) => {
-    const updatedEntries = experienceEntries.map((entry, idx) => {
+    const updatedEntries = projectEntries.map((entry, idx) => {
       if (idx === index) {
         return { ...entry, description: [...entry.description, ""] };
       }
       return entry;
     });
-    setExperienceEntries(updatedEntries);
+    setProjectEntries(updatedEntries);
   };
 
   const updateDescriptionBullet = (entryIndex, bulletIndex, value) => {
-    const updatedEntries = experienceEntries.map((entry, idx) => {
+    const updatedEntries = projectEntries.map((entry, idx) => {
       if (idx === entryIndex) {
         const updatedDescription = entry.description.map((desc, dIdx) => {
           if (dIdx === bulletIndex) {
@@ -92,33 +99,24 @@ export default function ExpensesPage() {
       }
       return entry;
     });
-    setExperienceEntries(updatedEntries);
+    setProjectEntries(updatedEntries);
   };
 
   const handleSave = () => {
-    console.log(experienceEntries);
+    console.log(projectEntries);
   };
 
   return (
     <>
-      {experienceEntries.map((entry, index) => (
+      {projectEntries.map((entry, index) => (
         <div className="flex flex-col space-y-4 pb-8" key={index}>
           <div className="flex space-x-6">
             <div className="flex-grow">
-              <Label>Company Name</Label>
+              <Label>Project Name</Label>
               <Input
-                value={entry.companyName}
+                value={entry.projectName}
                 onChange={(e) =>
-                  updateExpenseEntry(index, "companyName", e.target.value)
-                }
-              />
-            </div>
-            <div className="flex-grow">
-              <Label>Location</Label>
-              <Input
-                value={entry.location}
-                onChange={(e) =>
-                  updateExpenseEntry(index, "location", e.target.value)
+                  updateProjectEntry(index, "projectName", e.target.value)
                 }
               />
             </div>
@@ -129,35 +127,18 @@ export default function ExpensesPage() {
               <Input
                 value={entry.position}
                 onChange={(e) =>
-                  updateExperienceEntry(index, "position", e.target.value)
+                  updateProjectEntry(index, "position", e.target.value)
                 }
               />
             </div>
-            <div>
-              <Label>Experience Type</Label>
-              <Select>
-                <SelectTrigger
-                  value={entry.experienceType}
-                  onChange={(e) =>
-                    updateExperienceEntry(
-                      index,
-                      "experienceType",
-                      e.target.value
-                    )
-                  }
-                  className="max-w-[300px] sm:w-[200px] md:w-[300px]"
-                >
-                  <SelectValue placeholder="Select Experience Type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    <SelectItem value="Internship">Internship</SelectItem>
-                    <SelectItem value="Part-time">Part-time</SelectItem>
-                    <SelectItem value="Full-time">Full-time</SelectItem>
-                    <SelectItem value="Contract">Contract</SelectItem>
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
+            <div className="flex-grow">
+              <Label>Location</Label>
+              <Input
+                value={entry.location}
+                onChange={(e) =>
+                  updateProjectEntry(index, "location", e.target.value)
+                }
+              />
             </div>
           </div>
           <div className="flex space-x-6">
@@ -183,7 +164,7 @@ export default function ExpensesPage() {
                       mode="single"
                       selected={entry.startDate}
                       onSelect={(date) =>
-                        updateExperienceEntry(index, "startDate", date)
+                        updateProjectEntry(index, "startDate", date)
                       }
                       initialFocus
                     />
@@ -213,7 +194,7 @@ export default function ExpensesPage() {
                       mode="single"
                       selected={entry.endDate}
                       onSelect={(date) =>
-                        updateExperienceEntry(index, "endDate", date)
+                        updateProjectEntry(index, "endDate", date)
                       }
                       initialFocus
                     />
@@ -223,15 +204,6 @@ export default function ExpensesPage() {
             </div>
           </div>
           <div className="flex items-center space-x-2">
-            {/* <Checkbox
-                id="terms"
-              checked={entry.currentlyWorking}
-              onChange={(e) =>
-                updateExperienceEntry(index, "currentlyWorking", e.target.checked)
-              }
-            />
-            
-            <Label>Currently Working</Label> */}
             <Checkbox
               id={`currently-working-${index}`}
               checked={entry.currentlyWorking}
@@ -246,8 +218,8 @@ export default function ExpensesPage() {
 
           {/* Instruction Text */}
           <div className="text-center">
-            Please add as much information about your role so we can tailor to
-            the job description later.
+            Please add as much information about your project so we can tailor
+            to the job description later.
           </div>
 
           {/* Description Bullet Points */}
@@ -255,7 +227,7 @@ export default function ExpensesPage() {
             <div className="flex justify-between">
               <Label>Description (Min 4 Bullet points)</Label>
               <Button
-                variant="outline"
+                variant="ghost"
                 onClick={() => addDescriptionBullet(index)}
               >
                 + Add
@@ -264,7 +236,7 @@ export default function ExpensesPage() {
             {entry.description.map((desc, dIndex) => (
               <div
                 key={dIndex}
-                className="flex items-center ml-4 space-x-2 space-y-2"
+                className="flex items-center ml-4 space-x-2 space-y-2 "
               >
                 <span>•</span>
                 <Input
@@ -275,14 +247,13 @@ export default function ExpensesPage() {
                 />
               </div>
             ))}
-            <Button onClick={() => addDescriptionBullet(index)}>+ Add</Button>
           </div>
         </div>
       ))}
 
       <div className="flex space-x-6 justify-between">
-        <Button variant="outline" onClick={addExperienceEntry}>
-          Add Experience
+        <Button variant="outline" onClick={addProjectEntry}>
+          Add Project
         </Button>
         <Button type="button" onClick={handleSave}>
           Save
