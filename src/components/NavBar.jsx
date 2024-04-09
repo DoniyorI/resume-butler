@@ -7,13 +7,12 @@ import { useRouter, usePathname } from "next/navigation";
 import ToggleButton from "./LogoutButton";
 
 export default function Navbar() {
-    const router = useRouter();
-    const pathname = usePathname();
+  const router = useRouter();
+  const pathname = usePathname();
 
-  
-    if (pathname === "/login" || pathname === "/register") {
-      return null; 
-    }
+  if (pathname === "/login" || pathname === "/register") {
+    return null;
+  }
 
   const [isCollapsed, setIsCollapsed] = useState(false);
   const toggleNavbar = () => setIsCollapsed(!isCollapsed);
@@ -29,11 +28,11 @@ export default function Navbar() {
 
   return (
     <>
-      <div
-        className={`h-screen flex flex-col justify-between px-4 py-6 bg-[#E0F6EF] max-w-[215px] transition-all duration-300 ease-in-out ${
-          isCollapsed ? "w-[70px]" : "w-[215px]"
-        }`}
-      >
+<div
+  className={`h-screen flex flex-col justify-between px-4 py-6 bg-[#E0F6EF] max-w-[215px] transition-all duration-300 ease-in-out sticky top-0 left-0 z-10 ${
+    isCollapsed ? "w-[70px]" : "w-[215px]"
+  }`}
+>
         <div className="flex flex-col space-y-2 p-2">
           <Link href="/" className="flex items-center space-x-2">
             <Image src={`/image/Logo.svg`} width={40} height={40} />
@@ -48,89 +47,92 @@ export default function Navbar() {
               </span>
             )}
           </Link>
-        <div className="flex-1 space-y-6 pt-10 overflow-y-auto">
-          <Link href="/" className="flex items-center space-x-2">
-            <Image src={`/image/Home.svg`} width={20} height={20} />
-            {!isCollapsed && (
-              <span className="transition-opacity duration-300 ease-in-out opacity-100">
-                Home
-              </span>
-            )}
-            {isCollapsed && (
-              <span className="transition-opacity duration-300 ease-in-out opacity-0">
-                Home
-              </span>
-            )}
-          </Link>
-          <Link href="/profile" className="flex items-center space-x-2">
-            <Image src={`/image/Profile.svg`} width={20} height={20} />
-            {!isCollapsed && (
-              <span className="transition-opacity duration-300 ease-in-out opacity-100">
-                Profile
-              </span>
-            )}
-            {isCollapsed && (
-              <span className="transition-opacity duration-300 ease-in-out opacity-0">
-                Profile
-              </span>
-            )}
-          </Link>
-          <Link href="/applications" className="flex items-center space-x-2">
-            <Image src={`/image/Applications.svg`} width={20} height={20} />
-            {!isCollapsed && (
-              <span className="transition-opacity duration-300 ease-in-out opacity-100">
-                Application
-              </span>
-            )}
-            {isCollapsed && (
-              <span className="transition-opacity duration-300 ease-in-out opacity-0">
-                Application
-              </span>
-            )}
-          </Link>
-          <Link href="/resumes" className="flex items-center space-x-2">
-            <Image src={`/image/Resume.svg`} width={20} height={20} />
-            {!isCollapsed && (
-              <span className="transition-opacity duration-300 ease-in-out opacity-100">
-                Resumes
-              </span>
-            )}
-            {isCollapsed && (
-              <span className="transition-opacity duration-300 ease-in-out opacity-0">
-                Resumes
-              </span>
-            )}
-          </Link>
-          <Link href="/coverletters" className="flex items-center space-x-2">
-            <Image src={`/image/CoverLetter.svg`} width={20} height={20} />
-            {!isCollapsed && (
-              <span className="transition-opacity duration-300 ease-in-out opacity-100">
-                Cover Letters
-              </span>
-            )}
-            {isCollapsed && (
-              <span className="transition-opacity duration-300 ease-in-out opacity-0">
-                Cover Letters
-              </span>
-            )}
-          </Link>
-          <Link href="/cv" className="flex items-center space-x-2">
-            <Image src={`/image/CV.svg`} width={20} height={20} />
-            {!isCollapsed && (
-              <span className="transition-opacity duration-300 ease-in-out opacity-100">
-                CV
-              </span>
-            )}
-            {isCollapsed && (
-              <span className="transition-opacity duration-300 ease-in-out opacity-0">
-                CV
-              </span>
-            )}
-          </Link>
-        </div>
-        <div className="flex pt-10">
-        <ToggleButton isCollapsed={isCollapsed} toggleNavbar={toggleNavbar} />
-        </div>
+          <div className="flex-1 space-y-6 pt-10 overflow-y-auto">
+            <Link href="/" className="flex items-center space-x-2">
+              <Image src={`/image/Home.svg`} width={20} height={20} />
+              {!isCollapsed && (
+                <span className="transition-opacity duration-300 ease-in-out opacity-100">
+                  Home
+                </span>
+              )}
+              {isCollapsed && (
+                <span className="transition-opacity duration-300 ease-in-out opacity-0">
+                  Home
+                </span>
+              )}
+            </Link>
+            <Link href="/profile" className="flex items-center space-x-2">
+              <Image src={`/image/Profile.svg`} width={20} height={20} />
+              {!isCollapsed && (
+                <span className="transition-opacity duration-300 ease-in-out opacity-100">
+                  Profile
+                </span>
+              )}
+              {isCollapsed && (
+                <span className="transition-opacity duration-300 ease-in-out opacity-0">
+                  Profile
+                </span>
+              )}
+            </Link>
+            <Link href="/applications" className="flex items-center space-x-2">
+              <Image src={`/image/Applications.svg`} width={20} height={20} />
+              {!isCollapsed && (
+                <span className="transition-opacity duration-300 ease-in-out opacity-100">
+                  Application
+                </span>
+              )}
+              {isCollapsed && (
+                <span className="transition-opacity duration-300 ease-in-out opacity-0">
+                  Application
+                </span>
+              )}
+            </Link>
+            <Link href="/resumes" className="flex items-center space-x-2">
+              <Image src={`/image/Resume.svg`} width={20} height={20} />
+              {!isCollapsed && (
+                <span className="transition-opacity duration-300 ease-in-out opacity-100">
+                  Resumes
+                </span>
+              )}
+              {isCollapsed && (
+                <span className="transition-opacity duration-300 ease-in-out opacity-0">
+                  Resumes
+                </span>
+              )}
+            </Link>
+            <Link href="/coverletters" className="flex items-center space-x-2">
+              <Image src={`/image/CoverLetter.svg`} width={20} height={20} />
+              {!isCollapsed && (
+                <span className="transition-opacity duration-300 ease-in-out opacity-100">
+                  Cover Letters
+                </span>
+              )}
+              {isCollapsed && (
+                <span className="transition-opacity duration-300 ease-in-out opacity-0">
+                  Cover Letters
+                </span>
+              )}
+            </Link>
+            <Link href="/cv" className="flex items-center space-x-2">
+              <Image src={`/image/CV.svg`} width={20} height={20} />
+              {!isCollapsed && (
+                <span className="transition-opacity duration-300 ease-in-out opacity-100">
+                  CV
+                </span>
+              )}
+              {isCollapsed && (
+                <span className="transition-opacity duration-300 ease-in-out opacity-0">
+                  CV
+                </span>
+              )}
+            </Link>
+          </div>
+          <div className="flex pt-10">
+            <ToggleButton
+              isCollapsed={isCollapsed}
+              toggleNavbar={toggleNavbar}
+            />
+          </div>
         </div>
         <div className="p-2">
           <div className="flex flex-col space-y-2">

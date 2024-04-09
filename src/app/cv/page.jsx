@@ -1,71 +1,48 @@
-"use client";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import FileUpload from "@/components/FileUpload";
+import EducationForm from "@/components/EducationForm";
+import ExperienceForm from "@/components/ExperienceForm";
+import ProjectForm from "@/components/ProjectForm";
+import SkillForm from "@/components/SkillForm";
 
-import React, { useState } from "react";
-import { RiDeleteBack2Line } from "react-icons/ri";
-
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-
-export default function SkillForm() {
-  const [skills, setSkills] = useState([]);
-  const [newSkill, setNewSkill] = useState("");
-
-  const handleAddSkill = () => {
-    if (newSkill.trim() !== "") {
-      setSkills([...skills, { value: newSkill, isEditable: false }]);
-      setNewSkill("");
-    }
-  };
-
-  const handleDeleteSkill = (index) => {
-    const filteredSkills = skills.filter((_, i) => i !== index);
-    setSkills(filteredSkills);
-  };
-
+export default function CV() {
   return (
-    <div>
-      <Label>Skills</Label>
-      <div className="flex items-center space-x-2 mt-2">
-        <Input
-          value={newSkill}
-          onChange={(e) => setNewSkill(e.target.value)}
-          placeholder="Add a new skill"
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              handleAddSkill();
-            }
-          }}
-        />
-        <Button variant="ghost" onClick={handleAddSkill}>
-          + Add
-        </Button>
+    <div className="flex flex-col justify-center">
+      <div className="text-center my-12 mt-16">
+        <h1 className="text-3xl text-[#559F87]">Curriculum Vitae</h1>
+        <p className="pt-4 font-light text-sm">
+          Fill out the form below so we can later use to optimize your resume
+          for every application
+        </p>
       </div>
-      <div className="flex justify-center flex-wrap gap-2 mt-2 p-2">
-        {skills.map((skill, index) => {
-          const rotation = index % 2 === 0 ? 2 : -2; 
-          const zIndex = skills.length - index;
-          return (
-            <div
-              key={index}
-              style={{
-                transform: `rotate(${rotation}deg)`,
-                zIndex: zIndex,
-              }}
-              className="bg-green-200 hover:bg-green-100 py-2 pl-4 pr-2 space-x-2 rounded-md flex items-center shadow-lg"
-            >
-                
-              <div>{skill.value}</div>
-              <div className="text-red-500 hover:bg-green-200  rounded-md  p-2">
-              <RiDeleteBack2Line
-                onClick={() => handleDeleteSkill(index)}
-                className=""
-              />
-              </div>
-              
-            </div>
-          );
-        })}
+
+      <FileUpload />
+      <div className="flex items-center justify-center my-6">
+        <div className="w-1/3 rounded bg-gray-300 h-[1px] mr-4"></div>
+        <span className="text-gray-3 text-sm font-light">OR</span>
+        <div className="w-1/3 bg-gray-300 h-[1px] ml-4"></div>
+      </div>
+      <div className="flex justify-center">
+        <Tabs defaultValue="education">
+          <TabsList className="grid w-full grid-cols-4 lg:min-w-[750px]">
+            <TabsTrigger value="education">Education</TabsTrigger>
+            <TabsTrigger value="experiences">Experience</TabsTrigger>
+            <TabsTrigger value="projects">Project</TabsTrigger>
+            <TabsTrigger value="skills">Skills</TabsTrigger>
+          </TabsList>
+          <TabsContent className="pb-10" value="education">
+            <EducationForm />
+          </TabsContent>
+          <TabsContent className="pb-10" value="experiences">
+            <ExperienceForm />
+          </TabsContent>
+          <TabsContent className="pb-10" value="projects">
+            <ProjectForm />
+          </TabsContent>
+          <TabsContent className="pb-10" value="skills">
+            <SkillForm />
+          </TabsContent>
+        </Tabs>
       </div>
     </div>
   );

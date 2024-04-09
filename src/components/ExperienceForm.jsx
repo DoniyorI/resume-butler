@@ -18,11 +18,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar as CalendarIcon } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+
 import { format } from "date-fns";
 
-export default function ExpensesPage() {
+export default function ExperienceForm() {
   const [experienceEntries, setExperienceEntries] = useState([
     {
       companyName: "",
@@ -101,8 +102,19 @@ export default function ExpensesPage() {
 
   return (
     <>
+      <div className="flex space-x-6 justify-between items-center py-4">
+            <h1 className=" text-2xl text-[#5CA78F] cursor-default">Experience</h1>
+            <Button
+              className="text-[#188665] font-light hover:bg-green-100"
+              variant="ghost"
+              onClick={addExperienceEntry}
+            >
+              + Add Education
+            </Button>
+          </div>
       {experienceEntries.map((entry, index) => (
         <div className="flex flex-col space-y-4 pb-8" key={index}>
+         
           <div className="flex space-x-6">
             <div className="flex-grow">
               <Label>Company Name</Label>
@@ -222,16 +234,7 @@ export default function ExpensesPage() {
               </div>
             </div>
           </div>
-          <div className="flex items-center space-x-2">
-            {/* <Checkbox
-                id="terms"
-              checked={entry.currentlyWorking}
-              onChange={(e) =>
-                updateExperienceEntry(index, "currentlyWorking", e.target.checked)
-              }
-            />
-            
-            <Label>Currently Working</Label> */}
+          <div className="flex items-center space-x-2 pb-4 mt-0">
             <Checkbox
               id={`currently-working-${index}`}
               checked={entry.currentlyWorking}
@@ -239,29 +242,32 @@ export default function ExpensesPage() {
                 updateCurrentlyWorking(index, checked)
               }
             />
-            <Label htmlFor={`currently-working-${index}`}>
+            <Label className="font-light" htmlFor={`currently-working-${index}`}>
               Currently Working
             </Label>
           </div>
 
           {/* Instruction Text */}
-          <div className="text-center">
-            Please add as much information about your role so we can tailor to
-            the job description later.
+          <div className="text-center font-light text-xs my-2">
+            Please add as much information about your role so we can better tailor to
+            the job application
           </div>
 
           {/* Description Bullet Points */}
           <div>
-            <div className="flex justify-between">
-              <Label>Description (Min 4 Bullet points)</Label>
+            <div className="flex justify-between items-center">
+              <Label className="font-normal">Description</Label>
               <Button
-                variant="outline"
+              className="text-[#188665] font-light hover:bg-green-100"
+              variant="ghost"
                 onClick={() => addDescriptionBullet(index)}
               >
                 + Add
               </Button>
             </div>
+            
             {entry.description.map((desc, dIndex) => (
+              
               <div
                 key={dIndex}
                 className="flex items-center ml-4 space-x-2 space-y-2"
@@ -275,15 +281,11 @@ export default function ExpensesPage() {
                 />
               </div>
             ))}
-            <Button onClick={() => addDescriptionBullet(index)}>+ Add</Button>
           </div>
         </div>
       ))}
 
-      <div className="flex space-x-6 justify-between">
-        <Button variant="outline" onClick={addExperienceEntry}>
-          Add Experience
-        </Button>
+      <div className="flex space-x-6 justify-end">
         <Button type="button" onClick={handleSave}>
           Save
         </Button>

@@ -4,7 +4,6 @@ import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-
 import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
@@ -22,7 +21,7 @@ import {
 import { Calendar as CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 
-export default function Page() {
+export default function EducationForm() {
   const [educationEntries, setEducationEntries] = useState([
     {
       school: "",
@@ -63,6 +62,12 @@ export default function Page() {
   };
   return (
     <>
+      <div className="flex space-x-6 justify-between items-center py-4">
+      <h1 className=" text-2xl text-[#5CA78F] cursor-default">Education</h1>
+        <Button  className="text-[#188665] font-light hover:bg-green-100" variant="ghost" onClick={addEducationEntry}>
+          + Add Education
+        </Button>
+      </div>
       {educationEntries.map((entry, index) => (
         <div className="flex flex-col space-y-4 pb-8" key={index}>
           <div>
@@ -132,7 +137,9 @@ export default function Page() {
                       className="w-full justify-start text-left font-normal"
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {entry.startDate ? format(new Date(entry.startDate), 'PPP') : 'Select Start Date'}
+                      {entry.startDate
+                        ? format(new Date(entry.startDate), "PPP")
+                        : "Select Start Date"}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
@@ -160,7 +167,9 @@ export default function Page() {
                       className="w-full justify-start text-left font-normal"
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {entry.endDate ? format(new Date(entry.endDate), 'PPP') : 'Select End Date'}
+                      {entry.endDate
+                        ? format(new Date(entry.endDate), "PPP")
+                        : "Select End Date"}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
@@ -179,10 +188,7 @@ export default function Page() {
           </div>
         </div>
       ))}
-      <div className="flex space-x-6 justify-between">
-        <Button variant="outline" onClick={addEducationEntry}>
-          Add Education
-        </Button>
+      <div className="flex space-x-6 justify-end">
         <Button type="button" onClick={handleSave}>
           Save
         </Button>

@@ -1,12 +1,3 @@
-// export default function Page() {
-//     return (
-//         <div className="flex flex-col items-center justify-center h-screen">
-//         <h1 className="text-4xl font-bold">Welcome to your CV</h1>
-//         <p className="text-lg text-gray-500">Create your CV here</p>
-//         </div>
-//     );
-// }
-
 "use client";
 import React, { useState } from "react";
 
@@ -19,19 +10,11 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 
-export default function PersonalProjectsPage() {
+export default function ProjectForm() {
   const [projectEntries, setProjectEntries] = useState([
     {
       projectName: "",
@@ -108,6 +91,16 @@ export default function PersonalProjectsPage() {
 
   return (
     <>
+     <div className="flex space-x-6 justify-between items-center py-4">
+            <h1 className=" text-2xl text-[#5CA78F] cursor-default">Personal Project</h1>
+            <Button
+              className="text-[#188665] font-light hover:bg-green-100"
+              variant="ghost"
+              onClick={addProjectEntry}
+            >
+              + Add Education
+            </Button>
+          </div>
       {projectEntries.map((entry, index) => (
         <div className="flex flex-col space-y-4 pb-8" key={index}>
           <div className="flex space-x-6">
@@ -203,7 +196,7 @@ export default function PersonalProjectsPage() {
               </div>
             </div>
           </div>
-          <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2 pb-4">
             <Checkbox
               id={`currently-working-${index}`}
               checked={entry.currentlyWorking}
@@ -211,23 +204,24 @@ export default function PersonalProjectsPage() {
                 updateCurrentlyWorking(index, checked)
               }
             />
-            <Label htmlFor={`currently-working-${index}`}>
+             <Label className="font-light" htmlFor={`currently-working-${index}`}>
               Currently Working
             </Label>
           </div>
 
           {/* Instruction Text */}
-          <div className="text-center">
-            Please add as much information about your project so we can tailor
-            to the job description later.
+          <div className="text-center font-light text-xs my-2">
+            Please add as much information about your role so we can better tailor to
+            the job application
           </div>
 
           {/* Description Bullet Points */}
           <div>
-            <div className="flex justify-between">
-              <Label>Description (Min 4 Bullet points)</Label>
+          <div className="flex justify-between items-center">
+              <Label className="font-normal">Description</Label>
               <Button
-                variant="ghost"
+              className="text-[#188665] font-light hover:bg-green-100"
+              variant="ghost"
                 onClick={() => addDescriptionBullet(index)}
               >
                 + Add
@@ -251,10 +245,7 @@ export default function PersonalProjectsPage() {
         </div>
       ))}
 
-      <div className="flex space-x-6 justify-between">
-        <Button variant="outline" onClick={addProjectEntry}>
-          Add Project
-        </Button>
+      <div className="flex space-x-6 justify-end">
         <Button type="button" onClick={handleSave}>
           Save
         </Button>

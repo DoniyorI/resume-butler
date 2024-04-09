@@ -1,11 +1,11 @@
 "use client";
-
 import React, { useState } from "react";
-import { RiDeleteBack2Line } from "react-icons/ri";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+
+import { RiDeleteBack2Line } from "react-icons/ri";
 
 export default function SkillForm() {
   const [skills, setSkills] = useState([]);
@@ -25,8 +25,11 @@ export default function SkillForm() {
 
   return (
     <div>
-      <Label>Skills</Label>
+         <div className="flex space-x-6 justify-between items-center py-4">
+            <h1 className=" text-2xl text-[#5CA78F] cursor-default">Technical Skills</h1>
+          </div>
       <div className="flex items-center space-x-2 mt-2">
+        
         <Input
           value={newSkill}
           onChange={(e) => setNewSkill(e.target.value)}
@@ -37,13 +40,15 @@ export default function SkillForm() {
             }
           }}
         />
-        <Button variant="ghost" onClick={handleAddSkill}>
+         <Button
+              className="text-[#188665] font-light hover:bg-green-100"
+              variant="ghost" onClick={handleAddSkill}>
           + Add
         </Button>
       </div>
-      <div className="flex justify-center flex-wrap gap-2 mt-2 p-2">
+      <div className="flex justify-center flex-wrap gap-2 mt-6 p-2">
         {skills.map((skill, index) => {
-          const rotation = index % 2 === 0 ? 2 : -2; 
+          const rotation = index % 2 === 0 ? 2 : -2;
           const zIndex = skills.length - index;
           return (
             <div
@@ -52,17 +57,15 @@ export default function SkillForm() {
                 transform: `rotate(${rotation}deg)`,
                 zIndex: zIndex,
               }}
-              className="bg-green-200 hover:bg-green-100 py-2 pl-4 pr-2 space-x-2 rounded-md flex items-center shadow-lg"
+              className="bg-green-100 hover:bg-green-200 py-1 pl-4 pr-2 space-x-2 rounded-md flex items-center shadow-lg"
             >
-                
-              <div>{skill.value}</div>
-              <div className="text-red-500 hover:bg-green-200  rounded-md  p-2">
-              <RiDeleteBack2Line
-                onClick={() => handleDeleteSkill(index)}
-                className=""
-              />
+              <div className="font-light text-sm">{skill.value}</div>
+              <div className="text-red-500 hover:bg-emerald-100  rounded-md  p-2">
+                <RiDeleteBack2Line
+                  onClick={() => handleDeleteSkill(index)}
+                  className=""
+                />
               </div>
-              
             </div>
           );
         })}
