@@ -48,6 +48,8 @@ export default function AddApplicationDialog() {
   const [location, setLocation] = useState("");
   const [date, setDate] = useState(new Date());
   const [comments, setComments] = useState("");
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
 
   const handleSave = () => {
     console.log({
@@ -60,12 +62,13 @@ export default function AddApplicationDialog() {
       date,
       comments,
     });
+    setIsDialogOpen(false);
   };
 
   return (
-    <Dialog>
+    <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline">Add Application</Button>
+        <Button variant="outline" onClick={() => setIsDialogOpen(true)} >Add Application</Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]lg:w-8/12">
         <DialogHeader>
@@ -206,7 +209,7 @@ export default function AddApplicationDialog() {
           </div>
         </div>
         <DialogFooter>
-          <Button type="submit" onClick={handleSave}>
+          <Button type="button" onClick={handleSave}>
             Save
           </Button>
         </DialogFooter>

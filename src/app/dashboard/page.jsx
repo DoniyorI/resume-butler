@@ -1,4 +1,4 @@
-import ApplicationTable from '../../components/Table';
+import ApplicationTable from "@/components/table";
 export default function dashboard() {
   return(
     <div className=''>
