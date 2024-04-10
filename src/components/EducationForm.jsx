@@ -63,8 +63,12 @@ export default function EducationForm() {
   return (
     <>
       <div className="flex space-x-6 justify-between items-center py-4">
-      <h1 className=" text-2xl text-[#5CA78F] cursor-default">Education</h1>
-        <Button  className="text-[#188665] font-light hover:bg-green-100" variant="ghost" onClick={addEducationEntry}>
+        <h1 className=" text-2xl text-[#5CA78F] cursor-default">Education</h1>
+        <Button
+          className="text-[#188665] font-light hover:bg-green-100"
+          variant="ghost"
+          onClick={addEducationEntry}
+        >
           + Add Education
         </Button>
       </div>

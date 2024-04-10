@@ -2,7 +2,7 @@ import NavBar from "@/components/NavBar"
 export default function Page() {
     return (
         <>
-        <NavBar/>
+        this is List of coverletters
         </>
     )
 }

@@ -1,7 +1,7 @@
-import { IoIosArrowBack, IoIosArrowForward } from 'react-icons/io';
+import { IoIosArrowBack, IoIosArrowForward } from "react-icons/io";
 
-export default function ToggleButton({ isCollapsed, toggleNavbar }){
-  const rightPosition = isCollapsed ? '-18px' : '-18px'; 
+export default function ToggleButton({ isCollapsed, toggleNavbar }) {
+  const rightPosition = isCollapsed ? "-18px" : "-18px";
   return (
     <div
       // style={{ right: rightPosition }}
@@ -15,4 +15,4 @@ export default function ToggleButton({ isCollapsed, toggleNavbar }){
       )}
     </div>
   );
-};
+}

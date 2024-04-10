@@ -99,7 +99,7 @@ const columns = [
     header: ({ column }) => {
       return (
         <Button
-          className='p-1'
+          className="p-1"
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
@@ -111,7 +111,10 @@ const columns = [
     cell: ({ row }) => (
       <div className="flex justify-center">
         {row.getValue("resume") && (
-          <a href={`/resumes/${row.getValue("resume")}`} className="text-red-700">
+          <a
+            href={`/resumes/${row.getValue("resume")}`}
+            className="text-red-700"
+          >
             <AiOutlineFilePdf className="mx-auto" size={20} />
           </a>
         )}
@@ -123,8 +126,7 @@ const columns = [
     header: ({ column }) => {
       return (
         <Button
-          className='p-1'
-
+          className="p-1"
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
@@ -136,7 +138,10 @@ const columns = [
     cell: ({ row }) => (
       <div className="flex justify-center">
         {row.original.coverLetter && (
-          <a href={`/cover-letters/${row.original.coverLetter}`} className="text-green-700">
+          <a
+            href={`/cover-letters/${row.original.coverLetter}`}
+            className="text-green-700"
+          >
             <AiOutlineFilePdf className="mx-auto" size={20} />
           </a>
         )}
@@ -156,9 +161,7 @@ const columns = [
         </Button>
       );
     },
-    cell: ({ row }) => (
-      <div className="">{row.getValue("companyName")}</div>
-    ),
+    cell: ({ row }) => <div className="">{row.getValue("companyName")}</div>,
   },
   {
     accessorKey: "role",
@@ -188,7 +191,9 @@ const columns = [
         </Button>
       );
     },
-    cell: ({ row }) => <div className="justify-center">{row.getValue("status")}</div>,
+    cell: ({ row }) => (
+      <div className="justify-center">{row.getValue("status")}</div>
+    ),
   },
   {
     accessorKey: "location",
@@ -259,9 +264,9 @@ const columns = [
             <DropdownMenuSeparator />
             <DropdownMenuItem>
               <a href={`/applications/${application.id}`}>
-              View application details
+                View application details
               </a>
-              </DropdownMenuItem>
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       );
@@ -330,7 +335,7 @@ function ApplicationTable() {
       </div>
       <div className="rounded-md border mx-4">
         <Table>
-          <TableHeader >
+          <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
               <TableRow key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
@@ -349,9 +354,7 @@ function ApplicationTable() {
           <TableBody>
             {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                >
+                <TableRow key={row.id}>
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
                       {flexRender(
@@ -378,7 +381,7 @@ function ApplicationTable() {
 
       <div className="flex items-center justify-between space-x-2 py-4 mx-4">
         <div>
-            <AddApplicationDialog />
+          <AddApplicationDialog />
         </div>
         <div className="space-x-2 ">
           <Button

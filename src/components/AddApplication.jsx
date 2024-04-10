@@ -50,7 +50,6 @@ export default function AddApplicationDialog() {
   const [comments, setComments] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-
   const handleSave = () => {
     console.log({
       resume,
@@ -68,7 +67,9 @@ export default function AddApplicationDialog() {
   return (
     <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" onClick={() => setIsDialogOpen(true)} >Add Application</Button>
+        <Button variant="outline" onClick={() => setIsDialogOpen(true)}>
+          Add Application
+        </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]lg:w-8/12">
         <DialogHeader>
@@ -138,11 +139,11 @@ export default function AddApplicationDialog() {
               className="col-span-3"
             /> */}
               <Select>
-                <SelectTrigger 
-                 id="status"
-                 value={status}
-                 onChange={(e) => setStatus(e.target.value)}
-                 className="w-[180px]"
+                <SelectTrigger
+                  id="status"
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value)}
+                  className="w-[180px]"
                 >
                   <SelectValue placeholder="Select Status" />
                 </SelectTrigger>

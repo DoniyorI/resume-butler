@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import EmblaCarousel from "@/components/Carousel";
 
 // import { useSignInWithEmailAndPassword } from "react-firebase-hooks/auth";
-import { auth } from "../firebase/config";
+import { auth } from "../../firebase/config";
 import { signInWithEmailAndPassword } from "firebase/auth";
 // import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 
@@ -26,7 +26,7 @@ export default function Login() {
     e.preventDefault();
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      router.push("/dashboard"); // Redirect the user after successful login, adjust as necessary
+      router.push("/"); // Redirect the user after successful login, adjust as necessary
     } catch (error) {
       alert(error.message); // Inform the user in case of an error
     }

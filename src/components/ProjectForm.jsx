@@ -91,16 +91,18 @@ export default function ProjectForm() {
 
   return (
     <>
-     <div className="flex space-x-6 justify-between items-center py-4">
-            <h1 className=" text-2xl text-[#5CA78F] cursor-default">Personal Project</h1>
-            <Button
-              className="text-[#188665] font-light hover:bg-green-100"
-              variant="ghost"
-              onClick={addProjectEntry}
-            >
-              + Add Education
-            </Button>
-          </div>
+      <div className="flex space-x-6 justify-between items-center py-4">
+        <h1 className=" text-2xl text-[#5CA78F] cursor-default">
+          Personal Project
+        </h1>
+        <Button
+          className="text-[#188665] font-light hover:bg-green-100"
+          variant="ghost"
+          onClick={addProjectEntry}
+        >
+          + Add Education
+        </Button>
+      </div>
       {projectEntries.map((entry, index) => (
         <div className="flex flex-col space-y-4 pb-8" key={index}>
           <div className="flex space-x-6">
@@ -209,24 +211,27 @@ export default function ProjectForm() {
                 updateCurrentlyWorking(index, checked)
               }
             />
-             <Label className="font-light" htmlFor={`currently-working-${index}`}>
+            <Label
+              className="font-light"
+              htmlFor={`currently-working-${index}`}
+            >
               Currently Working
             </Label>
           </div>
 
           {/* Instruction Text */}
           <div className="text-center font-light text-xs my-2">
-            Please add as much information about your role so we can better tailor to
-            the job application
+            Please add as much information about your role so we can better
+            tailor to the job application
           </div>
 
           {/* Description Bullet Points */}
           <div>
-          <div className="flex justify-between items-center">
+            <div className="flex justify-between items-center">
               <Label className="font-normal">Description</Label>
               <Button
-              className="text-[#188665] font-light hover:bg-green-100"
-              variant="ghost"
+                className="text-[#188665] font-light hover:bg-green-100"
+                variant="ghost"
                 onClick={() => addDescriptionBullet(index)}
               >
                 + Add

@@ -9,10 +9,9 @@ import { Label } from "@/components/ui/label";
 
 import EmblaCarousel from "@/components/Carousel";
 
-import { auth } from "../firebase/config";
+import { auth } from "../../firebase/config";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import GoogleAuthButton from "@/components/GoogleAuth";
-
 
 export default function Register() {
   const [email, setEmail] = useState("");
@@ -28,7 +27,7 @@ export default function Register() {
     }
     try {
       await createUserWithEmailAndPassword(auth, email, password);
-      router.push("/login"); // Redirect the user after successful registration, adjust as necessary
+      router.push("/login");
     } catch (error) {
       alert(error.message);
     }

@@ -28,11 +28,11 @@ export default function Navbar() {
 
   return (
     <>
-<div
-  className={`h-screen flex flex-col justify-between px-4 py-6 bg-[#E0F6EF] max-w-[215px] transition-all duration-300 ease-in-out sticky top-0 left-0 z-10 ${
-    isCollapsed ? "w-[70px]" : "w-[215px]"
-  }`}
->
+      <div
+        className={`h-screen flex flex-col justify-between px-4 py-6 bg-[#E0F6EF] max-w-[215px] transition-all duration-300 ease-in-out sticky top-0 left-0 z-10 ${
+          isCollapsed ? "w-[70px]" : "w-[215px]"
+        }`}
+      >
         <div className="flex flex-col space-y-2 p-2">
           <Link href="/" className="flex items-center space-x-2">
             <Image src={`/image/Logo.svg`} width={40} height={40} />

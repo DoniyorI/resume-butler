@@ -24,7 +24,7 @@ export default function CV() {
       </div>
       <div className="flex justify-center">
         <Tabs defaultValue="education">
-          <TabsList className="grid w-full grid-cols-4 lg:min-w-[750px]">
+          <TabsList className="grid w-full grid-cols-4 lg:w-[750px] ">
             <TabsTrigger value="education">Education</TabsTrigger>
             <TabsTrigger value="experiences">Experience</TabsTrigger>
             <TabsTrigger value="projects">Project</TabsTrigger>

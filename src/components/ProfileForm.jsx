@@ -16,21 +16,21 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 const profileSchema = z.object({
-    firstName: z.string().min(1, "First Name is required"),
-    lastName: z.string().min(1, "Last Name is required"),
-    username: z.string().min(2, "Username must be at least 2 characters"),
-    email: z.string().email("Invalid email address").optional(), // Assuming this is fetched and displayed
-    phoneNumber: z.string().min(1, "Phone Number is required"),
-    location: z.string().optional(),
-    linkedin: z.string().url("Invalid URL").optional().or(z.string().length(0)),
-    github: z.string().url("Invalid URL").optional().or(z.string().length(0)),
-    portfolio: z.string().url("Invalid URL").optional().or(z.string().length(0)),
-    otherLinks: z.string().url("Invalid URL").optional().or(z.string().length(0)),
-  });
+  firstName: z.string().min(1, "First Name is required"),
+  lastName: z.string().min(1, "Last Name is required"),
+  username: z.string().min(2, "Username must be at least 2 characters"),
+  email: z.string().email("Invalid email address").optional(), // Assuming this is fetched and displayed
+  phoneNumber: z.string().min(1, "Phone Number is required"),
+  location: z.string().optional(),
+  linkedin: z.string().url("Invalid URL").optional().or(z.string().length(0)),
+  github: z.string().url("Invalid URL").optional().or(z.string().length(0)),
+  portfolio: z.string().url("Invalid URL").optional().or(z.string().length(0)),
+  otherLinks: z.string().url("Invalid URL").optional().or(z.string().length(0)),
+});
 
 // The profile form component
 export default function ProfileForm() {
-    const router = useRouter();
+  const router = useRouter();
   const form = useForm({
     resolver: zodResolver(profileSchema),
     defaultValues: {
@@ -106,7 +106,12 @@ export default function ProfileForm() {
               <FormItem>
                 <FormLabel>{label}</FormLabel>
                 <FormControl>
-                  <Input {...field} placeholder={label} type={type} disabled={disabled} />
+                  <Input
+                    {...field}
+                    placeholder={label}
+                    type={type}
+                    disabled={disabled}
+                  />
                 </FormControl>
                 <FormDescription />
                 <FormMessage />
