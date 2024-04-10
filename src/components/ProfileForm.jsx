@@ -50,7 +50,7 @@ export default function ProfileForm() {
   // Form submission handler
   const onSubmit = (data) => {
     console.log(data);
-    router.push("/dashboard");
+    router.push("/cv");
     // Here you would typically integrate with backend API to update the profile
   };
 
