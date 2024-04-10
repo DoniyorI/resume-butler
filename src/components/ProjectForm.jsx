@@ -174,7 +174,12 @@ export default function ProjectForm() {
                   <PopoverTrigger asChild>
                     <Button
                       variant={"outline"}
-                      className="w-full justify-start text-left font-normal"
+                      className={`w-full justify-start text-left font-normal ${
+                        entry.currentlyWorking
+                          ? "opacity-50 cursor-not-allowed cur"
+                          : ""
+                      }`}
+                      disabled={entry.currentlyWorking}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {entry.endDate

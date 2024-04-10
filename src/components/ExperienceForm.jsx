@@ -103,18 +103,17 @@ export default function ExperienceForm() {
   return (
     <>
       <div className="flex space-x-6 justify-between items-center py-4">
-            <h1 className=" text-2xl text-[#5CA78F] cursor-default">Experience</h1>
-            <Button
-              className="text-[#188665] font-light hover:bg-green-100"
-              variant="ghost"
-              onClick={addExperienceEntry}
-            >
-              + Add Education
-            </Button>
-          </div>
+        <h1 className=" text-2xl text-[#5CA78F] cursor-default">Experience</h1>
+        <Button
+          className="text-[#188665] font-light hover:bg-green-100"
+          variant="ghost"
+          onClick={addExperienceEntry}
+        >
+          + Add Education
+        </Button>
+      </div>
       {experienceEntries.map((entry, index) => (
         <div className="flex flex-col space-y-4 pb-8" key={index}>
-         
           <div className="flex space-x-6">
             <div className="flex-grow">
               <Label>Company Name</Label>
@@ -212,7 +211,12 @@ export default function ExperienceForm() {
                   <PopoverTrigger asChild>
                     <Button
                       variant={"outline"}
-                      className="w-full justify-start text-left font-normal"
+                      className={`w-full justify-start text-left font-normal ${
+                        entry.currentlyWorking
+                          ? "opacity-50 cursor-not-allowed cur"
+                          : ""
+                      }`}
+                      disabled={entry.currentlyWorking}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {entry.endDate
@@ -242,15 +246,18 @@ export default function ExperienceForm() {
                 updateCurrentlyWorking(index, checked)
               }
             />
-            <Label className="font-light" htmlFor={`currently-working-${index}`}>
+            <Label
+              className="font-light"
+              htmlFor={`currently-working-${index}`}
+            >
               Currently Working
             </Label>
           </div>
 
           {/* Instruction Text */}
           <div className="text-center font-light text-xs my-2">
-            Please add as much information about your role so we can better tailor to
-            the job application
+            Please add as much information about your role so we can better
+            tailor to the job application
           </div>
 
           {/* Description Bullet Points */}
@@ -258,16 +265,15 @@ export default function ExperienceForm() {
             <div className="flex justify-between items-center">
               <Label className="font-normal">Description</Label>
               <Button
-              className="text-[#188665] font-light hover:bg-green-100"
-              variant="ghost"
+                className="text-[#188665] font-light hover:bg-green-100"
+                variant="ghost"
                 onClick={() => addDescriptionBullet(index)}
               >
                 + Add
               </Button>
             </div>
-            
+
             {entry.description.map((desc, dIndex) => (
-              
               <div
                 key={dIndex}
                 className="flex items-center ml-4 space-x-2 space-y-2"
