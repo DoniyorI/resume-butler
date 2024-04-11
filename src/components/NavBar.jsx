@@ -5,6 +5,7 @@ import Link from "next/link";
 import { MdSettings, MdLogout } from "react-icons/md";
 import { useRouter, usePathname } from "next/navigation";
 import ToggleButton from "./LogoutButton";
+import { Home, List, GraduationCap} from "lucide-react";
 
 export default function Navbar() {
   const router = useRouter();
@@ -25,6 +26,7 @@ export default function Navbar() {
       console.error("Logout error", error);
     }
   };
+  const textClass = isCollapsed ? "opacity-0" : "opacity-100";
 
   return (
     <>
@@ -37,7 +39,7 @@ export default function Navbar() {
           <Link href="/" className="flex items-center space-x-2">
             <Image src={`/image/Logo.svg`} alt="Logo" width={40} height={40} />
             {!isCollapsed && (
-              <span className="transition-opacity duration-300 ease-in-out opacity-100">
+              <span className="transition-opacity duration-500 opacity-100">
                 Resume Butler
               </span>
             )}
@@ -48,10 +50,10 @@ export default function Navbar() {
             )}
           </Link>
           <div className="flex-1 space-y-6 pt-10 overflow-y-auto">
-            <Link href="/" className="flex items-center space-x-2">
+            <Link href="/" className="flex items-center space-x-2"> 
               <Image src={`/image/Home.svg`} alt="Home" width={20} height={20} />
               {!isCollapsed && (
-                <span className="transition-opacity duration-300 ease-in-out opacity-100">
+                <span className="transition-opacity duration-200 ease-in-out opacity-100">
                   Home
                 </span>
               )}
@@ -115,6 +117,7 @@ export default function Navbar() {
             </Link>
             <Link href="/cv" className="flex items-center space-x-2">
               <Image src={`/image/CV.svg`} alt="CV" width={20} height={20} />
+              {/* <GraduationCap strokeWidth={1.25} /> */}
               {!isCollapsed && (
                 <span className="transition-opacity duration-300 ease-in-out opacity-100">
                   CV
@@ -135,40 +138,26 @@ export default function Navbar() {
           </div>
         </div>
         <div className="p-2">
-          <div className="flex flex-col space-y-2">
-            <Link href="/setting" className="flex items-center space-x-2">
-              <MdSettings size={20} />
-              {!isCollapsed && (
-                <span className="transition-opacity duration-300 ease-in-out opacity-100">
-                  Settings
-                </span>
-              )}
-              {isCollapsed && (
-                <span className="transition-opacity duration-300 ease-in-out opacity-0">
-                  Settings
-                </span>
-              )}
-            </Link>
-            <Link
-              href="/login"
-              onClick={handleLogout}
-              className="flex items-center space-x-2"
-            >
-              <MdLogout />
-              {!isCollapsed && (
-                <span className="transition-opacity duration-300 ease-in-out opacity-100">
-                  Logout
-                </span>
-              )}
-              {isCollapsed && (
-                <span className="transition-opacity duration-300 ease-in-out opacity-0">
-                  Logout
-                </span>
-              )}
-            </Link>
-          </div>
+        <div className="flex flex-col space-y-2">
+          {/* <Link href="/settings" className="flex items-center space-x-2">
+            <MdSettings size={20} />
+            <span className={`transition-opacity duration-300 ease-in-out ${textClass}`}>
+              Settings
+            </span>
+          </Link> */}
+          <Link
+            href="/login"
+            onClick={handleLogout}
+            className="flex items-center space-x-2"
+          >
+            <MdLogout />
+            <span className={`transition-opacity duration-300 ease-in-out ${textClass}`}>
+              Logout
+            </span>
+          </Link>
         </div>
       </div>
+    </div>
     </>
   );
 }

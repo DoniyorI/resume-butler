@@ -1,8 +1,7 @@
 "use client";
+
 import React, { useState } from "react";
-// import Image from "next/image";
 import { AiOutlineFilePdf } from "react-icons/ai";
-// import { Link } from "next/link";
 import {
   flexRender,
   getCoreRowModel,
@@ -14,7 +13,7 @@ import {
 import { ArrowUpDown, ChevronDown, MoreHorizontal } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-// import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -64,7 +63,7 @@ const data = [
     coverLetter: "coverletter_file_1.pdf",
     companyName: "Company C",
     role: "Product Manager",
-    status: "accepted",
+    status: "offered",
     location: "Chicago, IL",
     date: "2023-04-01",
     comments: "Great fit for the role",
@@ -92,6 +91,24 @@ const data = [
     comments: "Needs more experience",
   },
 ];
+
+const logAppIdAndStatus = (id, newStatus) => {
+  console.log(`Changing status for ID ${id} to ${newStatus}`);
+};
+
+
+const getBadgeVariant = (status) => {
+  const statusToVariantMapping = {
+    "in progress": "inProgress",
+    pending: "pending",
+    offered: "offered",
+    interviewed: "interviewed",
+    rejected: "rejected",
+    withdrew: "withdrew",
+  };
+
+  return statusToVariantMapping[status] || "default";
+};
 
 const columns = [
   {
@@ -192,7 +209,53 @@ const columns = [
       );
     },
     cell: ({ row }) => (
-      <div className="justify-center">{row.getValue("status")}</div>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" className="outline-none select-none">
+            <Badge variant={getBadgeVariant(row.getValue("status"))}>
+              {row.getValue("status")}
+            </Badge>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="text-sm">
+          <DropdownMenuItem
+            onClick={() => logAppIdAndStatus(row.id,"In Progress")}
+            className="text-xs cursor-pointer"
+          >
+            <Badge variant="inProgress">In Progress</Badge>
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => logAppIdAndStatus(row.id,"Pending")}
+            className="text-xs cursor-pointer"
+          >
+            <Badge variant="pending">Pending</Badge>
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => logAppIdAndStatus(row.id,"Interviewed")}
+            className="text-xs cursor-pointer"
+          >
+            <Badge variant="interviewed">Interviewed</Badge>
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => logAppIdAndStatus(row.id,"Rejected")}
+            className="text-xs cursor-pointer"
+          >
+            <Badge variant="rejected">Rejected</Badge>
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => logAppIdAndStatus(row.id,"Offered")}
+            className="text-xs cursor-pointer"
+          >
+            <Badge variant="offered">Offered</Badge>
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onClick={() => logAppIdAndStatus(row.id,"Withdrew")}
+            className="text-xs cursor-pointer"
+          >
+            <Badge variant="withdrew">Withdrew</Badge>
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     ),
   },
   {

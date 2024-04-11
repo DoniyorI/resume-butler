@@ -101,7 +101,7 @@ export default function Page() {
         />
         <Select defaultValue="Recently Opened" onValueChange={setSortOrder}>
           <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Recently Opened"/>
+            <SelectValue placeholder="Recently Opened" />
           </SelectTrigger>
           <SelectContent>
             <SelectGroup>
