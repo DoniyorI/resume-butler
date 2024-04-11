@@ -35,7 +35,7 @@ export default function Navbar() {
       >
         <div className="flex flex-col space-y-2 p-2">
           <Link href="/" className="flex items-center space-x-2">
-            <Image src={`/image/Logo.svg`} width={40} height={40} />
+            <Image src={`/image/Logo.svg`} alt="Logo" width={40} height={40} />
             {!isCollapsed && (
               <span className="transition-opacity duration-300 ease-in-out opacity-100">
                 Resume Butler
@@ -49,7 +49,7 @@ export default function Navbar() {
           </Link>
           <div className="flex-1 space-y-6 pt-10 overflow-y-auto">
             <Link href="/" className="flex items-center space-x-2">
-              <Image src={`/image/Home.svg`} width={20} height={20} />
+              <Image src={`/image/Home.svg`} alt="Home" width={20} height={20} />
               {!isCollapsed && (
                 <span className="transition-opacity duration-300 ease-in-out opacity-100">
                   Home
@@ -62,7 +62,7 @@ export default function Navbar() {
               )}
             </Link>
             <Link href="/profile" className="flex items-center space-x-2">
-              <Image src={`/image/Profile.svg`} width={20} height={20} />
+              <Image src={`/image/Profile.svg`} alt="profile" width={20} height={20} />
               {!isCollapsed && (
                 <span className="transition-opacity duration-300 ease-in-out opacity-100">
                   Profile
@@ -75,7 +75,7 @@ export default function Navbar() {
               )}
             </Link>
             <Link href="/applications" className="flex items-center space-x-2">
-              <Image src={`/image/Applications.svg`} width={20} height={20} />
+              <Image src={`/image/Applications.svg`} alt="Applications" width={20} height={20} />
               {!isCollapsed && (
                 <span className="transition-opacity duration-300 ease-in-out opacity-100">
                   Application
@@ -88,7 +88,7 @@ export default function Navbar() {
               )}
             </Link>
             <Link href="/resumes" className="flex items-center space-x-2">
-              <Image src={`/image/Resume.svg`} width={20} height={20} />
+              <Image src={`/image/Resume.svg`} alt="Resumes" width={20} height={20} />
               {!isCollapsed && (
                 <span className="transition-opacity duration-300 ease-in-out opacity-100">
                   Resumes
@@ -101,7 +101,7 @@ export default function Navbar() {
               )}
             </Link>
             <Link href="/coverletters" className="flex items-center space-x-2">
-              <Image src={`/image/CoverLetter.svg`} width={20} height={20} />
+              <Image src={`/image/CoverLetter.svg`} alt="Cover Letter" width={20} height={20} />
               {!isCollapsed && (
                 <span className="transition-opacity duration-300 ease-in-out opacity-100">
                   Cover Letters
@@ -114,7 +114,7 @@ export default function Navbar() {
               )}
             </Link>
             <Link href="/cv" className="flex items-center space-x-2">
-              <Image src={`/image/CV.svg`} width={20} height={20} />
+              <Image src={`/image/CV.svg`} alt="CV" width={20} height={20} />
               {!isCollapsed && (
                 <span className="transition-opacity duration-300 ease-in-out opacity-100">
                   CV
