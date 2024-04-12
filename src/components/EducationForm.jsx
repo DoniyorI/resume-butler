@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
+import { cn } from "@/lib/utils"
 
 export default function EducationForm() {
   const [educationEntries, setEducationEntries] = useState([
@@ -52,7 +53,10 @@ export default function EducationForm() {
       if (idx === index) {
         return { ...entry, [field]: value };
       }
+      console.log(entry.startDate)
+
       return entry;
+      
     });
     setEducationEntries(updatedEntries);
   };
@@ -138,22 +142,28 @@ export default function EducationForm() {
                   <PopoverTrigger asChild>
                     <Button
                       variant={"outline"}
-                      className="w-full justify-start text-left font-normal"
+                      className={cn(
+                        "w-[240px] justify-start text-left font-normal",
+                        !entry.startDate && "text-muted-foreground"
+                      )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {entry.startDate
                         ? format(new Date(entry.startDate), "PPP")
-                        : "Select Start Date"}
+                        : "Select End Date"}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
+                  <PopoverContent align="start" className=" w-auto p-0">
                     <Calendar
                       mode="single"
+                      captionLayout="dropdown-buttons"
                       selected={entry.startDate}
                       onSelect={(date) =>
                         updateEducationEntry(index, "startDate", date)
                       }
-                      initialFocus
+                      fromYear={1960}
+                      toYear={2030}
+                      
                     />
                   </PopoverContent>
                 </Popover>
@@ -164,11 +174,14 @@ export default function EducationForm() {
                 End Date
               </Label>
               <div className="col-span-3">
-                <Popover>
+              <Popover>
                   <PopoverTrigger asChild>
                     <Button
                       variant={"outline"}
-                      className="w-full justify-start text-left font-normal"
+                      className={cn(
+                        "w-[240px] justify-start text-left font-normal",
+                        !entry.endDate && "text-muted-foreground"
+                      )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {entry.endDate
@@ -176,14 +189,17 @@ export default function EducationForm() {
                         : "Select End Date"}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
+                  <PopoverContent align="start" className=" w-auto p-0">
                     <Calendar
                       mode="single"
+                      captionLayout="dropdown-buttons"
                       selected={entry.endDate}
                       onSelect={(date) =>
                         updateEducationEntry(index, "endDate", date)
                       }
-                      initialFocus
+                      fromYear={1960}
+                      toYear={2030}
+                      
                     />
                   </PopoverContent>
                 </Popover>

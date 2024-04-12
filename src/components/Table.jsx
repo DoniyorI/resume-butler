@@ -33,6 +33,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import AddApplicationDialog from "@/components/AddApplication";
+import Link from "next/link";
 
 const data = [
   {
@@ -92,23 +93,27 @@ const data = [
   },
 ];
 
-const logAppIdAndStatus = (id, newStatus) => {
+const updateStatus = (id, newStatus) => {
   console.log(`Changing status for ID ${id} to ${newStatus}`);
 };
 
-
-const getBadgeVariant = (status) => {
-  const statusToVariantMapping = {
-    "in progress": "inProgress",
-    pending: "pending",
-    offered: "offered",
-    interviewed: "interviewed",
-    rejected: "rejected",
-    withdrew: "withdrew",
-  };
-
-  return statusToVariantMapping[status] || "default";
+const updateComment = (id, newComment) => {
+  console.log(`Updating comment for ID ${id} to ${newComment}`);
 };
+
+
+// const getBadgeVariant = (status) => {
+//   const statusToVariantMapping = {
+//     applied: "applied",
+//     pending: "pending",
+//     offered: "offered",
+//     interviewed: "interviewed",
+//     rejected: "rejected",
+//     withdrew: "withdrew",
+//   };
+
+//   return statusToVariantMapping[status] || "default";
+// };
 
 const columns = [
   {
@@ -208,55 +213,35 @@ const columns = [
         </Button>
       );
     },
-    cell: ({ row }) => (
-      <DropdownMenu>
+    cell: ({ row }) => {
+        const [value, setValue] = useState(row.getValue("status"));
+        const handleChange = (newStatus) => {
+          updateStatus(row.id, newStatus); // Update the status in the database
+          setValue(newStatus);
+        };
+      return(
+        <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" className="outline-none select-none">
-            <Badge variant={getBadgeVariant(row.getValue("status"))}>
-              {row.getValue("status")}
+            <Badge variant={value.toLowerCase()}>
+              {value}
             </Badge>
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="text-sm">
-          <DropdownMenuItem
-            onClick={() => logAppIdAndStatus(row.id,"In Progress")}
-            className="text-xs cursor-pointer"
-          >
-            <Badge variant="inProgress">In Progress</Badge>
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={() => logAppIdAndStatus(row.id,"Pending")}
-            className="text-xs cursor-pointer"
-          >
-            <Badge variant="pending">Pending</Badge>
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={() => logAppIdAndStatus(row.id,"Interviewed")}
-            className="text-xs cursor-pointer"
-          >
-            <Badge variant="interviewed">Interviewed</Badge>
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={() => logAppIdAndStatus(row.id,"Rejected")}
-            className="text-xs cursor-pointer"
-          >
-            <Badge variant="rejected">Rejected</Badge>
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={() => logAppIdAndStatus(row.id,"Offered")}
-            className="text-xs cursor-pointer"
-          >
-            <Badge variant="offered">Offered</Badge>
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            onClick={() => logAppIdAndStatus(row.id,"Withdrew")}
-            className="text-xs cursor-pointer"
-          >
-            <Badge variant="withdrew">Withdrew</Badge>
-          </DropdownMenuItem>
+        <DropdownMenuContent align="start" className="text-sm">
+          {["Applied", "Interviewed", "Pending", "Rejected", "Offered", "Withdrew"].map(status => (
+            <DropdownMenuItem
+              key={status}
+              onClick={() => handleChange(status)}
+              className="text-xs cursor-pointer"
+            >
+              <Badge variant={status.toLowerCase()}>{status}</Badge>
+            </DropdownMenuItem>
+          ))}
         </DropdownMenuContent>
       </DropdownMenu>
-    ),
+      );
+    }
   },
   {
     accessorKey: "location",
@@ -301,7 +286,39 @@ const columns = [
         </Button>
       );
     },
-    cell: ({ row }) => <div className="">{row.getValue("comments")}</div>,
+    cell: ({ row }) => {
+      const [editing, setEditing] = useState(false);
+      const [value, setValue] = useState(row.getValue("comments"));
+    
+      const toggleEdit = () => {
+        setEditing(!editing);
+      };
+    
+      const handleChange = (e) => {
+        setValue(e.target.value);
+      };
+      
+      const handleBlur = () => {
+        updateComment(row.id, value); // Update the comment in the database
+        setEditing(false);
+      };
+    
+      return (
+        <div onDoubleClick={toggleEdit}>
+          {editing ? (
+            <Input
+              type="text"
+              value={value}
+              onChange={handleChange}
+              onBlur={handleBlur}
+              autoFocus
+            />
+          ) : (
+            <span>{value}</span>
+          )}
+        </div>
+      );
+    },
   },
   {
     id: "actions",
@@ -318,17 +335,17 @@ const columns = [
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-            <DropdownMenuItem
+            {/* <DropdownMenuLabel>Actions</DropdownMenuLabel> */}
+            {/* <DropdownMenuItem
               onClick={() => navigator.clipboard.writeText(application.id)}
             >
               Copy application ID
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
+            </DropdownMenuItem> */}
+            {/* <DropdownMenuSeparator /> */}
             <DropdownMenuItem>
-              <a href={`/applications/${application.id}`}>
+              <Link href={`/applications/${application.id}`}>
                 View application details
-              </a>
+              </Link>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

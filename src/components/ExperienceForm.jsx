@@ -20,8 +20,8 @@ import {
 } from "@/components/ui/select";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
-
 import { format } from "date-fns";
+import { cn } from "@/lib/utils"
 
 export default function ExperienceForm() {
   const [experienceEntries, setExperienceEntries] = useState([
@@ -181,22 +181,27 @@ export default function ExperienceForm() {
                   <PopoverTrigger asChild>
                     <Button
                       variant={"outline"}
-                      className="w-full justify-start text-left font-normal"
+                      className={cn(
+                        "w-[240px] justify-start text-left font-normal",
+                        !entry.startDate && "text-muted-foreground"
+                      )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {entry.startDate
                         ? format(new Date(entry.startDate), "PPP")
-                        : "Select Start Date"}
+                        : "Select End Date"}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
+                  <PopoverContent align="start" className=" w-auto p-0">
                     <Calendar
                       mode="single"
+                      captionLayout="dropdown-buttons"
                       selected={entry.startDate}
                       onSelect={(date) =>
                         updateExperienceEntry(index, "startDate", date)
                       }
-                      initialFocus
+                      fromYear={1960}
+                      toYear={2030}
                     />
                   </PopoverContent>
                 </Popover>
@@ -211,12 +216,10 @@ export default function ExperienceForm() {
                   <PopoverTrigger asChild>
                     <Button
                       variant={"outline"}
-                      className={`w-full justify-start text-left font-normal ${
-                        entry.currentlyWorking
-                          ? "opacity-50 cursor-not-allowed cur"
-                          : ""
-                      }`}
-                      disabled={entry.currentlyWorking}
+                      className={cn(
+                        "w-[240px] justify-start text-left font-normal",
+                        !entry.endDate && "text-muted-foreground"
+                      )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
                       {entry.endDate
@@ -224,14 +227,16 @@ export default function ExperienceForm() {
                         : "Select End Date"}
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0">
+                  <PopoverContent align="start" className=" w-auto p-0">
                     <Calendar
                       mode="single"
+                      captionLayout="dropdown-buttons"
                       selected={entry.endDate}
                       onSelect={(date) =>
                         updateExperienceEntry(index, "endDate", date)
                       }
-                      initialFocus
+                      fromYear={1960}
+                      toYear={2030}
                     />
                   </PopoverContent>
                 </Popover>
