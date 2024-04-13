@@ -4,8 +4,7 @@ import React from "react";
 import { useState, useEffect } from "react";
 import { EllipsisVertical } from "lucide-react";
 import { FiDownload, FiTrash2 } from "react-icons/fi";
-import { MdOutlineEdit } from "react-icons/md";
-
+import { MdOutlineEdit } from "react-icons/md"
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -19,10 +18,11 @@ import {
   SelectContent,
   SelectGroup,
   SelectItem,
-  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+
+import ResumeDialog from "@/components/ResumeDialog";
 
 const FetchedResumes = [
   {
@@ -52,6 +52,8 @@ const FetchedResumes = [
 ];
 
 export default function Page() {
+  const [isHovered, setIsHovered] = useState(false);
+
   const [resumes, setResumes] = useState(FetchedResumes);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortOrder, setSortOrder] = useState("Recently Opened");
@@ -177,6 +179,8 @@ export default function Page() {
             </div>
           </div>
         ))}
+        <ResumeDialog />
+    
       </div>
     </div>
   );
