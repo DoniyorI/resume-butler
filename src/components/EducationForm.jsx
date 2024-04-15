@@ -1,5 +1,17 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { auth, db } from "@/lib/firebase/config";
+import {
+  collection,
+  doc,
+  getDocs,
+  addDoc,
+  updateDoc,
+  Timestamp
+} from "firebase/firestore";
+import { onAuthStateChanged } from "firebase/auth";
+import { format } from "date-fns";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,32 +31,32 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Calendar as CalendarIcon } from "lucide-react";
-import { format } from "date-fns";
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
 
 export default function EducationForm() {
-  const [educationEntries, setEducationEntries] = useState([
-    {
-      school: "",
-      major: "",
-      degreeType: "",
-      gpa: "",
-      startDate: "",
-      endDate: "",
-    },
-  ]);
+  const [educationEntries, setEducationEntries] = useState([]);
+  const [user, setUser] = useState(null);
+  const router = useRouter();
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
+      if (authUser) {
+        setUser(authUser);
+        const educationCollectionRef = collection(db, "users", authUser.uid, "education");
+        const snapshot = await getDocs(educationCollectionRef);
+        const educationData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), startDate: doc.data().startDate?.toDate() || "", endDate: doc.data().endDate?.toDate() || "" }));
+        setEducationEntries(educationData);
+      } else {
+        router.push("/login");
+      }
+    });
+    return () => unsubscribe();
+  }, [router]);
 
   const addEducationEntry = () => {
     setEducationEntries([
       ...educationEntries,
-      {
-        school: "",
-        major: "",
-        degreeType: "",
-        gpa: "",
-        startDate: new Date(),
-        endDate: new Date(),
-      },
+      { school: "", major: "", degreeType: "", gpa: "", startDate: "", endDate: "", isNew: true },
     ]);
   };
 
@@ -53,17 +65,37 @@ export default function EducationForm() {
       if (idx === index) {
         return { ...entry, [field]: value };
       }
-      console.log(entry.startDate)
-
       return entry;
-      
     });
     setEducationEntries(updatedEntries);
   };
 
-  const handleSave = () => {
-    console.log(educationEntries);
+  const handleSave = async () => {
+    if (user) {
+      const educationCollectionRef = collection(db, "users", user.uid, "education");
+      try {
+        await Promise.all(educationEntries.map(entry => {
+          const { id, isNew, ...data } = entry;
+          const entryWithTimestamps = {
+            ...data,
+            startDate: data.startDate ? Timestamp.fromDate(new Date(data.startDate)) : null,
+            endDate: data.endDate ? Timestamp.fromDate(new Date(data.endDate)) : null,
+          };
+          return isNew
+            ? addDoc(educationCollectionRef, entryWithTimestamps)
+            : updateDoc(doc(db, "users", user.uid, "education", id), entryWithTimestamps);
+        }));
+        alert("Education entries saved successfully!");
+      } catch (error) {
+        console.error("Error saving education entries: ", error);
+        alert("Failed to save education entries.");
+      }
+    }
   };
+
+  if (!user) {
+    return <div>Loading...</div>;
+  }
   return (
     <>
       <div className="flex space-x-6 justify-between items-center py-4">
@@ -99,14 +131,13 @@ export default function EducationForm() {
             </div>
             <div>
               <Label>Degree Type</Label>
-              <Select>
-                <SelectTrigger
-                  value={entry.degreeType}
-                  onChange={(e) =>
-                    updateEducationEntry(index, "degreeType", e.target.value)
-                  }
-                  className="max-w-[200px] md:w-[200px]"
-                >
+              <Select
+                value={entry.degreeType}
+                onValueChange={(value) =>
+                  updateEducationEntry(index, "degreeType", value)
+                }
+              >
+                <SelectTrigger className="max-w-[200px] md:w-[200px]">
                   <SelectValue placeholder="Select Degree Type" />
                 </SelectTrigger>
                 <SelectContent>
@@ -163,7 +194,6 @@ export default function EducationForm() {
                       }
                       fromYear={1960}
                       toYear={2030}
-                      
                     />
                   </PopoverContent>
                 </Popover>
@@ -174,7 +204,7 @@ export default function EducationForm() {
                 End Date
               </Label>
               <div className="col-span-3">
-              <Popover>
+                <Popover>
                   <PopoverTrigger asChild>
                     <Button
                       variant={"outline"}
@@ -199,7 +229,6 @@ export default function EducationForm() {
                       }
                       fromYear={1960}
                       toYear={2030}
-                      
                     />
                   </PopoverContent>
                 </Popover>

@@ -1,5 +1,17 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { auth, db } from "@/lib/firebase/config";
+import {
+  collection,
+  doc,
+  getDocs,
+  addDoc,
+  updateDoc,
+  Timestamp
+} from "firebase/firestore";
+import { onAuthStateChanged } from "firebase/auth";
+import { format } from "date-fns";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +24,7 @@ import {
 } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar as CalendarIcon } from "lucide-react";
-import { format } from "date-fns";
+
 import { cn } from "@/lib/utils"
 
 export default function ProjectForm() {
@@ -28,6 +40,29 @@ export default function ProjectForm() {
     },
   ]);
 
+  const [user, setUser] = useState(null);
+  const router = useRouter();
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
+      if (authUser) {
+        setUser(authUser);
+        const projectsCollectionRef = collection(db, "users", authUser.uid, "projects");
+        const snapshot = await getDocs(projectsCollectionRef);
+        const projectData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          startDate: doc.data().startDate?.toDate() || "",
+          endDate: doc.data().endDate?.toDate() || ""
+        }));
+        setProjectEntries(projectData);
+      } else {
+        router.push("/login");
+      }
+    });
+    return () => unsubscribe();
+  }, [router]);
+
   const addProjectEntry = () => {
     setProjectEntries([
       ...projectEntries,
@@ -39,6 +74,7 @@ export default function ProjectForm() {
         startDate: "",
         endDate: "",
         description: [""], // Initialize with one empty string for the first bullet point
+        isNew: true,
       },
     ]);
   };
@@ -52,6 +88,31 @@ export default function ProjectForm() {
     });
     setProjectEntries(updatedEntries);
   };
+
+  const handleSave = async () => {
+    if (user) {
+      const projectsCollectionRef = collection(db, "users", user.uid, "projects");
+      try {
+        await Promise.all(projectEntries.map(entry => {
+          const { id, isNew, ...data } = entry;
+          const entryWithTimestamps = {
+            ...data,
+            startDate: data.startDate ? Timestamp.fromDate(new Date(data.startDate)) : null,
+            endDate: data.endDate ? Timestamp.fromDate(new Date(data.endDate)) : null,
+          };
+          return isNew
+            ? addDoc(projectsCollectionRef, entryWithTimestamps)
+            : updateDoc(doc(db, "users", user.uid, "projects", id), entryWithTimestamps);
+        }));
+        alert("Project entries saved successfully!");
+      } catch (error) {
+        console.error("Error saving project entries: ", error);
+        alert("Failed to save project entries.");
+      }
+    }
+  };
+
+
 
   const updateCurrentlyWorking = (index, checked) => {
     const updatedEntries = projectEntries.map((entry, idx) =>
@@ -84,10 +145,6 @@ export default function ProjectForm() {
       return entry;
     });
     setProjectEntries(updatedEntries);
-  };
-
-  const handleSave = () => {
-    console.log(projectEntries);
   };
 
   return (

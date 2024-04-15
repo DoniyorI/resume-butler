@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label";
 
 import EmblaCarousel from "@/components/Carousel";
 
-import { auth } from "../../firebase/config";
+import { auth, db } from "@/lib/firebase/config";
+import { doc, setDoc } from "firebase/firestore";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import GoogleAuthButton from "@/components/GoogleAuth";
 
@@ -26,12 +27,23 @@ export default function Register() {
       return;
     }
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
-      router.push("/login");
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+      // Set up a new document in the 'users' collection with the user's UID
+      await setDoc(doc(db, 'users', user.uid), {
+        email: user.email // You can add more default fields here if needed
+      });
+      router.push('/profile'); // Redirect to the profile page
     } catch (error) {
-      alert(error.message);
+      console.error('Error creating new user: ', error);
+      if (error.code === 'auth/email-already-in-use') {
+        alert('This email is already in use by another account.');
+      } else {
+        alert('Failed to create account. Please try again later.');
+      }
     }
   };
+  
 
   return (
     <div className="w-full flex min-h-screen">

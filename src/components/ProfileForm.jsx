@@ -1,5 +1,6 @@
 "use client";
 import React from "react";
+import { useEffect, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -15,6 +16,10 @@ import {
   FormDescription,
   FormMessage,
 } from "@/components/ui/form";
+import { auth, db } from "@/lib/firebase/config";
+import { doc, setDoc, getDoc } from "firebase/firestore";
+import { onAuthStateChanged } from "firebase/auth";
+
 const profileSchema = z.object({
   firstName: z.string().min(1, "First Name is required"),
   lastName: z.string().min(1, "Last Name is required"),
@@ -30,6 +35,8 @@ const profileSchema = z.object({
 
 // The profile form component
 export default function ProfileForm() {
+  const [user, setUser] = useState(null);
+  const [initialLoading, setInitialLoading] = useState(true);
   const router = useRouter();
   const form = useForm({
     resolver: zodResolver(profileSchema),
@@ -37,7 +44,7 @@ export default function ProfileForm() {
       firstName: "",
       lastName: "",
       username: "",
-      email: "example@resumebutler.io", // Assuming this is fetched elsewhere
+      email: "example@resumebutler.io",
       phoneNumber: "",
       location: "",
       linkedin: "",
@@ -46,16 +53,55 @@ export default function ProfileForm() {
       otherLinks: "",
     },
   });
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        setUser(user);
+        // Fetch the user's document from Firestore
+        const userDoc = await getDoc(doc(db, "users", user.uid));
+        if (userDoc.exists()) {
+          // Populate the form with the existing data
+          form.reset(userDoc.data());
+        } else {
+          // No document found, create it with the email address
+          await setDoc(doc(db, "users", user.uid), { email: user.email });
+          form.setValue("email", user.email);
+        }
+        setInitialLoading(false);
+      } else {
+        // Not signed in
+        router.push("/login");
+      }
+    });
 
-  // Form submission handler
-  const onSubmit = (data) => {
-    console.log(data);
-    router.push("/cv");
-    // Here you would typically integrate with backend API to update the profile
+    return () => unsubscribe();
+  }, [form, router]);
+
+  const onSubmit = async (data) => {
+    if (!user) {
+      console.error("No user authenticated");
+      return;
+    }
+    // Convert any undefined optional fields to null
+    const sanitizedData = Object.keys(data).reduce((acc, key) => {
+      acc[key] = data[key] === undefined ? null : data[key];
+      return acc;
+    }, {});
+    try {
+      await setDoc(doc(db, "users", user.uid), sanitizedData, { merge: true });
+      router.push("/cv"); // Navigate to CV page or confirmation page
+    } catch (error) {
+      console.error("Error updating profile: ", error);
+      // Handle error (e.g., show error message to user)
+    }
   };
 
+  if (initialLoading) {
+    return <div>Loading...</div>; // Or your loading component
+  }
+
   return (
-    <Form {...form}>
+    <Form {...form} onSubmit={form.handleSubmit(onSubmit)}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="w-full space-y-6">
         <div className="flex space-x-4">
           {/* First Name and Last Name in the same row */}

@@ -1,5 +1,8 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { db, auth } from "@/lib/firebase/config";
+import { doc, updateDoc, arrayUnion, arrayRemove, getDoc } from "firebase/firestore";
+import { onAuthStateChanged } from "firebase/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { RiDeleteBack2Line } from "react-icons/ri";
@@ -7,20 +10,45 @@ import { RiDeleteBack2Line } from "react-icons/ri";
 export default function SkillForm() {
   const [skills, setSkills] = useState([]);
   const [newSkill, setNewSkill] = useState("");
-  const handleAddSkill = () => {
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
+      if (authUser) {
+        setUser(authUser);
+        const userDocRef = doc(db, "users", authUser.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        if (userDocSnap.exists() && userDocSnap.data().skills) {
+          setSkills(userDocSnap.data().skills);
+        }
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const handleAddSkill = async () => {
     if (newSkill.trim() !== "") {
-      setSkills([...skills, { value: newSkill, isEditable: false }]);
+      const userDocRef = doc(db, "users", user.uid);
+      await updateDoc(userDocRef, {
+        skills: arrayUnion(newSkill.trim())
+      });
+      setSkills([...skills, newSkill.trim()]);
       setNewSkill("");
     }
   };
-  const handleDeleteSkill = (index) => {
-    const filteredSkills = skills.filter((_, i) => i !== index);
-    setSkills(filteredSkills);
+
+  const handleDeleteSkill = async (skillToRemove) => {
+    const userDocRef = doc(db, "users", user.uid);
+    await updateDoc(userDocRef, {
+      skills: arrayRemove(skillToRemove)
+    });
+    setSkills(skills.filter(skill => skill !== skillToRemove));
   };
+
   return (
     <div>
       <div className="flex space-x-6 justify-between items-center py-4">
-        <h1 className=" text-2xl text-[#5CA78F] cursor-default">
+        <h1 className="text-2xl text-[#5CA78F] cursor-default">
           Technical Skills
         </h1>
       </div>
@@ -52,14 +80,14 @@ export default function SkillForm() {
               key={index}
               style={{
                 transform: `rotate(${rotation}deg)`,
-                zIndex: zIndex,
+                zIndex
               }}
               className="bg-green-100 hover:bg-green-200 py-1 pl-4 pr-2 space-x-2 rounded-md flex items-center shadow-lg"
             >
-              <div className="font-light text-sm">{skill.value}</div>
+              <div className="font-light text-sm">{skill}</div>
               <div className="text-red-500 hover:bg-emerald-100 rounded-md p-2">
                 <RiDeleteBack2Line
-                  onClick={() => handleDeleteSkill(index)}
+                  onClick={() => handleDeleteSkill(skill)}
                   className=""
                 />
               </div>

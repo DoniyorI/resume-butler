@@ -1,5 +1,16 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { auth, db } from "@/lib/firebase/config";
+import {
+  collection,
+  doc,
+  getDocs,
+  addDoc,
+  updateDoc,
+  Timestamp
+} from "firebase/firestore";
+import { onAuthStateChanged } from "firebase/auth";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,19 +34,31 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils"
 
+
 export default function ExperienceForm() {
-  const [experienceEntries, setExperienceEntries] = useState([
-    {
-      companyName: "",
-      location: "",
-      position: "",
-      experienceType: "",
-      currentlyWorking: false,
-      startDate: "",
-      endDate: "",
-      description: [""], // Initialize with one empty string for the first bullet point
-    },
-  ]);
+  const [experienceEntries, setExperienceEntries] = useState([]);
+  const [user, setUser] = useState(null);
+  const router = useRouter();
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
+      if (authUser) {
+        setUser(authUser);
+        const experienceCollectionRef = collection(db, "users", authUser.uid, "experience");
+        const snapshot = await getDocs(experienceCollectionRef);
+        const experienceData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          startDate: doc.data().startDate?.toDate() || "",
+          endDate: doc.data().endDate?.toDate() || ""
+        }));
+        setExperienceEntries(experienceData);
+      } else {
+        router.push("/login");
+      }
+    });
+    return () => unsubscribe();
+  }, [router]);
 
   const addExperienceEntry = () => {
     setExperienceEntries([
@@ -49,11 +72,20 @@ export default function ExperienceForm() {
         startDate: "",
         endDate: "",
         description: [""], // Initialize with one empty string for the first bullet point
+        isNew: true,
       },
     ]);
   };
+  const updateCurrentlyWorking = (index, checked) => {
+    const updatedEntries = experienceEntries.map((entry, idx) =>
+      idx === index ? { ...entry, currentlyWorking: checked } : entry
+    );
+    setExperienceEntries(updatedEntries);
+  };
+
 
   const updateExperienceEntry = (index, field, value) => {
+    console.log("updateExperienceEntry", index, field, value);
     const updatedEntries = experienceEntries.map((entry, idx) => {
       if (idx === index) {
         return { ...entry, [field]: value };
@@ -62,14 +94,6 @@ export default function ExperienceForm() {
     });
     setExperienceEntries(updatedEntries);
   };
-
-  const updateCurrentlyWorking = (index, checked) => {
-    const updatedEntries = experienceEntries.map((entry, idx) =>
-      idx === index ? { ...entry, currentlyWorking: checked } : entry
-    );
-    setExperienceEntries(updatedEntries);
-  };
-
   const addDescriptionBullet = (index) => {
     const updatedEntries = experienceEntries.map((entry, idx) => {
       if (idx === index) {
@@ -96,8 +120,27 @@ export default function ExperienceForm() {
     setExperienceEntries(updatedEntries);
   };
 
-  const handleSave = () => {
-    console.log(experienceEntries);
+  const handleSave = async () => {
+    if (user) {
+      const experienceCollectionRef = collection(db, "users", user.uid, "experience");
+      try {
+        await Promise.all(experienceEntries.map(entry => {
+          const { id, isNew, ...data } = entry;
+          const entryWithTimestamps = {
+            ...data,
+            startDate: data.startDate ? Timestamp.fromDate(new Date(data.startDate)) : null,
+            endDate: data.endDate ? Timestamp.fromDate(new Date(data.endDate)) : null,
+          };
+          return isNew
+            ? addDoc(experienceCollectionRef, entryWithTimestamps)
+            : updateDoc(doc(db, "users", user.uid, "experience", id), entryWithTimestamps);
+        }));
+        alert("Experience entries saved successfully!");
+      } catch (error) {
+        console.error("Error saving experience entries: ", error);
+        alert("Failed to save experience entries.");
+      }
+    }
   };
 
   return (
@@ -120,7 +163,7 @@ export default function ExperienceForm() {
               <Input
                 value={entry.companyName}
                 onChange={(e) =>
-                  updateExpenseEntry(index, "companyName", e.target.value)
+                  updateExperienceEntry(index, "companyName", e.target.value)
                 }
               />
             </div>
@@ -129,7 +172,7 @@ export default function ExperienceForm() {
               <Input
                 value={entry.location}
                 onChange={(e) =>
-                  updateExpenseEntry(index, "location", e.target.value)
+                  updateExperienceEntry(index, "location", e.target.value)
                 }
               />
             </div>
@@ -146,16 +189,14 @@ export default function ExperienceForm() {
             </div>
             <div>
               <Label>Experience Type</Label>
-              <Select>
+              <Select
+              value={entry.experienceType}
+              onValueChange={(value) =>
+                updateExperienceEntry(index,"experienceType", value)
+              }
+              >
                 <SelectTrigger
-                  value={entry.experienceType}
-                  onChange={(e) =>
-                    updateExperienceEntry(
-                      index,
-                      "experienceType",
-                      e.target.value
-                    )
-                  }
+                  
                   className="max-w-[300px] sm:w-[200px] md:w-[300px]"
                 >
                   <SelectValue placeholder="Select Experience Type" />
@@ -169,6 +210,7 @@ export default function ExperienceForm() {
                   </SelectGroup>
                 </SelectContent>
               </Select>
+
             </div>
           </div>
           <div className="flex space-x-6">

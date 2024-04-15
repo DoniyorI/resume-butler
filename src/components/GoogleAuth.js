@@ -1,7 +1,7 @@
 import React from "react";
 import { useRouter } from "next/navigation";
 import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
-import { auth } from "../firebase/config";
+import { auth } from "../lib/firebase/config";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 

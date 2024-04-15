@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import EmblaCarousel from "@/components/Carousel";
 
 // import { useSignInWithEmailAndPassword } from "react-firebase-hooks/auth";
-import { auth } from "../../firebase/config";
+import { auth } from "../../lib/firebase/config";
 import { signInWithEmailAndPassword } from "firebase/auth";
 // import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 
