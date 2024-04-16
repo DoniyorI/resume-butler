@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { db, auth } from "@/lib/firebase/config";
-import { doc, updateDoc, arrayUnion, arrayRemove, getDoc } from "firebase/firestore";
+import { collection, doc, setDoc, getDocs, deleteDoc } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,11 +16,10 @@ export default function SkillForm() {
     const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
       if (authUser) {
         setUser(authUser);
-        const userDocRef = doc(db, "users", authUser.uid);
-        const userDocSnap = await getDoc(userDocRef);
-        if (userDocSnap.exists() && userDocSnap.data().skills) {
-          setSkills(userDocSnap.data().skills);
-        }
+        const skillsRef = collection(db, "users", authUser.uid, "skills");
+        const snapshot = await getDocs(skillsRef);
+        const loadedSkills = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setSkills(loadedSkills);
       }
     });
     return () => unsubscribe();
@@ -28,21 +27,16 @@ export default function SkillForm() {
 
   const handleAddSkill = async () => {
     if (newSkill.trim() !== "") {
-      const userDocRef = doc(db, "users", user.uid);
-      await updateDoc(userDocRef, {
-        skills: arrayUnion(newSkill.trim())
-      });
-      setSkills([...skills, newSkill.trim()]);
+      const skillRef = doc(collection(db, "users", user.uid, "skills"));
+      await setDoc(skillRef, { name: newSkill.trim() });
+      setSkills([...skills, { id: skillRef.id, name: newSkill.trim() }]);
       setNewSkill("");
     }
   };
 
-  const handleDeleteSkill = async (skillToRemove) => {
-    const userDocRef = doc(db, "users", user.uid);
-    await updateDoc(userDocRef, {
-      skills: arrayRemove(skillToRemove)
-    });
-    setSkills(skills.filter(skill => skill !== skillToRemove));
+  const handleDeleteSkill = async (skillId) => {
+    await deleteDoc(doc(db, "users", user.uid, "skills", skillId));
+    setSkills(skills.filter(skill => skill.id !== skillId));
   };
 
   return (
@@ -77,17 +71,17 @@ export default function SkillForm() {
           const zIndex = skills.length - index;
           return (
             <div
-              key={index}
+              key={skill.id}  // Changed from index to skill.id
               style={{
                 transform: `rotate(${rotation}deg)`,
                 zIndex
               }}
               className="bg-green-100 hover:bg-green-200 py-1 pl-4 pr-2 space-x-2 rounded-md flex items-center shadow-lg"
             >
-              <div className="font-light text-sm">{skill}</div>
+              <div className="font-light text-sm">{skill.name}</div>
               <div className="text-red-500 hover:bg-emerald-100 rounded-md p-2">
                 <RiDeleteBack2Line
-                  onClick={() => handleDeleteSkill(skill)}
+                  onClick={() => handleDeleteSkill(skill.id)}  // Changed from skill to skill.id
                   className=""
                 />
               </div>

@@ -1,6 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { auth, db } from "@/lib/firebase/config";
+import { onAuthStateChanged } from "firebase/auth";
+import { collection, getDocs } from "firebase/firestore";
 import { AiOutlineFilePdf } from "react-icons/ai";
 import {
   flexRender,
@@ -11,7 +14,6 @@ import {
   useReactTable,
 } from "@tanstack/react-table";
 import { ArrowUpDown, ChevronDown, MoreHorizontal } from "lucide-react";
-
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -19,8 +21,6 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
@@ -35,64 +35,6 @@ import {
 import AddApplicationDialog from "@/components/AddApplication";
 import Link from "next/link";
 
-const data = [
-  {
-    id: "m5gr84i9",
-    resume: "",
-    coverLetter: "coverletter_file_1.pdf",
-    companyName: "Company A",
-    role: "Software Engineer",
-    status: "pending",
-    location: "New York, NY",
-    date: "2023-04-01",
-    comments: "Needs more experience",
-  },
-  {
-    id: "m5gr84i9",
-    resume: "resume_file_2.pdf",
-    coverLetter: "coverletter_file_1.pdf",
-    companyName: "Company B",
-    role: "Software Engineer",
-    status: "pending",
-    location: "San Francisco, CA",
-    date: "2023-04-01",
-    comments: "Needs more experience",
-  },
-  {
-    id: "m5gr84i9",
-    resume: "",
-    coverLetter: "coverletter_file_1.pdf",
-    companyName: "Company C",
-    role: "Product Manager",
-    status: "offered",
-    location: "Chicago, IL",
-    date: "2023-04-01",
-    comments: "Great fit for the role",
-  },
-  {
-    id: "m5gr84i9",
-    resume: "resume_file_4.pdf",
-    coverLetter: "coverletter_file_1.pdf",
-    companyName: "Company D",
-    role: "Data Analyst",
-    status: "rejected",
-    location: "Seattle, WA",
-    date: "2023-04-01",
-    comments: "Not the right fit",
-  },
-  {
-    id: "m5gr84i9",
-    resume: "resume_file_5.pdf",
-    coverLetter: "coverletter_file_1.pdf",
-    companyName: "Company E",
-    role: "Designer",
-    status: "pending",
-    location: "Austin, TX",
-    date: "2023-04-01",
-    comments: "Needs more experience",
-  },
-];
-
 const updateStatus = (id, newStatus) => {
   console.log(`Changing status for ID ${id} to ${newStatus}`);
 };
@@ -101,40 +43,26 @@ const updateComment = (id, newComment) => {
   console.log(`Updating comment for ID ${id} to ${newComment}`);
 };
 
-
-// const getBadgeVariant = (status) => {
-//   const statusToVariantMapping = {
-//     applied: "applied",
-//     pending: "pending",
-//     offered: "offered",
-//     interviewed: "interviewed",
-//     rejected: "rejected",
-//     withdrew: "withdrew",
-//   };
-
-//   return statusToVariantMapping[status] || "default";
-// };
-
 const columns = [
   {
-    accessorKey: "resume",
-    header: ({ column }) => {
-      return (
-        <Button
-          className="p-1"
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          Resume
-          <ArrowUpDown className="ml-2 h-3 w-3" />
-        </Button>
-      );
-    },
+    accessorKey: "resumeUrl", 
+    header: ({ column }) => (
+      <Button
+        className="p-1"
+        variant="ghost"
+        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+      >
+        Resume
+        <ArrowUpDown className="ml-2 h-3 w-3" />
+      </Button>
+    ),
     cell: ({ row }) => (
       <div className="flex justify-center">
-        {row.getValue("resume") && (
+        {row.getValue("resumeUrl") && ( 
           <a
-            href={`/resumes/${row.getValue("resume")}`}
+            href={row.getValue("resumeUrl")}
+            target="_blank" // Open in a new tab
+            rel="noopener noreferrer"
             className="text-red-700"
           >
             <AiOutlineFilePdf className="mx-auto" size={20} />
@@ -144,24 +72,24 @@ const columns = [
     ),
   },
   {
-    accessorKey: "coverLetter",
-    header: ({ column }) => {
-      return (
-        <Button
-          className="p-1"
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          Cover Letter
-          <ArrowUpDown className="ml-2 h-3 w-3" />
-        </Button>
-      );
-    },
+    accessorKey: "coverLetterUrl", 
+    header: ({ column }) => (
+      <Button
+        className="p-1"
+        variant="ghost"
+        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+      >
+        Cover Letter
+        <ArrowUpDown className="ml-2 h-3 w-3" />
+      </Button>
+    ),
     cell: ({ row }) => (
       <div className="flex justify-center">
-        {row.original.coverLetter && (
+        {row.getValue("coverLetterUrl") && (
           <a
-            href={`/cover-letters/${row.original.coverLetter}`}
+            href={row.getValue("coverLetterUrl")}
+            target="_blank" // Open in a new tab
+            rel="noopener noreferrer"
             className="text-green-700"
           >
             <AiOutlineFilePdf className="mx-auto" size={20} />
@@ -214,34 +142,39 @@ const columns = [
       );
     },
     cell: ({ row }) => {
-        const [value, setValue] = useState(row.getValue("status"));
-        const handleChange = (newStatus) => {
-          updateStatus(row.id, newStatus); // Update the status in the database
-          setValue(newStatus);
-        };
-      return(
+      const [value, setValue] = useState(row.getValue("status"));
+      const handleChange = (newStatus) => {
+        updateStatus(row.id, newStatus); // Update the status in the database
+        setValue(newStatus);
+      };
+      return (
         <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" className="outline-none select-none">
-            <Badge variant={value.toLowerCase()}>
-              {value}
-            </Badge>
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="text-sm">
-          {["Applied", "Interviewed", "Pending", "Rejected", "Offered", "Withdrew"].map(status => (
-            <DropdownMenuItem
-              key={status}
-              onClick={() => handleChange(status)}
-              className="text-xs cursor-pointer"
-            >
-              <Badge variant={status.toLowerCase()}>{status}</Badge>
-            </DropdownMenuItem>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" className="outline-none select-none">
+              <Badge variant={value.toLowerCase()}>{value}</Badge>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="text-sm">
+            {[
+              "Applied",
+              "Interviewed",
+              "Pending",
+              "Rejected",
+              "Offered",
+              "Withdrew",
+            ].map((status) => (
+              <DropdownMenuItem
+                key={status}
+                onClick={() => handleChange(status)}
+                className="text-xs cursor-pointer"
+              >
+                <Badge variant={status.toLowerCase()}>{status}</Badge>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
       );
-    }
+    },
   },
   {
     accessorKey: "location",
@@ -289,20 +222,20 @@ const columns = [
     cell: ({ row }) => {
       const [editing, setEditing] = useState(false);
       const [value, setValue] = useState(row.getValue("comments"));
-    
+
       const toggleEdit = () => {
         setEditing(!editing);
       };
-    
+
       const handleChange = (e) => {
         setValue(e.target.value);
       };
-      
+
       const handleBlur = () => {
         updateComment(row.id, value); // Update the comment in the database
         setEditing(false);
       };
-    
+
       return (
         <div onDoubleClick={toggleEdit}>
           {editing ? (
@@ -355,13 +288,44 @@ const columns = [
 ];
 
 function ApplicationTable() {
+  const [applications, setApplications] = useState([]);
   const [sorting, setSorting] = useState([]);
   const [columnFilters, setColumnFilters] = useState([]);
   const [columnVisibility, setColumnVisibility] = useState({});
   const [rowSelection, setRowSelection] = useState({});
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        setLoading(true);
+        try {
+          const applicationsRef = collection(
+            db,
+            "users",
+            user.uid,
+            "applications"
+          );
+          const querySnapshot = await getDocs(applicationsRef);
+          const loadedApplications = querySnapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+            date: doc.data().date.toDate().toISOString().slice(0, 10), // Format Firestore Timestamp to Date String
+          }));
+          setApplications(loadedApplications);
+          console.log("Applications loaded:", loadedApplications);
+        } catch (error) {
+          console.error("Error fetching applications:", error);
+        } finally {
+          setLoading(false);
+        }
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
   const table = useReactTable({
-    data,
+    data: applications,
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
@@ -378,6 +342,10 @@ function ApplicationTable() {
       rowSelection,
     },
   });
+
+  if (loading) {
+    return <div>Loading applications...</div>; // Loading state
+  }
 
   return (
     <div className="">

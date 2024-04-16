@@ -1,5 +1,11 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { auth, db, storage } from '@/lib/firebase/config';
+import { doc, setDoc, Timestamp } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { onAuthStateChanged } from 'firebase/auth';
+
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -20,16 +26,9 @@ import {
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "./ui/badge";
-import { format } from "date-fns";
+import { isValid, format } from 'date-fns';
 import { Calendar as CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-const locations = [
-  { city: "New York", state: "NY" },
-  { city: "Los Angeles", state: "CA" },
-  { city: "Chicago", state: "IL" },
-];
-
 import {
   Select,
   SelectContent,
@@ -40,33 +39,99 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
+const locations = [
+  { city: "New York", state: "NY" },
+  { city: "Los Angeles", state: "CA" },
+  { city: "Chicago", state: "IL" },
+];
+
 export default function AddApplicationDialog() {
-  const [resume, setResume] = useState("");
-  const [coverLetter, setCoverLetter] = useState("");
-  const [jobDescription, setJobDescription] = useState("");
-  const [companyName, setCompanyName] = useState("");
-  const [portalLink, setPortalLink] = useState("");
-  const [role, setRole] = useState("");
-  const [status, setStatus] = useState("");
-  const [location, setLocation] = useState("");
+  const [currentUser, setCurrentUser] = useState(null);
+  const [resumeFile, setResumeFile] = useState(null);
+  const [coverLetterFile, setCoverLetterFile] = useState(null);
+  const [companyName, setCompanyName] = useState('');
+  const [portalLink, setPortalLink] = useState('');
+  const [jobDescription, setJobDescription] = useState('');
+  const [role, setRole] = useState('');
+  const [status, setStatus] = useState('');
+  const [location, setLocation] = useState('');
   const [date, setDate] = useState(new Date());
-  const [comments, setComments] = useState("");
+  const [comments, setComments] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
 
-  const handleSave = () => {
-    console.log({
-      resume,
-      coverLetter,
-      companyName,
-      portalLink,
-      jobDescription,
-      role,
-      status,
-      location,
-      date,
-      comments,
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setCurrentUser(user);
+      }
     });
-    setIsDialogOpen(false);
+    return () => unsubscribe();
+  }, []);
+
+  const handleFileChange = (event, setter) => {
+    setter(event.target.files[0]);
+  };
+
+  const uploadFile = async (userId, file, folder) => {
+    if (!file) return '';
+    const fileRef = ref(storage, `users/${userId}/${folder}/${file.name}`);
+    await uploadBytes(fileRef, file);
+    return getDownloadURL(fileRef);
+  };
+
+  const handleSave = async () => {
+    if (!currentUser) {
+      alert('No user signed in');
+      return;
+    }
+    try {
+      const resumeUrl = await uploadFile(currentUser.uid, resumeFile, 'resumes');
+      const coverLetterUrl = await uploadFile(currentUser.uid, coverLetterFile, 'coverletters');
+  
+      const applicationData = {
+        resumeUrl,
+        coverLetterUrl,
+        companyName,
+        portalLink,
+        jobDescription,
+        role,
+        status,
+        location,
+        date: Timestamp.fromDate(date),
+        comments
+      };
+  
+      const userDocRef = doc(db, `users/${currentUser.uid}/applications`, `${Date.now()}`);
+      await setDoc(userDocRef, applicationData);
+      setIsDialogOpen(false);
+      // clear form fields
+      toast("Application successfully uploaded", {
+        description: "Your application data has been saved.",
+        action: {
+          label: "OK",
+          onClick: () => {} // Optionally handle the action click
+        }
+      });
+      setResumeFile(null);
+      setCoverLetterFile(null);
+      setCompanyName('');
+      setPortalLink('');
+      setJobDescription('');
+      setRole('');
+      setStatus('');
+      setLocation('');
+      setDate(new Date());
+      setComments('');
+    } catch (error) {
+      console.error("Error saving application data:", error);
+      toast("Failed to upload application", {
+        description: "An error occurred while saving your data.",
+        action: {
+          label: "Retry",
+          onClick: handleSave // Optionally retry the save operation
+        }
+      });
+    }
   };
 
   const statuses = [
@@ -99,25 +164,13 @@ export default function AddApplicationDialog() {
                 <Label htmlFor="resume" className="text-right">
                   Resume
                 </Label>
-                <Input
-                  id="resume"
-                  type="file"
-                  value={resume}
-                  onChange={(e) => setResume(e.target.value)}
-                  className="col-span-3"
-                />
+                <Input id="resume" type="file" onChange={(e) => handleFileChange(e, setResumeFile)} />
               </div>
               <div className="flex-grow">
                 <Label htmlFor="cover-letter" className="text-right">
                   Cover Letter
                 </Label>
-                <Input
-                  id="cover-letter"
-                  type="file"
-                  value={coverLetter}
-                  onChange={(e) => setCoverLetter(e.target.value)}
-                  className="col-span-3"
-                />
+                <Input id="cover-letter" type="file" onChange={(e) => handleFileChange(e, setCoverLetterFile)} />
               </div>
             </div>
             <div>
@@ -170,11 +223,10 @@ export default function AddApplicationDialog() {
                 <Label htmlFor="status" className="text-right">
                   Status
                 </Label>
-                <Select>
-                  <SelectTrigger
-                    id="status"
+                <Select  id="status"
                     value={status}
-                    onChange={(e) => setStatus(e.target.value)}
+                    onValueChange={(value) => setStatus(value)}>
+                  <SelectTrigger
                     className="w-[180px]"
                   >
                     <SelectValue placeholder="Select Status" />
@@ -183,7 +235,9 @@ export default function AddApplicationDialog() {
                     <SelectGroup>
                       {statuses.map((status) => (
                         <SelectItem key={status.label} value={status.value}>
-                          <Badge variant={status.value.toLowerCase()}>{status.label}</Badge>
+                          <Badge variant={status.value.toLowerCase()}>
+                            {status.label}
+                          </Badge>
                         </SelectItem>
                       ))}
                     </SelectGroup>
@@ -217,7 +271,7 @@ export default function AddApplicationDialog() {
                       )}
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {format(date, "PPP")}
+                      {isValid(date) ? format(date, "PPP") : "Select a date"}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
