@@ -8,7 +8,8 @@ import {
   getDocs,
   addDoc,
   updateDoc,
-  Timestamp
+  deleteDoc,
+  Timestamp,
 } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import { format } from "date-fns";
@@ -23,9 +24,9 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Calendar as CalendarIcon } from "lucide-react";
+import { Calendar as CalendarIcon, Trash2 } from "lucide-react";
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
 
 export default function ProjectForm() {
   const [projectEntries, setProjectEntries] = useState([
@@ -47,13 +48,18 @@ export default function ProjectForm() {
     const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
       if (authUser) {
         setUser(authUser);
-        const projectsCollectionRef = collection(db, "users", authUser.uid, "projects");
+        const projectsCollectionRef = collection(
+          db,
+          "users",
+          authUser.uid,
+          "projects"
+        );
         const snapshot = await getDocs(projectsCollectionRef);
-        const projectData = snapshot.docs.map(doc => ({
+        const projectData = snapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
           startDate: doc.data().startDate?.toDate() || "",
-          endDate: doc.data().endDate?.toDate() || ""
+          endDate: doc.data().endDate?.toDate() || "",
         }));
         setProjectEntries(projectData);
       } else {
@@ -79,6 +85,16 @@ export default function ProjectForm() {
     ]);
   };
 
+  const deleteProjectEntry = async (index) => {
+    const entryToDelete = projectEntries[index];
+    if (entryToDelete.isNew) {
+      setProjectEntries(projectEntries.filter((_, idx) => idx !== index));
+    } else {
+      await deleteDoc(doc(db, "users", user.uid, "projects", entryToDelete.id));
+      setProjectEntries(projectEntries.filter((_, idx) => idx !== index));
+    }
+  };
+
   const updateProjectEntry = (index, field, value) => {
     const updatedEntries = projectEntries.map((entry, idx) => {
       if (idx === index) {
@@ -91,19 +107,33 @@ export default function ProjectForm() {
 
   const handleSave = async () => {
     if (user) {
-      const projectsCollectionRef = collection(db, "users", user.uid, "projects");
+      const projectsCollectionRef = collection(
+        db,
+        "users",
+        user.uid,
+        "projects"
+      );
       try {
-        await Promise.all(projectEntries.map(entry => {
-          const { id, isNew, ...data } = entry;
-          const entryWithTimestamps = {
-            ...data,
-            startDate: data.startDate ? Timestamp.fromDate(new Date(data.startDate)) : null,
-            endDate: data.endDate ? Timestamp.fromDate(new Date(data.endDate)) : null,
-          };
-          return isNew
-            ? addDoc(projectsCollectionRef, entryWithTimestamps)
-            : updateDoc(doc(db, "users", user.uid, "projects", id), entryWithTimestamps);
-        }));
+        await Promise.all(
+          projectEntries.map((entry) => {
+            const { id, isNew, ...data } = entry;
+            const entryWithTimestamps = {
+              ...data,
+              startDate: data.startDate
+                ? Timestamp.fromDate(new Date(data.startDate))
+                : null,
+              endDate: data.endDate
+                ? Timestamp.fromDate(new Date(data.endDate))
+                : null,
+            };
+            return isNew
+              ? addDoc(projectsCollectionRef, entryWithTimestamps)
+              : updateDoc(
+                  doc(db, "users", user.uid, "projects", id),
+                  entryWithTimestamps
+                );
+          })
+        );
         alert("Project entries saved successfully!");
       } catch (error) {
         console.error("Error saving project entries: ", error);
@@ -111,8 +141,6 @@ export default function ProjectForm() {
       }
     }
   };
-
-
 
   const updateCurrentlyWorking = (index, checked) => {
     const updatedEntries = projectEntries.map((entry, idx) =>
@@ -125,6 +153,19 @@ export default function ProjectForm() {
     const updatedEntries = projectEntries.map((entry, idx) => {
       if (idx === index) {
         return { ...entry, description: [...entry.description, ""] };
+      }
+      return entry;
+    });
+    setProjectEntries(updatedEntries);
+  };
+
+  const deleteDescriptionBullet = (entryIndex, bulletIndex) => {
+    const updatedEntries = projectEntries.map((entry, idx) => {
+      if (idx === entryIndex) {
+        const updatedDescription = entry.description.filter(
+          (_, dIdx) => dIdx !== bulletIndex
+        );
+        return { ...entry, description: updatedDescription };
       }
       return entry;
     });
@@ -162,7 +203,12 @@ export default function ProjectForm() {
         </Button>
       </div>
       {projectEntries.map((entry, index) => (
-        <div className="flex flex-col space-y-4 pb-8" key={index}>
+        <div className="flex flex-col space-y-4 pb-8 relative" key={index}>
+          <Trash2
+            strokeWidth={1.25}
+            className="absolute left-[-50px] top-1/3 -translate-y-1/2 cursor-pointer hover:text-red-500"
+            onClick={() => deleteProjectEntry(index)}
+          />
           <div className="flex space-x-6">
             <div className="flex-grow">
               <Label>Project Name</Label>
@@ -200,7 +246,7 @@ export default function ProjectForm() {
                 Start Date
               </Label>
               <div className="col-span-3">
-              <Popover>
+                <Popover>
                   <PopoverTrigger asChild>
                     <Button
                       variant={"outline"}
@@ -225,7 +271,6 @@ export default function ProjectForm() {
                       }
                       fromYear={1960}
                       toYear={2030}
-                      
                     />
                   </PopoverContent>
                 </Popover>
@@ -236,7 +281,7 @@ export default function ProjectForm() {
                 End Date
               </Label>
               <div className="col-span-3">
-              <Popover>
+                <Popover>
                   <PopoverTrigger asChild>
                     <Button
                       variant={"outline"}
@@ -261,7 +306,6 @@ export default function ProjectForm() {
                       }
                       fromYear={1960}
                       toYear={2030}
-                      
                     />
                   </PopoverContent>
                 </Popover>
@@ -313,6 +357,11 @@ export default function ProjectForm() {
                   onChange={(e) =>
                     updateDescriptionBullet(index, dIndex, e.target.value)
                   }
+                />
+                <Trash2
+                  strokeWidth={1.25}
+                  className="cursor-pointer hover:text-red-500"
+                  onClick={() => deleteDescriptionBullet(index, dIndex)}
                 />
               </div>
             ))}

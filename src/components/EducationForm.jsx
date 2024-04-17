@@ -8,10 +8,12 @@ import {
   getDocs,
   addDoc,
   updateDoc,
+  deleteDoc,
   Timestamp
 } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import { format } from "date-fns";
+import { Trash2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -70,6 +72,16 @@ export default function EducationForm() {
     setEducationEntries(updatedEntries);
   };
 
+  const deleteEducationEntry = async (index) => {
+    const entryToDelete = educationEntries[index];
+    if (entryToDelete.isNew) {
+      setEducationEntries(educationEntries.filter((_, idx) => idx !== index));
+    } else {
+      await deleteDoc(doc(db, "users", user.uid, "education", entryToDelete.id));
+      setEducationEntries(educationEntries.filter((_, idx) => idx !== index));
+    }
+  };
+
   const handleSave = async () => {
     if (user) {
       const educationCollectionRef = collection(db, "users", user.uid, "education");
@@ -96,6 +108,7 @@ export default function EducationForm() {
   if (!user) {
     return <div>Loading...</div>;
   }
+
   return (
     <>
       <div className="flex space-x-6 justify-between items-center py-4">
@@ -109,7 +122,13 @@ export default function EducationForm() {
         </Button>
       </div>
       {educationEntries.map((entry, index) => (
-        <div className="flex flex-col space-y-4 pb-8" key={index}>
+        <div className="flex flex-col space-y-4 pb-8 relative" key={index}>
+          <Trash2
+            strokeWidth={1.25}
+            size={18}
+            className="absolute left-[-50px] top-1/2 -translate-y-1/2 cursor-pointer hover:text-red-500"
+            onClick={() => deleteEducationEntry(index)}
+          />
           <div>
             <Label>School</Label>
             <Input
