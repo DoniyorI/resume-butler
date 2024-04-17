@@ -104,7 +104,6 @@ export default function AddApplicationDialog() {
       const userDocRef = doc(db, `users/${currentUser.uid}/applications`, `${Date.now()}`);
       await setDoc(userDocRef, applicationData);
       setIsDialogOpen(false);
-      // clear form fields
       toast("Application successfully uploaded", {
         description: "Your application data has been saved.",
         action: {
@@ -112,6 +111,7 @@ export default function AddApplicationDialog() {
           onClick: () => {} // Optionally handle the action click
         }
       });
+      // clear form fields
       setResumeFile(null);
       setCoverLetterFile(null);
       setCompanyName('');

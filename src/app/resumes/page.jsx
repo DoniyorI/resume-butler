@@ -52,8 +52,6 @@ const FetchedResumes = [
 ];
 
 export default function Page() {
-  const [isHovered, setIsHovered] = useState(false);
-
   const [resumes, setResumes] = useState(FetchedResumes);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortOrder, setSortOrder] = useState("Recently Opened");
@@ -117,9 +115,7 @@ export default function Page() {
         </Select>
       </div>
       <div className="flex flex-wrap ">
-        <div className="h-[220px] w-[170px] border rounded-lg shadow p-4 flex justify-center items-center cursor-pointer m-2 ">
-          <div className="font-bold text-slate-400">New</div>
-        </div>
+        <ResumeDialog />
         {resumes.map((resume) => (
           <div
             key={resume.id}
@@ -179,7 +175,7 @@ export default function Page() {
             </div>
           </div>
         ))}
-        <ResumeDialog />
+        
     
       </div>
     </div>

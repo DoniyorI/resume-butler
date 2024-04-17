@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -15,10 +16,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useRouter } from "next/navigation";
 
 export default function ResumeDialog() {
-  const [isHovered, setIsHovered] = useState(false);
   const [useAI, setUseAI] = useState(false);
   const [resumeName, setResumeName] = useState("");
   const [jobDescription, setJobDescription] = useState("");
@@ -27,47 +26,26 @@ export default function ResumeDialog() {
 
   const updateCheckBox = () => {
     setUseAI(!useAI);
-    if (!useAI) {
-      setJobDescription("");
-    } else {
-      setJobDescription("");
-    }
   };
 
-  const handelNextStep = () => {
-    //random uuid
-    const uuid = Math.random().toString(36).substring(7); //placeholder, replace when adding firebase
-    //creates new resume and populates it with empty fields and saves to db
-    if (useAI) {
-      // Call Alfie API fills empty fields
-      // Loading page while waiting for response
-      router.push(`/resumes/${uuid}`);
-    }else {
-      router.push(`/resumes/${uuid}`);
-  }
-  setIsDialogOpen(false);
-}
+  const handleNextStep = () => {
+    const uuid = Math.random().toString(36).substring(7); // Generate a simple pseudo-random UUID
+    router.push(`/resumes/${uuid}`);
+    setIsDialogOpen(false);
+  };
+
+  const handleOpenDialog = () => {
+    setIsDialogOpen(true);
+  };
 
   return (
     <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
       <DialogTrigger asChild>
-        <div className="fixed bottom-10 right-10 flex items-center">
-          {isHovered && (
-            <Label className="mr-2 text-sm py-1 px-2 border rounded shadow-lg">
-              Create new resume
-            </Label>
-          )}
-          <Button
-            onClick={() => setIsDialogOpen(true)}
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
-            className="w-12 h-12 flex justify-center items-center rounded-full shadow-md focus:outline-none transition duration-150 ease-in-out"
-          >
-            +
-          </Button>
+        <div onClick={handleOpenDialog} className="h-[220px] w-[170px] border rounded-lg shadow p-4 flex justify-center items-center cursor-pointer m-2">
+          <div className="font-bold text-slate-400">New</div>
         </div>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[425px] md: min-w-[60vw]">
+      <DialogContent className="sm:max-w-[425px] md:min-w-[60vw]">
         <DialogHeader>
           <DialogTitle>Create a New Resume</DialogTitle>
           <DialogDescription>
@@ -88,9 +66,9 @@ export default function ResumeDialog() {
             <Checkbox
               id="useAI"
               checked={useAI}
-              onCheckedChange={() => updateCheckBox()}
+              onCheckedChange={updateCheckBox}
             />
-            <Label>Use Alfie to tailor your resume</Label>
+            <Label htmlFor="useAI">Use AI to tailor your resume</Label>
           </div>
           {useAI && (
             <div>
@@ -98,14 +76,15 @@ export default function ResumeDialog() {
               <Textarea
                 id="jobDescription"
                 value={jobDescription}
-                placeholder="Watch Alfie tailor your resume with your qualifications and experiences to elevate your application!"
+                onChange={(e) => setJobDescription(e.target.value)}
+                placeholder="Watch AI tailor your resume to your qualifications and experiences to elevate your application!"
               />
             </div>
           )}
         </div>
         <DialogFooter>
-          <Button type="button" onClick={handelNextStep}>
-          Next Step
+          <Button type="button" onClick={handleNextStep}>
+            Next Step
           </Button>
         </DialogFooter>
       </DialogContent>
