@@ -1,9 +1,9 @@
 "use client";
 import { useState, useEffect } from "react";
-import { auth, db, storage } from '@/lib/firebase/config';
-import { doc, setDoc, Timestamp } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { onAuthStateChanged } from 'firebase/auth';
+import { auth, db, storage } from "@/lib/firebase/config";
+import { doc, setDoc, Timestamp } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { onAuthStateChanged } from "firebase/auth";
 
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "./ui/badge";
-import { isValid, format } from 'date-fns';
+import { isValid, format } from "date-fns";
 import { Calendar as CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
@@ -49,15 +49,16 @@ export default function AddApplicationDialog() {
   const [currentUser, setCurrentUser] = useState(null);
   const [resumeFile, setResumeFile] = useState(null);
   const [coverLetterFile, setCoverLetterFile] = useState(null);
-  const [companyName, setCompanyName] = useState('');
-  const [portalLink, setPortalLink] = useState('');
-  const [jobDescription, setJobDescription] = useState('');
-  const [role, setRole] = useState('');
-  const [status, setStatus] = useState('');
-  const [location, setLocation] = useState('');
+  const [companyName, setCompanyName] = useState("");
+  const [portalLink, setPortalLink] = useState("");
+  // const [jobDescription, setJobDescription] = useState('');
+  const [role, setRole] = useState("");
+  const [status, setStatus] = useState("");
+  const [location, setLocation] = useState("");
   const [date, setDate] = useState(new Date());
-  const [comments, setComments] = useState('');
+  const [comments, setComments] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -73,7 +74,7 @@ export default function AddApplicationDialog() {
   };
 
   const uploadFile = async (userId, file, folder) => {
-    if (!file) return '';
+    if (!file) return "";
     const fileRef = ref(storage, `users/${userId}/${folder}/${file.name}`);
     await uploadBytes(fileRef, file);
     return getDownloadURL(fileRef);
@@ -81,56 +82,69 @@ export default function AddApplicationDialog() {
 
   const handleSave = async () => {
     if (!currentUser) {
-      alert('No user signed in');
+      alert("No user signed in");
       return;
     }
+    setIsSaving(true); // Start loading indication
     try {
-      const resumeUrl = await uploadFile(currentUser.uid, resumeFile, 'resumes');
-      const coverLetterUrl = await uploadFile(currentUser.uid, coverLetterFile, 'coverletters');
-  
+      const resumeUrl = await uploadFile(
+        currentUser.uid,
+        resumeFile,
+        "resumes"
+      );
+      const coverLetterUrl = await uploadFile(
+        currentUser.uid,
+        coverLetterFile,
+        "coverletters"
+      );
+
       const applicationData = {
         resumeUrl,
         coverLetterUrl,
         companyName,
         portalLink,
-        jobDescription,
         role,
         status,
         location,
         date: Timestamp.fromDate(date),
-        comments
+        comments,
       };
-  
-      const userDocRef = doc(db, `users/${currentUser.uid}/applications`, `${Date.now()}`);
+
+      const userDocRef = doc(
+        db,
+        `users/${currentUser.uid}/applications`,
+        `${Date.now()}`
+      );
       await setDoc(userDocRef, applicationData);
       setIsDialogOpen(false);
       toast("Application successfully uploaded", {
         description: "Your application data has been saved.",
         action: {
           label: "OK",
-          onClick: () => {} // Optionally handle the action click
-        }
+          onClick: () => {}, // Optionally handle the action click
+        },
       });
-      // clear form fields
+      // clear form fields after saving
       setResumeFile(null);
       setCoverLetterFile(null);
-      setCompanyName('');
-      setPortalLink('');
-      setJobDescription('');
-      setRole('');
-      setStatus('');
-      setLocation('');
+      setCompanyName("");
+      setPortalLink("");
+      setRole("");
+      setStatus("");
+      setLocation("");
       setDate(new Date());
-      setComments('');
+      setComments("");
     } catch (error) {
       console.error("Error saving application data:", error);
       toast("Failed to upload application", {
         description: "An error occurred while saving your data.",
         action: {
           label: "Retry",
-          onClick: handleSave // Optionally retry the save operation
-        }
+          onClick: handleSave, // Optionally retry the save operation
+        },
       });
+    } finally {
+      setIsSaving(false); // End loading indication
     }
   };
 
@@ -164,13 +178,21 @@ export default function AddApplicationDialog() {
                 <Label htmlFor="resume" className="text-right">
                   Resume
                 </Label>
-                <Input id="resume" type="file" onChange={(e) => handleFileChange(e, setResumeFile)} />
+                <Input
+                  id="resume"
+                  type="file"
+                  onChange={(e) => handleFileChange(e, setResumeFile)}
+                />
               </div>
               <div className="flex-grow">
                 <Label htmlFor="cover-letter" className="text-right">
                   Cover Letter
                 </Label>
-                <Input id="cover-letter" type="file" onChange={(e) => handleFileChange(e, setCoverLetterFile)} />
+                <Input
+                  id="cover-letter"
+                  type="file"
+                  onChange={(e) => handleFileChange(e, setCoverLetterFile)}
+                />
               </div>
             </div>
             <div>
@@ -196,17 +218,6 @@ export default function AddApplicationDialog() {
                 className="col-span-3"
               />
             </div>
-            <div>
-              <Label htmlFor="job-description" className="text-right">
-                Job Description
-              </Label>
-              <Textarea
-                id="company-name"
-                value={jobDescription}
-                onChange={(e) => setJobDescription(e.target.value)}
-                className="col-span-3"
-              />
-            </div>
             <div className="flex justify-between space-x-4">
               <div className="w-full">
                 <Label htmlFor="role" className="text-right">
@@ -223,12 +234,12 @@ export default function AddApplicationDialog() {
                 <Label htmlFor="status" className="text-right">
                   Status
                 </Label>
-                <Select  id="status"
-                    value={status}
-                    onValueChange={(value) => setStatus(value)}>
-                  <SelectTrigger
-                    className="w-[180px]"
-                  >
+                <Select
+                  id="status"
+                  value={status}
+                  onValueChange={(value) => setStatus(value)}
+                >
+                  <SelectTrigger className="w-[180px]">
                     <SelectValue placeholder="Select Status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -289,7 +300,7 @@ export default function AddApplicationDialog() {
               <Label htmlFor="comments" className="text-right">
                 Comments
               </Label>
-              <Input
+              <Textarea
                 id="comments"
                 value={comments}
                 onChange={(e) => setComments(e.target.value)}
@@ -299,8 +310,25 @@ export default function AddApplicationDialog() {
           </div>
         </ScrollArea>
         <DialogFooter>
-          <Button type="button" onClick={handleSave}>
-            Add Application
+          <Button type="button" onClick={handleSave} disabled={isSaving}>
+            {isSaving ? (
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className={cn("animate-spin", "mr-2 h-4 w-4 animate-spin")}
+                >
+                  <path d="M21 12a9 9 0 1 1-6.219-8.56" />
+                </svg>
+            ) : (
+              "Add Application"
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>

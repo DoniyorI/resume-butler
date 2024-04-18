@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { auth, db } from "@/lib/firebase/config";
 import { onAuthStateChanged } from "firebase/auth";
-import { collection, getDocs } from "firebase/firestore";
+import { doc, collection, getDocs, updateDoc } from "firebase/firestore";
 import { AiOutlineFilePdf } from "react-icons/ai";
 import {
   flexRender,
@@ -35,259 +35,9 @@ import {
 import AddApplicationDialog from "@/components/AddApplication";
 import Link from "next/link";
 
-const updateStatus = (id, newStatus) => {
-  console.log(`Changing status for ID ${id} to ${newStatus}`);
-};
-
-const updateComment = (id, newComment) => {
-  console.log(`Updating comment for ID ${id} to ${newComment}`);
-};
-
-const columns = [
-  {
-    accessorKey: "resumeUrl", 
-    header: ({ column }) => (
-      <Button
-        className="p-1"
-        variant="ghost"
-        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-      >
-        Resume
-        <ArrowUpDown className="ml-2 h-3 w-3" />
-      </Button>
-    ),
-    cell: ({ row }) => (
-      <div className="flex justify-center">
-        {row.getValue("resumeUrl") && ( 
-          <a
-            href={row.getValue("resumeUrl")}
-            target="_blank" // Open in a new tab
-            rel="noopener noreferrer"
-            className="text-red-700"
-          >
-            <AiOutlineFilePdf className="mx-auto" size={20} />
-          </a>
-        )}
-      </div>
-    ),
-  },
-  {
-    accessorKey: "coverLetterUrl", 
-    header: ({ column }) => (
-      <Button
-        className="p-1"
-        variant="ghost"
-        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-      >
-        Cover Letter
-        <ArrowUpDown className="ml-2 h-3 w-3" />
-      </Button>
-    ),
-    cell: ({ row }) => (
-      <div className="flex justify-center">
-        {row.getValue("coverLetterUrl") && (
-          <a
-            href={row.getValue("coverLetterUrl")}
-            target="_blank" // Open in a new tab
-            rel="noopener noreferrer"
-            className="text-green-700"
-          >
-            <AiOutlineFilePdf className="mx-auto" size={20} />
-          </a>
-        )}
-      </div>
-    ),
-  },
-  {
-    accessorKey: "companyName",
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          Company Name
-          <ArrowUpDown className="ml-2 h-3 w-3" />
-        </Button>
-      );
-    },
-    cell: ({ row }) => <div className="">{row.getValue("companyName")}</div>,
-  },
-  {
-    accessorKey: "role",
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          Role
-          <ArrowUpDown className="ml-2 h-3 w-3" />
-        </Button>
-      );
-    },
-    cell: ({ row }) => <div className="">{row.getValue("role")}</div>,
-  },
-  {
-    accessorKey: "status",
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          Status
-          <ArrowUpDown className="ml-2 h-3 w-3" />
-        </Button>
-      );
-    },
-    cell: ({ row }) => {
-      const [value, setValue] = useState(row.getValue("status"));
-      const handleChange = (newStatus) => {
-        updateStatus(row.id, newStatus); // Update the status in the database
-        setValue(newStatus);
-      };
-      return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="outline-none select-none">
-              <Badge variant={value.toLowerCase()}>{value}</Badge>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="text-sm">
-            {[
-              "Applied",
-              "Interviewed",
-              "Pending",
-              "Rejected",
-              "Offered",
-              "Withdrew",
-            ].map((status) => (
-              <DropdownMenuItem
-                key={status}
-                onClick={() => handleChange(status)}
-                className="text-xs cursor-pointer"
-              >
-                <Badge variant={status.toLowerCase()}>{status}</Badge>
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      );
-    },
-  },
-  {
-    accessorKey: "location",
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          Location
-          <ArrowUpDown className="ml-2 h-3 w-3" />
-        </Button>
-      );
-    },
-    cell: ({ row }) => <div className="">{row.getValue("location")}</div>,
-  },
-  {
-    accessorKey: "date",
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          Date
-          <ArrowUpDown className="ml-2 h-3 w-3" />
-        </Button>
-      );
-    },
-    cell: ({ row }) => <div className="">{row.getValue("date")}</div>,
-  },
-  {
-    accessorKey: "comments",
-    header: ({ column }) => {
-      return (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          Comments
-          <ArrowUpDown className="ml-2 h-3 w-3" />
-        </Button>
-      );
-    },
-    cell: ({ row }) => {
-      const [editing, setEditing] = useState(false);
-      const [value, setValue] = useState(row.getValue("comments"));
-
-      const toggleEdit = () => {
-        setEditing(!editing);
-      };
-
-      const handleChange = (e) => {
-        setValue(e.target.value);
-      };
-
-      const handleBlur = () => {
-        updateComment(row.id, value); // Update the comment in the database
-        setEditing(false);
-      };
-
-      return (
-        <div onDoubleClick={toggleEdit}>
-          {editing ? (
-            <Input
-              type="text"
-              value={value}
-              onChange={handleChange}
-              onBlur={handleBlur}
-              autoFocus
-            />
-          ) : (
-            <span>{value}</span>
-          )}
-        </div>
-      );
-    },
-  },
-  {
-    id: "actions",
-    enableHiding: false,
-    cell: ({ row }) => {
-      const application = row.original;
-
-      return (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" className="h-8 w-8 p-0">
-              <span className="sr-only">Open menu</span>
-              <MoreHorizontal className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {/* <DropdownMenuLabel>Actions</DropdownMenuLabel> */}
-            {/* <DropdownMenuItem
-              onClick={() => navigator.clipboard.writeText(application.id)}
-            >
-              Copy application ID
-            </DropdownMenuItem> */}
-            {/* <DropdownMenuSeparator /> */}
-            <DropdownMenuItem>
-              <Link href={`/applications/${application.id}`}>
-                View application details
-              </Link>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      );
-    },
-  },
-];
 
 function ApplicationTable() {
+  const [user, setUser] = useState(null);
   const [applications, setApplications] = useState([]);
   const [sorting, setSorting] = useState([]);
   const [columnFilters, setColumnFilters] = useState([]);
@@ -295,10 +45,12 @@ function ApplicationTable() {
   const [rowSelection, setRowSelection] = useState({});
   const [loading, setLoading] = useState(true);
 
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         setLoading(true);
+        setUser(user);
         try {
           const applicationsRef = collection(
             db,
@@ -324,6 +76,251 @@ function ApplicationTable() {
     return () => unsubscribe();
   }, []);
 
+  const columns = [
+    {
+      accessorKey: "resumeUrl", 
+      header: ({ column }) => (
+        <Button
+          className="p-1"
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Resume
+          <ArrowUpDown className="ml-2 h-3 w-3" />
+        </Button>
+      ),
+      cell: ({ row }) => (
+        <div className="flex justify-center">
+          {row.getValue("resumeUrl") && ( 
+            <a
+              href={row.getValue("resumeUrl")}
+              target="_blank" // Open in a new tab
+              rel="noopener noreferrer"
+              className="text-red-700"
+            >
+              <AiOutlineFilePdf className="mx-auto" size={20} />
+            </a>
+          )}
+        </div>
+      ),
+    },
+    {
+      accessorKey: "coverLetterUrl", 
+      header: ({ column }) => (
+        <Button
+          className="p-1"
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Cover Letter
+          <ArrowUpDown className="ml-2 h-3 w-3" />
+        </Button>
+      ),
+      cell: ({ row }) => (
+        <div className="flex justify-center">
+          {row.getValue("coverLetterUrl") && (
+            <a
+              href={row.getValue("coverLetterUrl")}
+              target="_blank" // Open in a new tab
+              rel="noopener noreferrer"
+              className="text-green-700"
+            >
+              <AiOutlineFilePdf className="mx-auto" size={20} />
+            </a>
+          )}
+        </div>
+      ),
+    },
+    {
+      accessorKey: "companyName",
+      header: ({ column }) => {
+        return (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          >
+            Company Name
+            <ArrowUpDown className="ml-2 h-3 w-3" />
+          </Button>
+        );
+      },
+      cell: ({ row }) => <div className="">{row.getValue("companyName")}</div>,
+    },
+    {
+      accessorKey: "role",
+      header: ({ column }) => {
+        return (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          >
+            Role
+            <ArrowUpDown className="ml-2 h-3 w-3" />
+          </Button>
+        );
+      },
+      cell: ({ row }) => <div className="">{row.getValue("role")}</div>,
+    },
+    {
+      accessorKey: "status",
+      header: ({ column }) => {
+        return (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          >
+            Status
+            <ArrowUpDown className="ml-2 h-3 w-3" />
+          </Button>
+        );
+      },
+      cell: ({ row }) => {
+        const [value, setValue] = useState(row.getValue("status"));
+        const handleChange = (newStatus) => {
+          updateStatus(row.original.id, newStatus); // Update the status in the database
+          setValue(newStatus);
+        };
+        return (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="outline-none select-none">
+                <Badge variant={value.toLowerCase()}>{value}</Badge>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="text-sm">
+              {[
+                "Applied",
+                "Interviewed",
+                "Pending",
+                "Rejected",
+                "Offered",
+                "Withdrew",
+              ].map((status) => (
+                <DropdownMenuItem
+                  key={status}
+                  onClick={() => handleChange(status)}
+                  className="text-xs cursor-pointer"
+                >
+                  <Badge variant={status.toLowerCase()}>{status}</Badge>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        );
+      },
+    },
+    {
+      accessorKey: "location",
+      header: ({ column }) => {
+        return (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          >
+            Location
+            <ArrowUpDown className="ml-2 h-3 w-3" />
+          </Button>
+        );
+      },
+      cell: ({ row }) => <div className="">{row.getValue("location")}</div>,
+    },
+    {
+      accessorKey: "date",
+      header: ({ column }) => {
+        return (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          >
+            Date
+            <ArrowUpDown className="ml-2 h-3 w-3" />
+          </Button>
+        );
+      },
+      cell: ({ row }) => <div className="">{row.getValue("date")}</div>,
+    },
+    {
+      accessorKey: "comments",
+      header: ({ column }) => {
+        return (
+          <Button
+            variant="ghost"
+            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          >
+            Comments
+            <ArrowUpDown className="ml-2 h-3 w-3" />
+          </Button>
+        );
+      },
+      cell: ({ row }) => {
+        const [editing, setEditing] = useState(false);
+        const [value, setValue] = useState(row.getValue("comments"));
+  
+        const toggleEdit = () => {
+          setEditing(!editing);
+        };
+  
+        const handleChange = (e) => {
+          setValue(e.target.value);
+        };
+  
+        const handleBlur = () => {
+          updateComment(row.original.id, value); // Update the comment in the database
+          setEditing(false);
+        };
+  
+        return (
+          <div onDoubleClick={toggleEdit}>
+            {editing ? (
+              <Input
+                type="text"
+                value={value}
+                onChange={handleChange}
+                onBlur={handleBlur}
+                autoFocus
+              />
+            ) : (
+              <span>{value}</span>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      id: "actions",
+      enableHiding: false,
+      cell: ({ row }) => {
+        const application = row.original;
+  
+        return (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="h-8 w-8 p-0">
+                <span className="sr-only">Open menu</span>
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {/* <DropdownMenuLabel>Actions</DropdownMenuLabel> */}
+              {/* <DropdownMenuItem
+                onClick={() => navigator.clipboard.writeText(application.id)}
+              >
+                Copy application ID
+              </DropdownMenuItem> */}
+              {/* <DropdownMenuSeparator /> */}
+              <DropdownMenuItem>
+                <Link href={`/applications/${application.id}`}>
+                  View application details
+                </Link>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        );
+      },
+    },
+  ];
+  
+
   const table = useReactTable({
     data: applications,
     columns,
@@ -342,6 +339,35 @@ function ApplicationTable() {
       rowSelection,
     },
   });
+
+
+const updateStatus = async (id, newStatus) => {
+  console.log(`Changing status for ID ${id} to ${newStatus}`);
+  const applicationRef = doc(db, "users", user.uid, "applications", id);
+  try {
+    await updateDoc(applicationRef, {
+      status: newStatus
+    });
+    console.log(`Status updated to ${newStatus} for ID ${id}`);
+  } catch (error) {
+    console.error("Failed to update status:", error);
+  }
+};
+
+
+const updateComment = async (id, newComment) => {
+  console.log(`Updating comment for ID ${id} to ${newComment}`);
+  const applicationRef = doc(db, "users", user.uid, "applications", id);
+  try {
+    await updateDoc(applicationRef, {
+      comments: newComment
+    });
+    console.log(`Comment updated to "${newComment}" for ID ${id}`);
+  } catch (error) {
+    console.error("Failed to update comment:", error);
+  }
+};
+
 
   if (loading) {
     return <div>Loading applications...</div>; // Loading state

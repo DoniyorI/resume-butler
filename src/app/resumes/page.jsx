@@ -114,6 +114,7 @@ export default function Page() {
           </SelectContent>
         </Select>
       </div>
+      Resumes with our AI will appear here
       <div className="flex flex-wrap ">
         <ResumeDialog />
         {resumes.map((resume) => (
@@ -176,8 +177,8 @@ export default function Page() {
           </div>
         ))}
         
-    
       </div>
+      Your Resumes will appear here
     </div>
   );
 }

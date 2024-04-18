@@ -68,7 +68,7 @@ export default function ResumeDialog() {
               checked={useAI}
               onCheckedChange={updateCheckBox}
             />
-            <Label htmlFor="useAI">Use AI to tailor your resume</Label>
+            <Label htmlFor="useAI">Use Ali to tailor your resume</Label>
           </div>
           {useAI && (
             <div>
