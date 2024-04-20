@@ -153,12 +153,12 @@ export default function Page() {
                   >
                     <FiDownload className="mr-2" /> Download PDF
                   </DropdownMenuItem>
-                  <DropdownMenuItem
+                  {/* <DropdownMenuItem
                     className="text-xs cursor-pointer"
                     onClick={() => handleDownloadDOCX(resume.id)}
                   >
                     <FiDownload className="mr-2" /> Download DOCX
-                  </DropdownMenuItem>
+                  </DropdownMenuItem> */}
                   <DropdownMenuItem
                     className="text-xs cursor-pointer"
                     onClick={() => handleRename(resume.id)}

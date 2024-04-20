@@ -1,9 +1,10 @@
 "use client";
 import { useState, useEffect } from "react";
+import { onAuthStateChanged } from "firebase/auth";
 import { auth, db, storage } from "@/lib/firebase/config";
 import { doc, setDoc, Timestamp } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { onAuthStateChanged } from "firebase/auth";
+
 
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -38,6 +39,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { useRouter } from "next/navigation";
 
 const locations = [
   { city: "New York", state: "NY" },
@@ -59,11 +61,14 @@ export default function AddApplicationDialog() {
   const [comments, setComments] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
         setCurrentUser(user);
+      }else{
+        router.push("/login");
       }
     });
     return () => unsubscribe();

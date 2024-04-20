@@ -1,10 +1,21 @@
 "use client";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
 
+import { onAuthStateChanged } from "firebase/auth";
+import { doc, setDoc, collection, addDoc } from "firebase/firestore";
+import { db, auth } from "@/lib/firebase/config";
+
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { z, ZodError } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
+import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import {
   Dialog,
   DialogContent,
@@ -14,29 +25,88 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
+
+
+const formSchema = z.object({
+  resumeName: z.string().min(1, "Resume Name is required."),
+  jobDescription: z.string().optional(),
+  useAI: z.boolean(),
+}).refine((data) => data.useAI ? data.jobDescription && data.jobDescription.length > 0 : true, {
+  message: "Job Description is required when using AI.",
+  path: ["jobDescription"],
+});
 
 export default function ResumeDialog() {
-  const [useAI, setUseAI] = useState(false);
-  const [resumeName, setResumeName] = useState("");
-  const [jobDescription, setJobDescription] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [useAI, setUseAI] = useState(false);
+  const [user, setUser] = useState(null);
   const router = useRouter();
+  const form = useForm({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      resumeName: "",
+      jobDescription: "",
+      useAI: false,
+    }
+  });
 
-  const updateCheckBox = () => {
-    setUseAI(!useAI);
-  };
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, currentUser => {
+      setUser(currentUser);
+    });
+    return () => unsubscribe(); // Clean up subscription
+  }, []);
 
-  const handleNextStep = () => {
-    const uuid = Math.random().toString(36).substring(7); // Generate a simple pseudo-random UUID
-    router.push(`/resumes/${uuid}`);
-    setIsDialogOpen(false);
+  const handleNextStep = async (formData) => {
+    if (user) {
+      const resumesRef = collection(db, `users/${user.uid}/resumes`);
+      const resumeRef = await addDoc(resumesRef, {
+        name: formData.resumeName,
+        dateCreated: new Date(),
+        education: [], // list of dict with school, major, degree, graduation, gpa  
+        experience: [], // list of dict with company, position, dates, description
+        projects: [], // list of dict with name, dates, description
+        skills: [] // list of skills
+      });
+      router.push(`/resumes/${resumeRef.id}`);
+      setIsDialogOpen(false);
+    } else {
+      alert("You must be logged in to create a resume.");
+    }
   };
 
   const handleOpenDialog = () => {
     setIsDialogOpen(true);
   };
+
+  const toggleUseAI = () => {
+    setUseAI(!useAI);
+    form.setValue("useAI", !useAI);
+  };
+
+      //create a new resume in database user/{userid}/resumes/{resumeid}
+      //resume structure
+      //subcollections for each section
+        //Education
+          //School
+          //Major, Type of Degree
+          //Expected Graduation
+          //GPA
+        //Experience
+          //Company
+          //Position
+          //Dates
+          //Description
+            //dictionary for each bullet points
+        //Projects
+          //Name
+          //Dates
+          //Description
+            //dictionary for each bullet points
+        //Skills
+          //List of skills
+      // calls backend to generate a resume based on the job description fills in the resume structure with the generated resume
+      //navigate to the new resume page
 
   return (
     <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -52,41 +122,45 @@ export default function ResumeDialog() {
             Let's create a new resume to help you land your dream job!
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4">
+        <form onSubmit={form.handleSubmit(handleNextStep)} className="space-y-4">
           <div>
             <Label htmlFor="resumeName">Resume Name</Label>
             <Input
               id="resumeName"
-              value={resumeName}
-              onChange={(e) => setResumeName(e.target.value)}
+              {...form.register("resumeName")}
               placeholder="Enter resume name"
             />
+            {form.formState.errors.resumeName && (
+              <p className="text-red-500">{form.formState.errors.resumeName.message}</p>
+            )}
           </div>
           <div className="flex space-x-2 justify-start items-center">
             <Checkbox
               id="useAI"
               checked={useAI}
-              onCheckedChange={updateCheckBox}
+              onCheckedChange={toggleUseAI}
             />
-            <Label htmlFor="useAI">Use Ali to tailor your resume</Label>
+            <Label htmlFor="useAI">Use AI to tailor your resume</Label>
           </div>
           {useAI && (
             <div>
               <Label htmlFor="jobDescription">Paste Job Description</Label>
               <Textarea
                 id="jobDescription"
-                value={jobDescription}
-                onChange={(e) => setJobDescription(e.target.value)}
-                placeholder="Watch AI tailor your resume to your qualifications and experiences to elevate your application!"
+                {...form.register("jobDescription")}
+                placeholder="Watch AI tailor your resume..."
               />
+              {form.formState.errors.jobDescription && (
+                <p className="text-red-500">{form.formState.errors.jobDescription.message}</p>
+              )}
             </div>
           )}
-        </div>
-        <DialogFooter>
-          <Button type="button" onClick={handleNextStep}>
-            Next Step
-          </Button>
-        </DialogFooter>
+          <DialogFooter>
+            <Button type="submit">
+              Next Step
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );
