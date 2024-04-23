@@ -69,7 +69,9 @@ export default function ResumeDialog() {
         projects: [], // list of dict with name, dates, description
         skills: [] // list of skills
       });
-      router.push(`/resumes/${resumeRef.id}`);clear
+      router.push(`/resumes/${resumeRef.id}`);
+      //close dialog
+      
       setIsDialogOpen(false);
     } else {
       alert("You must be logged in to create a resume.");

@@ -199,7 +199,7 @@ export default function ProjectForm() {
           variant="ghost"
           onClick={addProjectEntry}
         >
-          + Add Education
+          + Add Project
         </Button>
       </div>
       {projectEntries.map((entry, index) => (
