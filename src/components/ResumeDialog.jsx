@@ -61,14 +61,15 @@ export default function ResumeDialog() {
     if (user) {
       const resumesRef = collection(db, `users/${user.uid}/resumes`);
       const resumeRef = await addDoc(resumesRef, {
-        name: formData.resumeName,
+        title: formData.resumeName,
         dateCreated: new Date(),
+        lastUpdated: new Date(),
         education: [], // list of dict with school, major, degree, graduation, gpa  
         experience: [], // list of dict with company, position, dates, description
         projects: [], // list of dict with name, dates, description
         skills: [] // list of skills
       });
-      router.push(`/resumes/${resumeRef.id}`);
+      router.push(`/resumes/${resumeRef.id}`);clear
       setIsDialogOpen(false);
     } else {
       alert("You must be logged in to create a resume.");

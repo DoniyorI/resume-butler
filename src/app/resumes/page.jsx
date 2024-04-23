@@ -1,10 +1,19 @@
 "use client";
 
-import React from "react";
+import {
+  getDocs,
+  updateDoc,
+  deleteDoc,
+  doc,
+  collection,
+} from "firebase/firestore";
+import { useAuthState } from "react-firebase-hooks/auth";
+import { db, auth } from "@/lib/firebase/config";
+
 import { useState, useEffect } from "react";
 import { EllipsisVertical } from "lucide-react";
 import { FiDownload, FiTrash2 } from "react-icons/fi";
-import { MdOutlineEdit } from "react-icons/md"
+import { MdOutlineEdit } from "react-icons/md";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -23,71 +32,125 @@ import {
 } from "@/components/ui/select";
 
 import ResumeDialog from "@/components/ResumeDialog";
-
-const FetchedResumes = [
-  {
-    id: "1",
-    title: "Software Engineer",
-    created: "2023-04-01",
-    lastUpdated: "2023-04-05",
-  },
-  {
-    id: "2",
-    title: "Product Manager",
-    created: "2023-03-15",
-    lastUpdated: "2023-03-20",
-  },
-  {
-    id: "3",
-    title: "Data Manager",
-    created: "2022-03-15",
-    lastUpdated: "2023-03-20",
-  },
-  {
-    id: "4",
-    title: "Block Chain Developer",
-    created: "2023-03-15",
-    lastUpdated: "2024-05-20",
-  },
-];
+import { useRouter } from "next/navigation";
 
 export default function Page() {
-  const [resumes, setResumes] = useState(FetchedResumes);
+  const [resumes, setResumes] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortOrder, setSortOrder] = useState("Recently Opened");
+  const [user, loading, error] = useAuthState(auth);
+  const router = useRouter();
+
+  const [editingId, setEditingId] = useState(null);
+  const [editingTitle, setEditingTitle] = useState("");
 
   useEffect(() => {
-    const filteredResumes = FetchedResumes.filter((resume) =>
-      resume.title.toLowerCase().includes(searchTerm.toLowerCase())
-    ).sort((a, b) => {
-      if (sortOrder === "A-Z") {
-        return a.title.localeCompare(b.title);
-      } else if (sortOrder === "Z-A") {
-        return b.title.localeCompare(a.title);
-      } else if (sortOrder === "Recently Created") {
-        return new Date(b.created) - new Date(a.created);
-      } else if (sortOrder === "Latest Updated") {
-        return new Date(b.lastUpdated) - new Date(a.lastUpdated);
+    if (loading) return;
+    if (error) console.error("Auth error:", error); // Handle possible auth errors
+    if (!user) {
+      router.push("/login");
+      return;
+    }
+
+    const fetchResumes = async () => {
+      try {
+        const resumesRef = collection(db, `users/${user.uid}/resumes`);
+        const querySnapshot = await getDocs(resumesRef);
+        const fetchedResumes = querySnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+          dateCreated: doc
+            .data()
+            .dateCreated.toDate()
+            .toLocaleDateString("en-US", {
+              month: "2-digit",
+              day: "2-digit",
+              year: "numeric",
+            }),
+          lastUpdated: doc
+            .data()
+            .lastUpdated.toDate()
+            .toLocaleDateString("en-US", {
+              month: "2-digit",
+              day: "2-digit",
+              year: "numeric",
+            }),
+        }));
+        setResumes(fetchedResumes);
+      } catch (error) {
+        console.error("Error fetching resumes:", error);
       }
-      return 0;
-    });
+    };
+
+    fetchResumes();
+  }, [user, loading, error, router]);
+
+  useEffect(() => {
+    const filteredResumes = resumes
+      .filter((resume) =>
+        resume.title.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+      .sort((a, b) => {
+        if (sortOrder === "A-Z") {
+          return a.title.localeCompare(b.title);
+        } else if (sortOrder === "Z-A") {
+          return b.title.localeCompare(a.title);
+        } else if (sortOrder === "Recently Created") {
+          return new Date(b.dateCreated) - new Date(a.dateCreated);
+        } else if (sortOrder === "Latest Updated") {
+          return new Date(b.lastUpdated) - new Date(a.lastUpdated);
+        }
+        return 0;
+      });
     setResumes(filteredResumes);
   }, [searchTerm, sortOrder]);
+
   const handleDownloadPDF = (id) => {
     console.log("Download PDF");
   };
-
-  const handleDownloadDOCX = (id) => {
-    console.log("Download DOCX");
+  
+  const handleRename = (id, title) => {
+    setEditingId(id);
+    setEditingTitle(title || "");  // Ensures editingTitle is never undefined
+  };
+  
+  const handleTitleChange = (event) => {
+    setEditingTitle(event.target.value);
   };
 
-  const handleRename = (id) => {
-    console.log("Rename");
+  const saveTitle = async (id) => {
+    if (editingTitle.trim() === "") {
+      return;
+    }
+    try {
+      const resumeRef = doc(db, `users/${user.uid}/resumes`, id);
+      await updateDoc(resumeRef, { title: editingTitle });
+      setResumes((resumes) =>
+        resumes.map((resume) =>
+          resume.id === id ? { ...resume, title: editingTitle } : resume
+        )
+      );
+      setEditingId(null); // Stop editing
+      console.log("Title updated successfully");
+    } catch (error) {
+      console.error("Error updating title:", error);
+    }
   };
 
-  const handleDelete = (id) => {
-    console.log("Delete");
+  const handleDelete = async (id) => {
+    if (!id) return;
+
+    try {
+      const resumeRef = doc(db, `users/${user.uid}/resumes`, id);
+      await deleteDoc(resumeRef);
+      setResumes((resumes) => resumes.filter((resume) => resume.id !== id));
+
+      console.log("Resume deleted successfully");
+    } catch (error) {
+      console.error("Error deleting resume:", error);
+    }
   };
+
   return (
     <div className="flex flex-col w-full min-h-screen py-10 px-10">
       <h1 className="text-2xl text-[#559F87] font-semibold">Resumes</h1>
@@ -122,16 +185,37 @@ export default function Page() {
             key={resume.id}
             className="h-[220px] w-[170px] border rounded-md shadow justify-between flex flex-col m-2"
           >
-            <div className="h-full flex justify-center items-center cursor-pointer ">
+            <div className="h-full flex justify-center items-center cursor-pointer"
+              onClick={() => router.push(`/resumes/${resume.id}`)}
+            >
               Preview
             </div>
             <div className=" flex justify-between py-2 px-2 bg-slate-100">
               <div>
-                <div className="text-sm">
-                  {resume.title.length > 18
-                    ? `${resume.title.substring(0, 15)}...`
-                    : resume.title}
-                </div>
+                {editingId === resume.id ? (
+                  <input
+                    type="text"
+                    value={editingTitle}
+                    onChange={handleTitleChange}
+                    onBlur={() => saveTitle(resume.id)}
+                    onKeyPress={(event) => {
+                      if (event.key === "Enter") {
+                        saveTitle(resume.id);
+                      }
+                    }}
+                    className="text-sm p-1 w-full"
+                    autoFocus
+                  />
+                ) : (
+                  <div
+                    className="flex justify-center items-center cursor-pointer"
+                    onClick={() => handleRename(resume.id, resume.title)}
+                  >
+                    {resume.title.length > 18
+                      ? `${resume.title.substring(0, 15)}...`
+                      : resume.title}
+                  </div>
+                )}
 
                 <div className="text-xs text-slate-400">
                   {resume.lastUpdated}
@@ -153,12 +237,6 @@ export default function Page() {
                   >
                     <FiDownload className="mr-2" /> Download PDF
                   </DropdownMenuItem>
-                  {/* <DropdownMenuItem
-                    className="text-xs cursor-pointer"
-                    onClick={() => handleDownloadDOCX(resume.id)}
-                  >
-                    <FiDownload className="mr-2" /> Download DOCX
-                  </DropdownMenuItem> */}
                   <DropdownMenuItem
                     className="text-xs cursor-pointer"
                     onClick={() => handleRename(resume.id)}
@@ -176,7 +254,6 @@ export default function Page() {
             </div>
           </div>
         ))}
-        
       </div>
       Your Resumes will appear here
     </div>

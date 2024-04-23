@@ -1,120 +1,158 @@
 "use client";
-import React, { useState, useRef } from 'react';
-import { Editor, EditorState, RichUtils, getDefaultKeyBinding } from 'draft-js';
-import 'draft-js/dist/Draft.css';
-import { stateToHTML } from 'draft-js-export-html';
-import jsPDF from 'jspdf';
+
+import { useAuthState } from 'react-firebase-hooks/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from '@/lib/firebase/config';
+import React, { useState, useEffect } from "react";
 import { Slider } from "@/components/ui/slider";
 import { ZoomIn, ZoomOut } from "lucide-react";
+import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
+
+import { useRouter } from "next/navigation";
 
 
 export default function Page({ params }) {
-  const [scale, setScale] = useState(80);
-  const [editorState, setEditorState] = useState(() => EditorState.createEmpty());
-  const editorRef = useRef(null);
+  const [email, setEmail] = useState("email@resumebutler.ai");
+  const [phone, setPhone] = useState("(123) 456-7890");
+  const [linkedin, setLinkedin] = useState("linkedin.com/in/Username");
+  const [github, setGithub] = useState("github.com/Username");
 
-  const width = 850 * (scale / 100);
-  const height = 1101 * (scale / 100);
+  const [scale, setScale] = useState(114);
+  const width = 816 * (scale / 100);
+  const height = 1056 * (scale / 100);
   const scaledPadding = 30 * (scale / 100);
-  const scaledFontSize = 16 * (scale / 100);
 
   const handleScaleChange = (value) => {
     setScale(value[0]);
   };
 
-  const focusEditor = () => {
-    editorRef.current.focus();
-  };
-
-  const handleKeyCommand = (command, editorState) => {
-    const newState = RichUtils.handleKeyCommand(editorState, command);
-    if (newState) {
-      setEditorState(newState);
-      return 'handled';
-    }
-    return 'not-handled';
-  };
-
-  const mapKeyToEditorCommand = (e) => {
-    if (e.keyCode === 9 /* TAB */) {
-      const newEditorState = RichUtils.onTab(e, editorState, 4);
-      if (newEditorState !== editorState) {
-        setEditorState(newEditorState);
-      }
+  const onDragEnd = (result) => {
+    if (!result.destination) {
       return;
     }
-    return getDefaultKeyBinding(e);
+    const items = Array.from(sections);
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
+    setSections(items);
   };
 
-  const downloadPDF = () => {
-    if (!editorState) {
-      console.error("Editor state is not available.");
-      return;
+  const initialSections = [
+    { id: "education", content: "Education" },
+    { id: "experience", content: "Experience" },
+    { id: "projects", content: "Projects" },
+    { id: "skills", content: "Skills" },
+  ];
+  const [sections, setSections] = useState(initialSections);
+
+  const [resumeTitle, setResumeTitle] = useState('');
+  const [user, loading, error] = useAuthState(auth);
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push('/login');
     }
-  
-    // Ensuring that the content state is properly accessed
-    const contentState = editorState.getCurrentContent();
-    if (!contentState) {
-      console.error("No content to print.");
-      return;
+  }, [user, loading, router]);
+
+  useEffect(() => {
+    if (user && params.resumeId) {
+      const resumeRef = doc(db, `users/${user.uid}/resumes`, params.resumeId);
+
+      getDoc(resumeRef).then(docSnap => {
+        if (docSnap.exists()) {
+          setResumeTitle(docSnap.data().title);
+        } else {
+          console.error("Resume not found or you're not authorized to view it");
+          router.push('/404');
+        }
+      }).catch(error => {
+        console.error('Error fetching resume:', error);
+        router.push('/404');
+      });
     }
-  
-    // Convert content state to HTML
-    const html = stateToHTML(contentState);
-  
-    // Create a hidden div to attach the HTML content
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = html;
-    tempDiv.style.visibility = 'hidden';
-    document.body.appendChild(tempDiv);
-  
-    // Initialize jsPDF and use html method to add content
-    const pdf = new jsPDF({
-      orientation: 'portrait',
-      unit: 'pt',
-      format: 'a4'
-    });
-  
-    // Ensuring jsPDF html method works properly
-    pdf.html(tempDiv, {
-      callback: (doc) => {
-        doc.save('resume.pdf');
-        document.body.removeChild(tempDiv);
-      },
-      x: 10,
-      y: 10,
-      width: 595.28
-    });
+  }, [user, params.resumeId, router]);
+
+  if (loading || !user) {
+    return <p>Loading...</p>; 
   };
-  
+
 
   return (
-    <div className="flex flex-col w-full p-10">
+    <div className="flex flex-col w-full p-10 font-sans">
       <h1 className="text-3xl font-medium text-[#559F87] mb-4">
-        Resume: {params.resumeId}
+        Resume: {resumeTitle}
       </h1>
-      <button onClick={downloadPDF} className="mb-4 p-2 bg-blue-500 text-white rounded hover:bg-blue-700">
-        Download as PDF
-      </button>
+
       <div className="flex-grow flex flex-col">
-        <div className="flex flex-col items-center justify-center flex-grow p-4" onClick={focusEditor}>
+        <div className="flex flex-col items-center justify-center flex-grow p-4">
           <div
             style={{
               width: `${width}px`,
               height: `${height}px`,
               padding: `${scaledPadding}px`,
-              fontSize: `${scaledFontSize}px`,
             }}
             className="border border-black bg-white box-border overflow-hidden"
           >
-            <Editor
-              editorState={editorState}
-              onChange={setEditorState}
-              ref={editorRef}
-              placeholder="Start typing..."
-              handleKeyCommand={handleKeyCommand}
-              keyBindingFn={mapKeyToEditorCommand}
-            />
+            <div className="text-center">
+              <input
+                type="text"
+                className="bg-transparent text-center w-full focus:outline-none text-3xl uppercase font-bold"
+                placeholder="Your Name"
+              />
+            </div>
+
+            <div className="flex justify-center items-center">
+              <InputSizer
+                placeholder="Email"
+                value={email}
+                onChange={setEmail}
+              />
+              <span>|</span>
+              <InputSizer
+                placeholder="Phone Number"
+                value={phone}
+                onChange={setPhone}
+              />
+              <span>|</span>
+
+              <InputSizer
+                placeholder="LinkedIn Profile"
+                value={linkedin}
+                onChange={setLinkedin}
+              />
+              <span>|</span>
+
+              <InputSizer
+                label="GitHub: "
+                placeholder="GitHub Profile"
+                value={github}
+                onChange={setGithub}
+              />
+            </div>
+
+            <DragDropContext onDragEnd={onDragEnd}>
+              <Droppable droppableId="sections">
+                {(provided) => (
+                  <div {...provided.droppableProps} ref={provided.innerRef}>
+                    {sections.map(({ id, content }, index) => (
+                      <Draggable key={id} draggableId={id} index={index}>
+                        {(provided) => (
+                          <div
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            {...provided.dragHandleProps}
+                            className="mb-2 mt-[-6pt] text-left text-lg font-bold small-caps border-black pl-1 border-b-2"
+                          >
+                            {content}
+                          </div>
+                        )}
+                      </Draggable>
+                    ))}
+                    {provided.placeholder}
+                  </div>
+                )}
+              </Droppable>
+            </DragDropContext>
           </div>
         </div>
         <div className="fixed flex space-x-2 right-5 bottom-5 w-[15%]">
@@ -131,3 +169,22 @@ export default function Page({ params }) {
     </div>
   );
 }
+
+const InputSizer = ({ placeholder, value, onChange }) => {
+  const handleInputChange = (event) => {
+    onChange(event.target.value);
+  };
+  return (
+    <label className="input-sizer">
+      <input
+        type="text"
+        className="text-center underline underline-offset-3"
+        value={value}
+        onChange={handleInputChange}
+        size={Math.max(1, value.length)}
+        placeholder={placeholder}
+        onInput={(e) => (e.target.parentNode.dataset.value = e.target.value)}
+      />
+    </label>
+  );
+};

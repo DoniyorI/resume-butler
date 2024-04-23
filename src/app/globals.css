@@ -111,3 +111,49 @@
 .rdp-vhidden {
   @apply hidden;
 }
+
+.input-sizer,
+.input-sizer::before,
+.input-sizer::after {
+  box-sizing: border-box;
+}
+
+.input-sizer {
+  font-size: 10;
+  display: inline-grid;
+  vertical-align: top;
+  align-items: center;
+  position: relative;
+}
+
+.input-sizer span {
+  padding: 0.25em;
+}
+
+.input-sizer::after,
+.input-sizer input {
+  width: auto;
+  min-width: 1em;
+  grid-area: 1 / 2;
+  font: inherit;
+  padding: 0.1em;
+  margin: 0;
+  background: none;
+  appearance: none;
+  border: none; 
+}
+
+.input-sizer::after {
+  content: attr(data-value) ' ';
+  visibility: hidden;
+  white-space: pre-wrap;
+}
+
+.input-sizer input:focus {
+  outline: none; 
+}
+
+
+body {
+  font-family: 'Latin Modern Roman', serif;
+}
