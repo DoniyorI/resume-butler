@@ -16,6 +16,8 @@ import {
   FormDescription,
   FormMessage,
 } from "@/components/ui/form";
+import { toast } from "sonner";
+
 import { auth, db } from "@/lib/firebase/config";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
@@ -89,8 +91,10 @@ export default function ProfileForm() {
     }, {});
     try {
       await setDoc(doc(db, "users", user.uid), sanitizedData, { merge: true });
+      toast("Profile updated successfully");
       router.push("/cv"); // Navigate to CV page or confirmation page
     } catch (error) {
+      toast("Error updating profile");
       console.error("Error updating profile: ", error);
       // Handle error (e.g., show error message to user)
     }

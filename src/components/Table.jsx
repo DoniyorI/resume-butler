@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { auth, db } from "@/lib/firebase/config";
 import { onAuthStateChanged } from "firebase/auth";
-import { doc, collection, getDocs, updateDoc } from "firebase/firestore";
+import { doc, collection, getDocs, updateDoc, deleteDoc} from "firebase/firestore";
 import { AiOutlineFilePdf } from "react-icons/ai";
 import {
   flexRender,
@@ -34,7 +34,7 @@ import {
 } from "@/components/ui/table";
 import AddApplicationDialog from "@/components/AddApplication";
 import Link from "next/link";
-
+import { toast } from "sonner";
 
 function ApplicationTable() {
   const [user, setUser] = useState(null);
@@ -78,10 +78,9 @@ function ApplicationTable() {
 
   const columns = [
     {
-      accessorKey: "resumeUrl", 
+      accessorKey: "resume", 
       header: ({ column }) => (
         <Button
-          className="p-1"
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
@@ -90,13 +89,13 @@ function ApplicationTable() {
         </Button>
       ),
       cell: ({ row }) => (
-        <div className="flex justify-center">
-          {row.getValue("resumeUrl") && ( 
+        <div className="flex justify-start mx-10">
+          {row.getValue("resume") && ( 
             <a
-              href={row.getValue("resumeUrl")}
+              href={row.getValue("resume")}
               target="_blank" // Open in a new tab
               rel="noopener noreferrer"
-              className="text-red-700"
+              className="text-red-700 "
             >
               <AiOutlineFilePdf className="mx-auto" size={20} />
             </a>
@@ -105,10 +104,9 @@ function ApplicationTable() {
       ),
     },
     {
-      accessorKey: "coverLetterUrl", 
+      accessorKey: "coverLetter", 
       header: ({ column }) => (
         <Button
-          className="p-1"
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
         >
@@ -117,10 +115,10 @@ function ApplicationTable() {
         </Button>
       ),
       cell: ({ row }) => (
-        <div className="flex justify-center">
-          {row.getValue("coverLetterUrl") && (
+        <div className="flex justify-start mx-10">
+          {row.getValue("coverLetter") && (
             <a
-              href={row.getValue("coverLetterUrl")}
+              href={row.getValue("coverLetter")}
               target="_blank" // Open in a new tab
               rel="noopener noreferrer"
               className="text-green-700"
@@ -181,9 +179,10 @@ function ApplicationTable() {
           setValue(newStatus);
         };
         return (
+          <div className="flex justify-start">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="outline-none select-none">
+              <Button variant="ghost" className="outline-none select-none -ml-3">
                 <Badge variant={value.toLowerCase()}>{value}</Badge>
               </Button>
             </DropdownMenuTrigger>
@@ -206,6 +205,7 @@ function ApplicationTable() {
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
+        </div>
         );
       },
     },
@@ -291,7 +291,18 @@ function ApplicationTable() {
       enableHiding: false,
       cell: ({ row }) => {
         const application = row.original;
-  
+
+        const handleDelete = async () => {
+          try {
+            console.log(user.uid, application.id)
+            const docRef = doc(db, "users", user.uid, "applications", application.id);
+            await deleteDoc(docRef);
+            alert("Application deleted successfully!"); // Notify the user of success
+          } catch (error) {
+            console.error("Error deleting application:", error);
+            alert("Failed to delete application."); // Notify the user of failure
+          }
+        };
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -300,18 +311,16 @@ function ApplicationTable() {
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {/* <DropdownMenuLabel>Actions</DropdownMenuLabel> */}
-              {/* <DropdownMenuItem
-                onClick={() => navigator.clipboard.writeText(application.id)}
-              >
-                Copy application ID
-              </DropdownMenuItem> */}
-              {/* <DropdownMenuSeparator /> */}
+            <DropdownMenuContent align="end">              
               <DropdownMenuItem>
                 <Link href={`/applications/${application.id}`}>
                   View application details
                 </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                <button className="text-red-500" onClick={handleDelete}>
+                  Delete
+                </button>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -453,11 +462,11 @@ const updateComment = async (id, newComment) => {
         </Table>
       </div>
 
-      <div className="flex items-center justify-between space-x-2 py-4 mx-4">
+      <div className="flex items-center justify-end space-x-2 py-4 mx-4">
         <div>
           <AddApplicationDialog />
         </div>
-        <div className="space-x-2 ">
+        {/* <div className="space-x-2 ">
           <Button
             variant="outline"
             size="sm"
@@ -474,7 +483,7 @@ const updateComment = async (id, newComment) => {
           >
             Next
           </Button>
-        </div>
+        </div> */}
       </div>
     </div>
   );

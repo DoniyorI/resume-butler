@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 
-const StatusButton = ({ status, onClick }) => {
+export default function StatusButton({ status, onClick }){
   let variant = "default";
   let color = "gray-500";
 
@@ -24,7 +24,6 @@ const StatusButton = ({ status, onClick }) => {
     default:
       break;
   }
-
   return (
     <Button
       variant={variant}
@@ -35,5 +34,3 @@ const StatusButton = ({ status, onClick }) => {
     </Button>
   );
 };
-
-export default StatusButton;

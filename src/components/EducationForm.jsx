@@ -15,6 +15,7 @@ import { onAuthStateChanged } from "firebase/auth";
 import { format } from "date-fns";
 import { Trash2 } from "lucide-react";
 
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -97,10 +98,10 @@ export default function EducationForm() {
             ? addDoc(educationCollectionRef, entryWithTimestamps)
             : updateDoc(doc(db, "users", user.uid, "education", id), entryWithTimestamps);
         }));
-        alert("Education entries saved successfully!");
+        toast("Education entries saved successfully!");
       } catch (error) {
         console.error("Error saving education entries: ", error);
-        alert("Failed to save education entries.");
+        toast("Education entires FAILED to save!");
       }
     }
   };

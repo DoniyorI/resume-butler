@@ -209,7 +209,7 @@ export default function Page() {
                 ) : (
                   <div
                     className="flex justify-center items-center cursor-pointer"
-                    onClick={() => handleRename(resume.id, resume.title)}
+                    onDoubleClick={() => handleRename(resume.id, resume.title)}
                   >
                     {resume.title.length > 18
                       ? `${resume.title.substring(0, 15)}...`

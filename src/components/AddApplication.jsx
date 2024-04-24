@@ -41,12 +41,6 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useRouter } from "next/navigation";
 
-const locations = [
-  { city: "New York", state: "NY" },
-  { city: "Los Angeles", state: "CA" },
-  { city: "Chicago", state: "IL" },
-];
-
 export default function AddApplicationDialog() {
   const [currentUser, setCurrentUser] = useState(null);
   const [resumeFile, setResumeFile] = useState(null);
@@ -92,20 +86,20 @@ export default function AddApplicationDialog() {
     }
     setIsSaving(true); // Start loading indication
     try {
-      const resumeUrl = await uploadFile(
+      const resume = await uploadFile(
         currentUser.uid,
         resumeFile,
         "resumes"
       );
-      const coverLetterUrl = await uploadFile(
+      const coverLetter = await uploadFile(
         currentUser.uid,
         coverLetterFile,
         "coverletters"
       );
 
       const applicationData = {
-        resumeUrl,
-        coverLetterUrl,
+        resume,
+        coverLetter,
         companyName,
         portalLink,
         role,

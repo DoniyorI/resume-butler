@@ -13,6 +13,7 @@ import {
 } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -161,10 +162,10 @@ export default function ExperienceForm() {
             ? addDoc(experienceCollectionRef, entryWithTimestamps)
             : updateDoc(doc(db, "users", user.uid, "experience", id), entryWithTimestamps);
         }));
-        alert("Experience entries saved successfully!");
+        toast("Experience entries saved successfully!");
       } catch (error) {
         console.error("Error saving experience entries: ", error);
-        alert("Failed to save experience entries.");
+        toast("Failed to save experience entries.");
       }
     }
   };

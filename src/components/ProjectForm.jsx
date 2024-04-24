@@ -14,6 +14,7 @@ import {
 import { onAuthStateChanged } from "firebase/auth";
 import { format } from "date-fns";
 
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -134,10 +135,10 @@ export default function ProjectForm() {
                 );
           })
         );
-        alert("Project entries saved successfully!");
+        toast("Project entries saved successfully!");
       } catch (error) {
         console.error("Error saving project entries: ", error);
-        alert("Failed to save project entries.");
+        toast("Failed to save project entries.");
       }
     }
   };
