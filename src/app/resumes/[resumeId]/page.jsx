@@ -29,6 +29,7 @@ export default function Page({ params }) {
     {
       degreeType: "Bachelor's",
       endDate: "December 20, 2024 at 12:00:00 AM UTC-5",
+      location: "Buffalo, NY",
       gpa: "3.72",
       major: "Computer Science",
       school: "University At Buffalo",
@@ -94,6 +95,19 @@ export default function Page({ params }) {
       projectName: "FiLo Chat",
       startDate: "September 1, 2023 at 12:00:00 AM UTC-4",
     },
+    {
+      currentlyWorking: false,
+      description: [
+          "Integrated OpenAI APIs for real-time, AI-driven solutions, enriching user interaction across various fields such as financial analysis, artistic creation, & programming and programming language translation.",
+          "Secured an exciting 1st place in the UB Hacking Machine Learning/Artificial Intelligence Category, recognized for developing a high-quality, innovative project within a 24-hour time frame."
+      ],
+      endDate: "November 19, 2022 at 12:00:00 AM UTC-5",
+      location: "Buffalo, NY",
+      position: "Frontend Developer",
+      projectName: "Transform *WINNER*",
+      startDate: "November 19, 2022 at 12:00:00 AM UTC-5"
+  }
+  
   ];
 
   const [education, setEducation] = useState(exampleEducation);
@@ -113,24 +127,28 @@ export default function Page({ params }) {
     if (user && params.resumeId) {
       const resumeRef = doc(db, `users/${user.uid}/resumes`, params.resumeId);
 
-      getDoc(resumeRef).then((docSnap) => {
-        if (docSnap.exists()) {
-          const resumeData = docSnap.data();
-          setResumeTitle(resumeData.title);
-          // setSections({
-          //   education: resumeData.education || [],
-          //   experience: resumeData.experience || [],
-          //   projects: resumeData.projects || [],
-          //   skills: resumeData.skills.map(skill => ({ id: skill, content: skill })) || [] // Assuming skills are simple strings
-          // });
-        } else {
-          console.error("Resume not found or you're not authorized to view it");
+      getDoc(resumeRef)
+        .then((docSnap) => {
+          if (docSnap.exists()) {
+            const resumeData = docSnap.data();
+            setResumeTitle(resumeData.title);
+            // setSections({
+            //   education: resumeData.education || [],
+            //   experience: resumeData.experience || [],
+            //   projects: resumeData.projects || [],
+            //   skills: resumeData.skills.map(skill => ({ id: skill, content: skill })) || [] // Assuming skills are simple strings
+            // });
+          } else {
+            console.error(
+              "Resume not found or you're not authorized to view it"
+            );
+            router.push("/404");
+          }
+        })
+        .catch((error) => {
+          console.error("Error fetching resume:", error);
           router.push("/404");
-        }
-      }).catch((error) => {
-        console.error("Error fetching resume:", error);
-        router.push("/404");
-      });
+        });
     }
   }, [user, params.resumeId, router]);
 
@@ -159,11 +177,11 @@ export default function Page({ params }) {
   const renderItem = (item, sectionId) => {
     switch (sectionId) {
       case "education":
-        return `${item.degreeType} in ${item.major} from ${item.school}`;
+        return <Education item={item} />;
       case "experience":
-        return `${item.position} at ${item.companyName}`;
+        return <Experience item={item} />;
       case "projects":
-        return `${item.projectName}: ${item.description[0]}`;
+        return <Projects item={item} />;
       case "skills":
         return item.name;
       default:
@@ -316,3 +334,116 @@ const ZoomControls = ({ handleScaleChange }) => (
     <ZoomIn strokeWidth={2} />
   </div>
 );
+
+const Education = ({ item }) => {
+  // Extract the date as "December 20, 2024"
+  const dateString = item.endDate.split(" at ")[0];
+
+  // Parse and format the date
+  const date = new Date(dateString);
+  const formattedDate = date.toLocaleDateString("en-US", {
+    month: "long",
+    year: "numeric",
+  });
+
+  return (
+    <div className="">
+      <div className="flex justify-between items-baseline">
+        <h2 className="text-md font-bold">{item.school}</h2>
+        <span className="text-sm font-bold">Expected {formattedDate}</span>
+      </div>
+      <div className="text-sm flex justify-between">
+        <p>
+          {item.degreeType} in {item.major}, {item.gpa} GPA
+        </p>
+        <p className="italic">{item.location}</p>
+      </div>
+    </div>
+  );
+};
+
+const Experience = ({ item }) => {
+  const formatDate = (dateString) => {
+    const date = new Date(dateString.split(" at ")[0]); // Assuming the date format includes unnecessary suffixes
+    return date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  };
+  const formattedStartDate = formatDate(item.startDate);
+  let formattedEndDate = item.currentlyWorking
+    ? "Current"
+    : formatDate(item.endDate);
+
+  return (
+    <div className="Experience">
+    <div className="flex justify-between items-baseline">
+      <h2 className="text-md font-bold">{item.companyName}</h2>
+      <span className="text-sm font-bold">
+        {formattedStartDate} -- {formattedEndDate}
+      </span>
+    </div>
+    <div className="text-sm flex justify-between">
+      <p>{item.position}</p>
+      <p className="italic">{item.location}</p>
+    </div>
+    <div className="ml-[22px]"> {/* Adjust the margin-left here to move bullets to the right */}
+      <ul className="list-disc list-inside">
+        {item.description.map((point, index) => (
+          <li key={index} className="text-sm">
+            {point}
+          </li>
+        ))}
+      </ul>
+    </div>
+  </div>
+  
+  );
+};
+
+const Projects = ({ item }) => {
+  const formatDate = (dateString) => {
+    const date = new Date(dateString.split(" at ")[0]); // Assuming the date format includes unnecessary suffixes
+    return date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  };
+  const formattedStartDate = formatDate(item.startDate);
+  let formattedEndDate = item.currentlyWorking
+    ? "Current"
+    : formatDate(item.endDate);
+
+  return (
+    <div className="">
+    <div className="flex justify-between items-baseline">
+      <h2 className="text-md font-bold">{item.projectName}</h2>
+      <span className="text-sm font-bold">
+        {formattedStartDate} -- {formattedEndDate}
+      </span>
+    </div>
+    <div className="text-sm flex justify-between">
+      <p>{item.position}</p>
+      <p className="italic">{item.location}</p>
+    </div>
+    <div className="ml-[22px]"> {/* Adjust the margin-left here to move bullets to the right */}
+      <ul className="list-disc list-inside">
+        {item.description.map((point, index) => (
+          <li key={index} className="text-sm">
+            {point}
+          </li>
+        ))}
+      </ul>
+    </div>
+  </div>
+  
+  );
+};
+// {
+//   currentlyWorking: true,
+//   description: [
+//     "Designed an application to manage and tailor resumes, increasing interview callbacks by 25% through use of OpenAI’s APIs.",
+//     "Established a user dashboard, improving user engagement by 20% by providing insights into application statuses and management tools.",
+//     "Implemented a PDF reader to streamline resume and cover letter tailoring process.",
+//     "Designed and implemented a resume and cover letter editor, enabling users to craft and personalize documents with an intuitive interface, option to download the final versions as PDFs.",
+//   ],
+//   endDate: null,
+//   location: "Buffalo, NY",
+//   position: "Full Stack Developer",
+//   projectName: "Resume Butler",
+//   startDate: "March 1, 2024 at 12:00:00 AM UTC-5",
+// },

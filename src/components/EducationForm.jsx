@@ -58,7 +58,7 @@ export default function EducationForm() {
   const addEducationEntry = () => {
     setEducationEntries([
       ...educationEntries,
-      { school: "", major: "", degreeType: "", gpa: "", startDate: "", endDate: "", isNew: true },
+      { school: "",location: "", major: "", degreeType: "", gpa: "", startDate: "", endDate: "", isNew: true },
     ]);
   };
 
@@ -129,7 +129,8 @@ export default function EducationForm() {
             className="absolute left-[-50px] top-1/2 -translate-y-1/2 cursor-pointer hover:text-red-500"
             onClick={() => deleteEducationEntry(index)}
           />
-          <div>
+          <div className="flex space-x-6 ">
+          <div className="flex-grow">
             <Label>School</Label>
             <Input
               value={entry.school}
@@ -138,6 +139,18 @@ export default function EducationForm() {
               }
             />
           </div>
+          <div className="flex-grow">
+            <Label>Location</Label>
+            <Input
+              value={entry.location}
+              onChange={(e) =>
+                updateEducationEntry(index, "location", e.target.value)
+              }
+            />
+          </div>
+
+          </div>
+          
           <div className="flex space-x-6">
             <div className="flex-grow">
               <Label>Major</Label>
