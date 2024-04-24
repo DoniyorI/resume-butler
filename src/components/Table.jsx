@@ -3,7 +3,13 @@
 import React, { useState, useEffect } from "react";
 import { auth, db } from "@/lib/firebase/config";
 import { onAuthStateChanged } from "firebase/auth";
-import { doc, collection, getDocs, updateDoc, deleteDoc} from "firebase/firestore";
+import {
+  doc,
+  collection,
+  getDocs,
+  updateDoc,
+  deleteDoc,
+} from "firebase/firestore";
 import { AiOutlineFilePdf } from "react-icons/ai";
 import {
   flexRender,
@@ -45,7 +51,6 @@ function ApplicationTable() {
   const [rowSelection, setRowSelection] = useState({});
   const [loading, setLoading] = useState(true);
 
-
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
@@ -78,7 +83,7 @@ function ApplicationTable() {
 
   const columns = [
     {
-      accessorKey: "resume", 
+      accessorKey: "resume",
       header: ({ column }) => (
         <Button
           variant="ghost"
@@ -90,7 +95,7 @@ function ApplicationTable() {
       ),
       cell: ({ row }) => (
         <div className="flex justify-start mx-10">
-          {row.getValue("resume") && ( 
+          {row.getValue("resume") && (
             <a
               href={row.getValue("resume")}
               target="_blank" // Open in a new tab
@@ -104,7 +109,7 @@ function ApplicationTable() {
       ),
     },
     {
-      accessorKey: "coverLetter", 
+      accessorKey: "coverLetter",
       header: ({ column }) => (
         <Button
           variant="ghost"
@@ -180,32 +185,35 @@ function ApplicationTable() {
         };
         return (
           <div className="flex justify-start">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="outline-none select-none -ml-3">
-                <Badge variant={value.toLowerCase()}>{value}</Badge>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" className="text-sm">
-              {[
-                "Applied",
-                "Interviewed",
-                "Pending",
-                "Rejected",
-                "Offered",
-                "Withdrew",
-              ].map((status) => (
-                <DropdownMenuItem
-                  key={status}
-                  onClick={() => handleChange(status)}
-                  className="text-xs cursor-pointer"
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="outline-none select-none -ml-3"
                 >
-                  <Badge variant={status.toLowerCase()}>{status}</Badge>
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+                  <Badge variant={value.toLowerCase()}>{value}</Badge>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="text-sm">
+                {[
+                  "Applied",
+                  "Interviewed",
+                  "Pending",
+                  "Rejected",
+                  "Offered",
+                  "Withdrew",
+                ].map((status) => (
+                  <DropdownMenuItem
+                    key={status}
+                    onClick={() => handleChange(status)}
+                    className="text-xs cursor-pointer"
+                  >
+                    <Badge variant={status.toLowerCase()}>{status}</Badge>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         );
       },
     },
@@ -255,20 +263,20 @@ function ApplicationTable() {
       cell: ({ row }) => {
         const [editing, setEditing] = useState(false);
         const [value, setValue] = useState(row.getValue("comments"));
-  
+
         const toggleEdit = () => {
           setEditing(!editing);
         };
-  
+
         const handleChange = (e) => {
           setValue(e.target.value);
         };
-  
+
         const handleBlur = () => {
           updateComment(row.original.id, value); // Update the comment in the database
           setEditing(false);
         };
-  
+
         return (
           <div onDoubleClick={toggleEdit}>
             {editing ? (
@@ -293,14 +301,21 @@ function ApplicationTable() {
         const application = row.original;
 
         const handleDelete = async () => {
+          console.log("trying to delete");
           try {
-            console.log(user.uid, application.id)
-            const docRef = doc(db, "users", user.uid, "applications", application.id);
+            console.log(user.uid, application.id);
+            const docRef = doc(
+              db,
+              "users",
+              user.uid,
+              "applications",
+              application.id
+            );
             await deleteDoc(docRef);
-            alert("Application deleted successfully!"); // Notify the user of success
+            toast("Application deleted successfully!"); // Notify the user of success
           } catch (error) {
             console.error("Error deleting application:", error);
-            alert("Failed to delete application."); // Notify the user of failure
+            toast("Failed to delete application.");
           }
         };
         return (
@@ -311,16 +326,19 @@ function ApplicationTable() {
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">              
+            <DropdownMenuContent align="end">
               <DropdownMenuItem>
                 <Link href={`/applications/${application.id}`}>
                   View application details
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuItem>
-                <button className="text-red-500" onClick={handleDelete}>
+                <Button 
+                variant="ghost"
+                className="text-red-500 py-1 p-0 m-0 h-5" 
+                onClick={handleDelete}>
                   Delete
-                </button>
+                </Button>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -328,7 +346,6 @@ function ApplicationTable() {
       },
     },
   ];
-  
 
   const table = useReactTable({
     data: applications,
@@ -349,34 +366,31 @@ function ApplicationTable() {
     },
   });
 
+  const updateStatus = async (id, newStatus) => {
+    console.log(`Changing status for ID ${id} to ${newStatus}`);
+    const applicationRef = doc(db, "users", user.uid, "applications", id);
+    try {
+      await updateDoc(applicationRef, {
+        status: newStatus,
+      });
+      console.log(`Status updated to ${newStatus} for ID ${id}`);
+    } catch (error) {
+      console.error("Failed to update status:", error);
+    }
+  };
 
-const updateStatus = async (id, newStatus) => {
-  console.log(`Changing status for ID ${id} to ${newStatus}`);
-  const applicationRef = doc(db, "users", user.uid, "applications", id);
-  try {
-    await updateDoc(applicationRef, {
-      status: newStatus
-    });
-    console.log(`Status updated to ${newStatus} for ID ${id}`);
-  } catch (error) {
-    console.error("Failed to update status:", error);
-  }
-};
-
-
-const updateComment = async (id, newComment) => {
-  console.log(`Updating comment for ID ${id} to ${newComment}`);
-  const applicationRef = doc(db, "users", user.uid, "applications", id);
-  try {
-    await updateDoc(applicationRef, {
-      comments: newComment
-    });
-    console.log(`Comment updated to "${newComment}" for ID ${id}`);
-  } catch (error) {
-    console.error("Failed to update comment:", error);
-  }
-};
-
+  const updateComment = async (id, newComment) => {
+    console.log(`Updating comment for ID ${id} to ${newComment}`);
+    const applicationRef = doc(db, "users", user.uid, "applications", id);
+    try {
+      await updateDoc(applicationRef, {
+        comments: newComment,
+      });
+      console.log(`Comment updated to "${newComment}" for ID ${id}`);
+    } catch (error) {
+      console.error("Failed to update comment:", error);
+    }
+  };
 
   if (loading) {
     return <div>Loading applications...</div>; // Loading state

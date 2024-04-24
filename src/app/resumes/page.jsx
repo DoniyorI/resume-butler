@@ -1,5 +1,4 @@
 "use client";
-
 import {
   getDocs,
   updateDoc,
@@ -7,10 +6,11 @@ import {
   doc,
   collection,
 } from "firebase/firestore";
+import { ref, listAll, getMetadata, getDownloadURL, deleteObject } from "firebase/storage";
 import { useAuthState } from "react-firebase-hooks/auth";
-import { db, auth } from "@/lib/firebase/config";
+import { db, auth, storage } from "@/lib/firebase/config";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, use } from "react";
 import { EllipsisVertical } from "lucide-react";
 import { FiDownload, FiTrash2 } from "react-icons/fi";
 import { MdOutlineEdit } from "react-icons/md";
@@ -33,9 +33,11 @@ import {
 
 import ResumeDialog from "@/components/ResumeDialog";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 export default function Page() {
   const [resumes, setResumes] = useState([]);
+  const [PDFresumes, setPDFResumes] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortOrder, setSortOrder] = useState("Recently Opened");
   const [user, loading, error] = useAuthState(auth);
@@ -108,12 +110,12 @@ export default function Page() {
   const handleDownloadPDF = (id) => {
     console.log("Download PDF");
   };
-  
+
   const handleRename = (id, title) => {
     setEditingId(id);
-    setEditingTitle(title || "");  // Ensures editingTitle is never undefined
+    setEditingTitle(title || ""); 
   };
-  
+
   const handleTitleChange = (event) => {
     setEditingTitle(event.target.value);
   };
@@ -130,10 +132,12 @@ export default function Page() {
           resume.id === id ? { ...resume, title: editingTitle } : resume
         )
       );
-      setEditingId(null); // Stop editing
-      console.log("Title updated successfully");
+      setEditingId(null);
+      toast("Title updated successfully");
     } catch (error) {
       console.error("Error updating title:", error);
+      toast("Title failed updated");
+
     }
   };
 
@@ -144,12 +148,27 @@ export default function Page() {
       const resumeRef = doc(db, `users/${user.uid}/resumes`, id);
       await deleteDoc(resumeRef);
       setResumes((resumes) => resumes.filter((resume) => resume.id !== id));
-
-      console.log("Resume deleted successfully");
+      toast("Resume deleted successfully");
     } catch (error) {
       console.error("Error deleting resume:", error);
+      toast("Resume Failed to delete")
     }
   };
+
+  const handleDeletePDF = async (fullPath) => {
+    const fileRef = ref(storage, fullPath);
+
+    try {
+        await deleteObject(fileRef);
+        toast("File successfully deleted!");
+        setPDFResumes(prevFiles => prevFiles.filter(PDFresumes => PDFresumes.path !== fullPath));
+    } catch (error) {
+        console.error("Error deleting file: ", error);
+    }
+};
+  useEffect(() => {
+    fetchResumes(user).then(setPDFResumes);
+  }, [user]);
 
   return (
     <div className="flex flex-col w-full min-h-screen py-10 px-10">
@@ -177,7 +196,7 @@ export default function Page() {
           </SelectContent>
         </Select>
       </div>
-      Resumes with our AI will appear here
+      Resume Editor
       <div className="flex flex-wrap ">
         <ResumeDialog />
         {resumes.map((resume) => (
@@ -185,7 +204,8 @@ export default function Page() {
             key={resume.id}
             className="h-[220px] w-[170px] border rounded-md shadow justify-between flex flex-col m-2"
           >
-            <div className="h-full flex justify-center items-center cursor-pointer"
+            <div
+              className="h-full flex justify-center items-center cursor-pointer"
               onClick={() => router.push(`/resumes/${resume.id}`)}
             >
               Preview
@@ -203,7 +223,7 @@ export default function Page() {
                         saveTitle(resume.id);
                       }
                     }}
-                    className="text-sm p-1 w-full"
+                    className="text-sm w-full bg-inherit focus:ring-0"
                     autoFocus
                   />
                 ) : (
@@ -239,7 +259,7 @@ export default function Page() {
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     className="text-xs cursor-pointer"
-                    onClick={() => handleRename(resume.id)}
+                    onClick={() => handleRename(resume.id, resume.title)}
                   >
                     <MdOutlineEdit className="mr-2" /> Rename
                   </DropdownMenuItem>
@@ -255,7 +275,102 @@ export default function Page() {
           </div>
         ))}
       </div>
-      Your Resumes will appear here
+      Resumes you uploaded
+      <div className="flex flex-wrap">
+        {PDFresumes.map((resume) => (
+          <div
+            key={resume.path}
+            className="h-[220px] w-[170px] border rounded-md shadow justify-between flex flex-col m-2"
+          >
+            <a
+              href={resume.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="h-full flex justify-center items-center cursor-pointer"
+            >
+              Preview
+            </a>
+            <div className="flex justify-between py-2 px-2 bg-slate-100">
+              <div className="flex flex-col">
+                <div>
+                  {resume.name.length > 18
+                    ? `${resume.name.substring(0, 15)}...`
+                    : resume.name}
+                </div>
+                <div className="text-xs text-slate-400">{resume.date}</div>
+              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="p-0 m-0 outline-none select-none "
+                  >
+                    <EllipsisVertical size={18} />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="text-sm">
+                  {/* <DropdownMenuItem
+                    className="text-xs cursor-pointer"
+                    onClick={() => handleDownloadPDF(resume.id)}
+                  >
+                    <FiDownload className="mr-2" /> Download PDF
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="text-xs cursor-pointer"
+                    onClick={() => handleRename(resume.id)}
+                  >
+                    <MdOutlineEdit className="mr-2" /> Rename
+                  </DropdownMenuItem> */}
+                  <DropdownMenuItem
+                    className="text-xs cursor-pointer text-red-500"
+                    onClick={() => handleDeletePDF(resume.path)}
+                  >
+                    <FiTrash2 className="mr-2" /> Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
+
+const fetchResumes = async (userId) => {
+  if (!userId) {
+    console.error("User ID is null or undefined.");
+    return [];
+  }
+  const resumesRef = ref(storage, `users/${userId.uid}/resumes`);
+  try {
+    const snapshot = await listAll(resumesRef);
+    const metadataPromises = snapshot.items.map((itemRef) =>
+      Promise.all([getMetadata(itemRef), getDownloadURL(itemRef)]).then(
+        ([metadata, url]) => ({
+          name: itemRef.name,
+          path: itemRef.fullPath,
+          url: url,
+          date: formatDate(metadata.timeCreated),
+        })
+      )
+    );
+
+    const resumeFiles = await Promise.all(metadataPromises);
+    return resumeFiles;
+  } catch (error) {
+    console.error("Error fetching resumes: ", error);
+    return [];
+  }
+};
+
+const formatDate = (dateString) => {
+  const date = new Date(dateString);
+  return `${padTo2Digits(date.getMonth() + 1)}/${padTo2Digits(
+    date.getDate()
+  )}/${date.getFullYear()}`;
+};
+
+const padTo2Digits = (num) => {
+  return num.toString().padStart(2, "0");
+};

@@ -5,7 +5,6 @@ import { auth, db, storage } from "@/lib/firebase/config";
 import { doc, setDoc, Timestamp } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
-
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,7 +27,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "./ui/badge";
 import { isValid, format } from "date-fns";
-import { Calendar as CalendarIcon } from "lucide-react";
+import { Calendar as CalendarIcon, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   Select,
@@ -61,7 +60,7 @@ export default function AddApplicationDialog() {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
         setCurrentUser(user);
-      }else{
+      } else {
         router.push("/login");
       }
     });
@@ -84,13 +83,9 @@ export default function AddApplicationDialog() {
       alert("No user signed in");
       return;
     }
-    setIsSaving(true); // Start loading indication
+    setIsSaving(true);
     try {
-      const resume = await uploadFile(
-        currentUser.uid,
-        resumeFile,
-        "resumes"
-      );
+      const resume = await uploadFile(currentUser.uid, resumeFile, "resumes");
       const coverLetter = await uploadFile(
         currentUser.uid,
         coverLetterFile,
@@ -309,26 +304,16 @@ export default function AddApplicationDialog() {
           </div>
         </ScrollArea>
         <DialogFooter>
-          <Button type="button" onClick={handleSave} disabled={isSaving}>
-            {isSaving ? (
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className={cn("animate-spin", "mr-2 h-4 w-4 animate-spin")}
-                >
-                  <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-                </svg>
-            ) : (
-              "Add Application"
-            )}
-          </Button>
+          {isSaving ? (
+            <Button disabled>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Please wait
+            </Button>
+          ) : (
+            <Button type="button" onClick={handleSave} disabled={isSaving}>
+              Add Application
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
