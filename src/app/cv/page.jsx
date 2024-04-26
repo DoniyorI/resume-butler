@@ -1,6 +1,6 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import FileUpload from "@/components/FileUpload";
-import EducationForm from "@/components/EducationForm";
+import EducationForm from "@/app/resumes/[resumeId]/_components/educationForm";
 import ExperienceForm from "@/components/ExperienceForm";
 import ProjectForm from "@/components/ProjectForm";
 import SkillForm from "@/components/SkillForm";

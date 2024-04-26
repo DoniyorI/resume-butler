@@ -10,6 +10,10 @@ import { Slider } from "@/components/ui/slider";
 import { InputSizer } from "@/components/InputSizer";
 import { ZoomIn, ZoomOut } from "lucide-react";
 
+import { EducationForm } from "./_components/educationForm";
+import { ExperienceForm } from "./_components/experienceForm";
+import { ProjectsForm } from "./_components/projectForm";
+
 export default function Page({ params }) {
   const [user, loading, error] = useAuthState(auth);
   const router = useRouter();
@@ -161,9 +165,6 @@ export default function Page({ params }) {
   const width = 850;
   const height = 1100;
   const scaledPadding = 30;
-  const scaledBorderWidth = 2 * (scale / 100); // Scale border thickness
-  const scaledFontSize = 16 * (scale / 100); // Scale font size
-
   // const handleScaleChange = (value) => {
   //   setScale(value[0]);
   // };
@@ -177,54 +178,61 @@ export default function Page({ params }) {
     console.log("Reordered sections:", items);
   };
 
-  const renderItem = (item, sectionId) => {
+  const renderItem = (item, sectionId, index) => {
+    // Add index here
     switch (sectionId) {
       case "education":
-        return <Education item={item} onChange={(data) => handleEducationChange(index, data)} />;
+        return (
+          <EducationForm
+            item={item}
+            onChange={(data) => handleEducationChange(index, data)}
+          />
+        );
       case "experience":
-        return <Experience item={item} onChange={(data) => handleExperienceChange(index, data)}/>;
+        return (
+          <ExperienceForm
+            item={item}
+            onChange={(data) => handleExperienceChange(index, data)}
+          />
+        );
       case "projects":
-        return <Projects item={item} />;
+        return <ProjectsForm
+        item={item}
+        onChange={(data) => handleProjectChange(index, data)}
+      />;
       case "skills":
         return item.name;
       default:
         return null;
     }
   };
-  
-  const handleEducationChange = (index, newEducationData) => {
-    setEducation(prevEducation => prevEducation.map((item, idx) => idx === index ? {...item, ...newEducationData} : item));
-};
 
-  const handleExperienceChange = (innerIndex, newExperienceData) => {
-    setExperience(prev => prev.map((exp, i) => i === innerIndex ? { ...exp, ...newExperienceData } : exp));
-    console.log(experience)
+  const handleEducationChange = (index, newEducationData) => {
+    setEducation((prevEducation) =>
+      prevEducation.map((item, idx) =>
+        idx === index ? { ...item, ...newEducationData } : item
+      )
+    );
+  };
+  const handleExperienceChange = (index, newExperience) => {
+    setExperience((prevExperience) =>
+      prevExperience.map((item, idx) =>
+        idx === index ? { ...item, ...newExperience } : item
+      )
+    );
+  };
+  const handleProjectChange = (index, newProject) => {
+    setProjects((prevProject) =>
+      prevProject.map((item, idx) =>
+        idx === index ? { ...item, ...newProject } : item
+      )
+    );
   };
   
-  // const onDragEnd = (result) => {
-  //   const { source, destination } = result;
-  //   if (!destination) return;
-
-  //   if (source.droppableId === destination.droppableId) {
-  //     if (source.droppableId === "sections") {
-  //       // Reordering sections
-  //       const newSections = Array.from(sections);
-  //       const [removed] = newSections.splice(source.index, 1);
-  //       newSections.splice(destination.index, 0, removed);
-  //       setSections(newSections);
-  //     } else {
-  //       // Reordering items within the same section
-  //       const section = sections.find((s) => s.id === source.droppableId);
-  //       const items = Array.from(section.content);
-  //       const [removed] = items.splice(source.index, 1);
-  //       items.splice(destination.index, 0, removed);
-  //       const newSections = sections.map((s) =>
-  //         s.id === section.id ? { ...s, content: items } : s
-  //       );
-  //       setSections(newSections);
-  //     }
-  //   }
-  // };
+  //   const handleExperienceChange = (innerIndex, newExperienceData) => {
+  //     setExperience(prev => prev.map((exp, i) => i === innerIndex ? { ...exp, ...newExperienceData } : exp));
+  //     console.log(experience)
+  //   };
 
   if (loading || !user) {
     return <p>Loading...</p>;
@@ -334,7 +342,7 @@ export default function Page({ params }) {
                                 key={innerIndex}
                                 className="text-left text-sm pl-2"
                               >
-                                {renderItem(item, section.id)}
+                                {renderItem(item, section.id, innerIndex)}
                               </div>
                             ))}
                           </div>
@@ -411,257 +419,6 @@ const ZoomControls = ({ handleScaleChange }) => (
     <ZoomIn strokeWidth={2} />
   </div>
 );
-
-
-const Education = ({ item, onChange }) => {
-  const handleInputChange = (field, e) => {
-    const value = e.target.textContent.trim();
-    console.log(value)
-    onChange({ [field]: value });
-  };
-
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault(); // Stop the default enter key action
-      e.target.blur();    // Remove focus from element
-    }
-  };
-
-  const handleFocus = (e) => {
-    if (e.target.textContent === e.target.getAttribute("data-placeholder")) {
-      e.target.textContent = ''; // Clear placeholder on focus if text is placeholder
-    }
-  };
-
-  const handleBlur = (e) => {
-    const field = e.target.getAttribute('data-field');
-    const value = e.target.textContent.trim();
-    if (!value) {
-      e.target.textContent = e.target.getAttribute("data-placeholder");
-      e.target.classList.add('contentEditablePlaceholder');
-    } else {
-      e.target.classList.remove('contentEditablePlaceholder');
-    }
-    handleInputChange(field, { target: { textContent: value } });
-  };
-  
-
-  const endDateString = item.endDate ? item.endDate.split(" at ")[0] : "";
-  const endDate = endDateString ? new Date(endDateString) : new Date();
-  const formattedEndDate = endDate.toLocaleDateString("en-US", { year: 'numeric', month: 'long' });
-
-  return (
-    <div>
-      <div className="flex justify-between items-end mt-3">
-        <span
-          contentEditable
-          className={`input text-md font-bold ${!item.school ? 'contentEditablePlaceholder' : ''}`}
-          role="textbox"
-          onFocus={handleFocus}
-          onBlur={handleBlur}
-          onKeyDown={handleKeyDown}
-          data-placeholder="Enter School Name"
-          data-field="school"
-          dangerouslySetInnerHTML={{ __html: item.school || "" }}
-        />
-        <div>
-          Expected {" "}
-        <span
-          contentEditable
-          className={`input text-sm ${!item.endDate ? 'contentEditablePlaceholder' : ''}`}
-          role="textbox"
-          onFocus={handleFocus}
-          onBlur={handleBlur}
-          onKeyDown={handleKeyDown}
-          data-placeholder="Enter End Date"
-          data-field="endDate"
-          dangerouslySetInnerHTML={{ __html: formattedEndDate || "" }}
-        />
-        </div>
-       
-      </div>
-      <div className="text-sm flex justify-between">
-        <div className="flex items-center">
-        <span
-          contentEditable
-          className={`input ${!item.degreeType ? 'contentEditablePlaceholder' : ''}`}
-          role="textbox"
-          onFocus={handleFocus}
-          onBlur={handleBlur}
-          onKeyDown={handleKeyDown}
-          data-placeholder="Degree Type"
-          data-field="degreeType"
-          dangerouslySetInnerHTML={{ __html: item.degreeType || "" }}
-        />
-        <span className="label">{" "} in {" "}</span>
-        <span
-          contentEditable
-          className={`input ${!item.major ? 'contentEditablePlaceholder' : ''}`}
-          role="textbox"
-          onFocus={handleFocus}
-          onBlur={handleBlur}
-          onKeyDown={handleKeyDown}
-          data-placeholder="Major"
-          data-field="major"
-          dangerouslySetInnerHTML={{ __html: item.major || "" }}
-        />
-        <span className="label">{" "}, GPA {" "}</span>
-        <span
-          contentEditable
-          className={`input ${!item.gpa ? 'contentEditablePlaceholder' : ''}`}
-          role="textbox"
-          onFocus={handleFocus}
-          onBlur={handleBlur}
-          onKeyDown={handleKeyDown}
-          data-placeholder="GPA"
-          data-field="gpa"
-          dangerouslySetInnerHTML={{ __html: item.gpa || "" }}
-        />
-        </div>
-        
-        <span
-          contentEditable
-          className={`input italic ${!item.location ? 'contentEditablePlaceholder' : ''}`}
-          role="textbox"
-          onFocus={handleFocus}
-          onBlur={handleBlur}
-          onKeyDown={handleKeyDown}
-          data-placeholder="Location"
-          data-field="location"
-          dangerouslySetInnerHTML={{ __html: item.location || "" }}
-        />
-      </div>
-    </div>
-  );
-};
-
-const Experience = ({ item, onChange }) => {
-  const handleInputChange = (field, e) => {
-    const value = e.target.textContent.trim();
-    onChange({ [field]: value });
-  };
-
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault(); // Stop the default enter key action
-      e.target.blur();    // Remove focus from element
-    }
-  };
-
-  const handleFocus = (e) => {
-    if (e.target.textContent === e.target.getAttribute("data-placeholder")) {
-      e.target.textContent = ''; // Clear placeholder on focus if text is placeholder
-    }
-  };
-
-  const handleBlur = (e) => {
-    if (e.target.textContent.trim() === "") {
-      e.target.textContent = ''; // Clear placeholder text
-      e.target.classList.add('contentEditablePlaceholder'); // Add placeholder class
-      handleInputChange(e.target.getAttribute('data-field'), e); // Update the state
-    } else {
-      e.target.classList.remove('contentEditablePlaceholder'); // Remove placeholder class if text is present
-    }
-  };
-
-  const formatDate = (dateString) => {
-    if (!dateString) return ""; 
-    const date = new Date(dateString.split(" at ")[0]);
-    return date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
-  };
-
-  const formattedStartDate = formatDate(item.startDate);
-  const formattedEndDate = item.currentlyWorking ? "Current" : formatDate(item.endDate);
-
-  return (
-    <div className="Experience">
-      <div className="flex justify-between items-baseline">
-        <span
-          contentEditable
-          className={`input text-sm ${!item.companyName ? 'contentEditablePlaceholder' : ''}`}
-          role="textbox"
-          onFocus={handleFocus}
-          onBlur={handleBlur}
-          onKeyDown={handleKeyDown}
-          data-placeholder="Enter Company Name"
-          data-field="companyName"
-          dangerouslySetInnerHTML={{ __html: item.companyName || "" }}
-        />
-        <div className="flex">
-          <span
-            contentEditable
-            className={`input text-sm ${!item.startDate ? 'contentEditablePlaceholder' : ''}`}
-            role="textbox"
-            onFocus={handleFocus}
-            onBlur={handleBlur}
-            onKeyDown={handleKeyDown}
-            data-placeholder="Enter Start Date"
-            data-field="startDate"
-            dangerouslySetInnerHTML={{ __html: formattedStartDate || "" }}
-          />
-          {" -- "}
-          <span
-            contentEditable
-            className={`input text-sm ${!item.endDate && !item.currentlyWorking ? 'contentEditablePlaceholder' : ''}`}
-            role="textbox"
-            onFocus={handleFocus}
-            onBlur={handleBlur}
-            onKeyDown={handleKeyDown}
-            data-placeholder="Enter End Date"
-            data-field="endDate"
-            dangerouslySetInnerHTML={{ __html: formattedEndDate || "" }}
-          />
-        </div>
-      </div>
-      <div className="text-sm flex justify-between">
-        <span
-          contentEditable
-          className={`input text-sm ${!item.position ? 'contentEditablePlaceholder' : ''}`}
-          role="textbox"
-          onFocus={handleFocus}
-          onBlur={handleBlur}
-          onKeyDown={handleKeyDown}
-          data-placeholder="Enter Position"
-          data-field="position"
-          dangerouslySetInnerHTML={{ __html: item.position || "" }}
-        />
-        <span
-          contentEditable
-          className={`input italic text-sm ${!item.location ? 'contentEditablePlaceholder' : ''}`}
-          role="textbox"
-          onFocus={handleFocus}
-          onBlur={handleBlur}
-          onKeyDown={handleKeyDown}
-          data-placeholder="Enter Location"
-          data-field="location"
-          dangerouslySetInnerHTML={{ __html: item.location || "" }}
-        />
-      </div>
-      <div className="ml-[22px]">
-        <ul className="list-disc list-inside">
-        {
-  item.description && item.description.length > 0 ? (
-    item.description.map((point, index) => (
-      <li key={index} className="text-sm" contentEditable
-          onFocus={handleFocus}
-          onBlur={(e) => handleDescriptionChange(index, e.target.textContent)}
-          onKeyDown={handleKeyDown}
-          data-placeholder="Enter Description Detail"
-          dangerouslySetInnerHTML={{ __html: point || "Add description detail" }}
-      >
-      </li>
-    ))
-  ) : (
-    <li className="text-sm">No details available.</li>
-  )
-}
-        </ul>
-      </div>
-    </div>
-  );
-};
-
-
 
 const Projects = ({ item }) => {
   const formatDate = (dateString) => {
