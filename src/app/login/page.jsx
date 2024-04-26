@@ -69,7 +69,7 @@ export default function Login() {
               Login
             </Button>
           </form>
-          <GoogleAuthButton redirectPath="/dashboard" />
+          <GoogleAuthButton redirectPath="/" />
           {/* Link to sign up */}
           <div className="text-center text-sm">
             Don&apos;t have an account?{" "}

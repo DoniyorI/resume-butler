@@ -6,7 +6,6 @@ import { auth, db } from "@/lib/firebase/config";
 import { doc, getDoc } from "firebase/firestore";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 
-// Import UI components
 import { Slider } from "@/components/ui/slider";
 import { InputSizer } from "@/components/InputSizer";
 import { ZoomIn, ZoomOut } from "lucide-react";
@@ -15,14 +14,12 @@ export default function Page({ params }) {
   const [user, loading, error] = useAuthState(auth);
   const router = useRouter();
 
-  // Redirect logic based on authentication state
   useEffect(() => {
     if (!loading && !user) {
       router.push("/login");
     }
   }, [user, loading, router]);
 
-  // State hooks for managing resume data
   const [resumeTitle, setResumeTitle] = useState("");
 
   const exampleEducation = [
@@ -98,30 +95,36 @@ export default function Page({ params }) {
     {
       currentlyWorking: false,
       description: [
-          "Integrated OpenAI APIs for real-time, AI-driven solutions, enriching user interaction across various fields such as financial analysis, artistic creation, & programming and programming language translation.",
-          "Secured an exciting 1st place in the UB Hacking Machine Learning/Artificial Intelligence Category, recognized for developing a high-quality, innovative project within a 24-hour time frame."
+        "Integrated OpenAI APIs for real-time, AI-driven solutions, enriching user interaction across various fields such as financial analysis, artistic creation, & programming and programming language translation.",
+        "Secured an exciting 1st place in the UB Hacking Machine Learning/Artificial Intelligence Category, recognized for developing a high-quality, innovative project within a 24-hour time frame.",
       ],
       endDate: "November 19, 2022 at 12:00:00 AM UTC-5",
       location: "Buffalo, NY",
       position: "Frontend Developer",
       projectName: "Transform *WINNER*",
-      startDate: "November 19, 2022 at 12:00:00 AM UTC-5"
-  }
-  
+      startDate: "November 19, 2022 at 12:00:00 AM UTC-5",
+    },
   ];
 
   const [education, setEducation] = useState(exampleEducation);
-  const [experience, setExperience] = useState(exampleExperience);
-  const [projects, setProjects] = useState(exampleProjects);
+  const [experience, setExperience] = useState([]);
+  const [projects, setProjects] = useState([]);
   const [skills, setSkills] = useState([]);
-  const initialSections = [
+  const [sections, setSections] = useState([
     { id: "education", title: "Education", content: education },
     { id: "experience", title: "Experience", content: experience },
     { id: "projects", title: "Projects", content: projects },
     { id: "skills", title: "Skills", content: skills },
-  ];
-  const [sections, setSections] = useState(initialSections);
-  console.log("sections", sections);
+  ]);
+
+  useEffect(() => {
+    setSections([
+      { id: "education", title: "Education", content: education },
+      { id: "experience", title: "Experience", content: experience },
+      { id: "projects", title: "Projects", content: projects },
+      { id: "skills", title: "Skills", content: skills },
+    ]);
+  }, [education, experience, projects, skills]);
 
   useEffect(() => {
     if (user && params.resumeId) {
@@ -177,9 +180,9 @@ export default function Page({ params }) {
   const renderItem = (item, sectionId) => {
     switch (sectionId) {
       case "education":
-        return <Education item={item} />;
+        return <Education item={item} onChange={(data) => handleEducationChange(index, data)} />;
       case "experience":
-        return <Experience item={item} />;
+        return <Experience item={item} onChange={(data) => handleExperienceChange(index, data)}/>;
       case "projects":
         return <Projects item={item} />;
       case "skills":
@@ -188,6 +191,16 @@ export default function Page({ params }) {
         return null;
     }
   };
+  
+  const handleEducationChange = (index, newEducationData) => {
+    setEducation(prevEducation => prevEducation.map((item, idx) => idx === index ? {...item, ...newEducationData} : item));
+};
+
+  const handleExperienceChange = (innerIndex, newExperienceData) => {
+    setExperience(prev => prev.map((exp, i) => i === innerIndex ? { ...exp, ...newExperienceData } : exp));
+    console.log(experience)
+  };
+  
   // const onDragEnd = (result) => {
   //   const { source, destination } = result;
   //   if (!destination) return;
@@ -216,6 +229,63 @@ export default function Page({ params }) {
   if (loading || !user) {
     return <p>Loading...</p>;
   }
+
+  const handleAdd = (section) => {
+    switch (section) {
+      case "Education":
+        addEducation();
+        break;
+      case "Experience":
+        addExperience();
+        break;
+      case "Projects":
+        addProjects();
+        break;
+      case "Skills":
+        addSkills();
+        break;
+      default:
+        console.log("Unknown section");
+    }
+  };
+
+  const addEducation = () => {
+    const newEducation = {
+      degreeType: "",
+      endDate: "",
+      location: "",
+      gpa: "",
+      major: "",
+      school: "",
+      startDate: "",
+    };
+    setEducation((prev) => [...prev, newEducation]);
+  };
+  const addExperience = () => {
+    const newExperience = {
+      companyName: "",
+      position: "",
+      startDate: "",
+      endDate: "",
+      location: "",
+      description: "",
+      currentlyWorking: false,
+    };
+    setExperience((prev) => [...prev, newExperience]);
+  };
+
+  const addProjects = () => {
+    const newProject = {
+      projectName: "",
+      description: "",
+      startDate: "",
+      endDate: "",
+      currentlyWorking: false,
+    };
+    setProjects((prev) => [...prev, newProject]);
+  };
+
+  const addSkills = () => {};
 
   return (
     <div className="flex flex-col w-full p-10 font-sans">
@@ -248,8 +318,15 @@ export default function Page({ params }) {
                             {...provided.dragHandleProps}
                             className="mb-2 mt-[-6pt] "
                           >
-                            <h2 className="text-left text-lg font-bold small-caps border-black pl-1 border-b-2">
-                              {section.title}
+                            <h2 className="flex justify-between text-left text-lg font-bold small-caps border-black pl-1 border-b-2">
+                              <div>{section.title}</div>
+                              <button
+                                className="text-[#188665] font-light text-sm hover:bg-green-100 px-2 py-1 "
+                                variant="ghost"
+                                onClick={() => handleAdd(section.title)}
+                              >
+                                + Add {section.title}
+                              </button>
                             </h2>
 
                             {section.content.map((item, innerIndex) => (
@@ -335,68 +412,256 @@ const ZoomControls = ({ handleScaleChange }) => (
   </div>
 );
 
-const Education = ({ item }) => {
-  // Extract the date as "December 20, 2024"
-  const dateString = item.endDate.split(" at ")[0];
 
-  // Parse and format the date
-  const date = new Date(dateString);
-  const formattedDate = date.toLocaleDateString("en-US", {
-    month: "long",
-    year: "numeric",
-  });
+const Education = ({ item, onChange }) => {
+  const handleInputChange = (field, e) => {
+    const value = e.target.textContent.trim();
+    console.log(value)
+    onChange({ [field]: value });
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault(); // Stop the default enter key action
+      e.target.blur();    // Remove focus from element
+    }
+  };
+
+  const handleFocus = (e) => {
+    if (e.target.textContent === e.target.getAttribute("data-placeholder")) {
+      e.target.textContent = ''; // Clear placeholder on focus if text is placeholder
+    }
+  };
+
+  const handleBlur = (e) => {
+    const field = e.target.getAttribute('data-field');
+    const value = e.target.textContent.trim();
+    if (!value) {
+      e.target.textContent = e.target.getAttribute("data-placeholder");
+      e.target.classList.add('contentEditablePlaceholder');
+    } else {
+      e.target.classList.remove('contentEditablePlaceholder');
+    }
+    handleInputChange(field, { target: { textContent: value } });
+  };
+  
+
+  const endDateString = item.endDate ? item.endDate.split(" at ")[0] : "";
+  const endDate = endDateString ? new Date(endDateString) : new Date();
+  const formattedEndDate = endDate.toLocaleDateString("en-US", { year: 'numeric', month: 'long' });
 
   return (
-    <div className="">
-      <div className="flex justify-between items-baseline">
-        <h2 className="text-md font-bold">{item.school}</h2>
-        <span className="text-sm font-bold">Expected {formattedDate}</span>
+    <div>
+      <div className="flex justify-between items-end mt-3">
+        <span
+          contentEditable
+          className={`input text-md font-bold ${!item.school ? 'contentEditablePlaceholder' : ''}`}
+          role="textbox"
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          onKeyDown={handleKeyDown}
+          data-placeholder="Enter School Name"
+          data-field="school"
+          dangerouslySetInnerHTML={{ __html: item.school || "" }}
+        />
+        <div>
+          Expected {" "}
+        <span
+          contentEditable
+          className={`input text-sm ${!item.endDate ? 'contentEditablePlaceholder' : ''}`}
+          role="textbox"
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          onKeyDown={handleKeyDown}
+          data-placeholder="Enter End Date"
+          data-field="endDate"
+          dangerouslySetInnerHTML={{ __html: formattedEndDate || "" }}
+        />
+        </div>
+       
       </div>
       <div className="text-sm flex justify-between">
-        <p>
-          {item.degreeType} in {item.major}, {item.gpa} GPA
-        </p>
-        <p className="italic">{item.location}</p>
+        <div className="flex items-center">
+        <span
+          contentEditable
+          className={`input ${!item.degreeType ? 'contentEditablePlaceholder' : ''}`}
+          role="textbox"
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          onKeyDown={handleKeyDown}
+          data-placeholder="Degree Type"
+          data-field="degreeType"
+          dangerouslySetInnerHTML={{ __html: item.degreeType || "" }}
+        />
+        <span className="label">{" "} in {" "}</span>
+        <span
+          contentEditable
+          className={`input ${!item.major ? 'contentEditablePlaceholder' : ''}`}
+          role="textbox"
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          onKeyDown={handleKeyDown}
+          data-placeholder="Major"
+          data-field="major"
+          dangerouslySetInnerHTML={{ __html: item.major || "" }}
+        />
+        <span className="label">{" "}, GPA {" "}</span>
+        <span
+          contentEditable
+          className={`input ${!item.gpa ? 'contentEditablePlaceholder' : ''}`}
+          role="textbox"
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          onKeyDown={handleKeyDown}
+          data-placeholder="GPA"
+          data-field="gpa"
+          dangerouslySetInnerHTML={{ __html: item.gpa || "" }}
+        />
+        </div>
+        
+        <span
+          contentEditable
+          className={`input italic ${!item.location ? 'contentEditablePlaceholder' : ''}`}
+          role="textbox"
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          onKeyDown={handleKeyDown}
+          data-placeholder="Location"
+          data-field="location"
+          dangerouslySetInnerHTML={{ __html: item.location || "" }}
+        />
       </div>
     </div>
   );
 };
 
-const Experience = ({ item }) => {
+const Experience = ({ item, onChange }) => {
+  const handleInputChange = (field, e) => {
+    const value = e.target.textContent.trim();
+    onChange({ [field]: value });
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault(); // Stop the default enter key action
+      e.target.blur();    // Remove focus from element
+    }
+  };
+
+  const handleFocus = (e) => {
+    if (e.target.textContent === e.target.getAttribute("data-placeholder")) {
+      e.target.textContent = ''; // Clear placeholder on focus if text is placeholder
+    }
+  };
+
+  const handleBlur = (e) => {
+    if (e.target.textContent.trim() === "") {
+      e.target.textContent = ''; // Clear placeholder text
+      e.target.classList.add('contentEditablePlaceholder'); // Add placeholder class
+      handleInputChange(e.target.getAttribute('data-field'), e); // Update the state
+    } else {
+      e.target.classList.remove('contentEditablePlaceholder'); // Remove placeholder class if text is present
+    }
+  };
+
   const formatDate = (dateString) => {
-    const date = new Date(dateString.split(" at ")[0]); // Assuming the date format includes unnecessary suffixes
+    if (!dateString) return ""; 
+    const date = new Date(dateString.split(" at ")[0]);
     return date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
   };
+
   const formattedStartDate = formatDate(item.startDate);
-  let formattedEndDate = item.currentlyWorking
-    ? "Current"
-    : formatDate(item.endDate);
+  const formattedEndDate = item.currentlyWorking ? "Current" : formatDate(item.endDate);
 
   return (
     <div className="Experience">
-    <div className="flex justify-between items-baseline">
-      <h2 className="text-md font-bold">{item.companyName}</h2>
-      <span className="text-sm font-bold">
-        {formattedStartDate} -- {formattedEndDate}
-      </span>
+      <div className="flex justify-between items-baseline">
+        <span
+          contentEditable
+          className={`input text-sm ${!item.companyName ? 'contentEditablePlaceholder' : ''}`}
+          role="textbox"
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          onKeyDown={handleKeyDown}
+          data-placeholder="Enter Company Name"
+          data-field="companyName"
+          dangerouslySetInnerHTML={{ __html: item.companyName || "" }}
+        />
+        <div className="flex">
+          <span
+            contentEditable
+            className={`input text-sm ${!item.startDate ? 'contentEditablePlaceholder' : ''}`}
+            role="textbox"
+            onFocus={handleFocus}
+            onBlur={handleBlur}
+            onKeyDown={handleKeyDown}
+            data-placeholder="Enter Start Date"
+            data-field="startDate"
+            dangerouslySetInnerHTML={{ __html: formattedStartDate || "" }}
+          />
+          {" -- "}
+          <span
+            contentEditable
+            className={`input text-sm ${!item.endDate && !item.currentlyWorking ? 'contentEditablePlaceholder' : ''}`}
+            role="textbox"
+            onFocus={handleFocus}
+            onBlur={handleBlur}
+            onKeyDown={handleKeyDown}
+            data-placeholder="Enter End Date"
+            data-field="endDate"
+            dangerouslySetInnerHTML={{ __html: formattedEndDate || "" }}
+          />
+        </div>
+      </div>
+      <div className="text-sm flex justify-between">
+        <span
+          contentEditable
+          className={`input text-sm ${!item.position ? 'contentEditablePlaceholder' : ''}`}
+          role="textbox"
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          onKeyDown={handleKeyDown}
+          data-placeholder="Enter Position"
+          data-field="position"
+          dangerouslySetInnerHTML={{ __html: item.position || "" }}
+        />
+        <span
+          contentEditable
+          className={`input italic text-sm ${!item.location ? 'contentEditablePlaceholder' : ''}`}
+          role="textbox"
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          onKeyDown={handleKeyDown}
+          data-placeholder="Enter Location"
+          data-field="location"
+          dangerouslySetInnerHTML={{ __html: item.location || "" }}
+        />
+      </div>
+      <div className="ml-[22px]">
+        <ul className="list-disc list-inside">
+        {
+  item.description && item.description.length > 0 ? (
+    item.description.map((point, index) => (
+      <li key={index} className="text-sm" contentEditable
+          onFocus={handleFocus}
+          onBlur={(e) => handleDescriptionChange(index, e.target.textContent)}
+          onKeyDown={handleKeyDown}
+          data-placeholder="Enter Description Detail"
+          dangerouslySetInnerHTML={{ __html: point || "Add description detail" }}
+      >
+      </li>
+    ))
+  ) : (
+    <li className="text-sm">No details available.</li>
+  )
+}
+        </ul>
+      </div>
     </div>
-    <div className="text-sm flex justify-between">
-      <p>{item.position}</p>
-      <p className="italic">{item.location}</p>
-    </div>
-    <div className="ml-[22px]"> {/* Adjust the margin-left here to move bullets to the right */}
-      <ul className="list-disc list-inside">
-        {item.description.map((point, index) => (
-          <li key={index} className="text-sm">
-            {point}
-          </li>
-        ))}
-      </ul>
-    </div>
-  </div>
-  
   );
 };
+
+
 
 const Projects = ({ item }) => {
   const formatDate = (dateString) => {
@@ -410,27 +675,32 @@ const Projects = ({ item }) => {
 
   return (
     <div className="">
-    <div className="flex justify-between items-baseline">
-      <h2 className="text-md font-bold">{item.projectName}</h2>
-      <span className="text-sm font-bold">
-        {formattedStartDate} -- {formattedEndDate}
-      </span>
+      <div className="flex justify-between items-baseline">
+        <h2 className="text-md font-bold">{item.projectName}</h2>
+        <span className="text-sm font-bold">
+          {formattedStartDate} -- {formattedEndDate}
+        </span>
+      </div>
+      <div className="text-sm flex justify-between">
+        <p>{item.position}</p>
+        <p className="italic">{item.location}</p>
+      </div>
+      <div className="ml-[22px]">
+        {" "}
+        {/* Adjust the margin-left here to move bullets to the right */}
+        <ul className="list-disc list-inside">
+          {item.description && item.description.length > 0 ? (
+            item.description.map((point, index) => (
+              <li key={index} className="text-sm">
+                {point}
+              </li>
+            ))
+          ) : (
+            <li className="text-sm">No details available.</li>
+          )}
+        </ul>
+      </div>
     </div>
-    <div className="text-sm flex justify-between">
-      <p>{item.position}</p>
-      <p className="italic">{item.location}</p>
-    </div>
-    <div className="ml-[22px]"> {/* Adjust the margin-left here to move bullets to the right */}
-      <ul className="list-disc list-inside">
-        {item.description.map((point, index) => (
-          <li key={index} className="text-sm">
-            {point}
-          </li>
-        ))}
-      </ul>
-    </div>
-  </div>
-  
   );
 };
 // {

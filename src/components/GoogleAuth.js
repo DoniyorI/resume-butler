@@ -1,11 +1,10 @@
-import React from "react";
 import { useRouter } from "next/navigation";
 import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { auth } from "../lib/firebase/config";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 
-const GoogleAuthButton = ({ redirectPath = "/dashboard" }) => {
+const GoogleAuthButton = ({ redirectPath = "/" }) => {
   const router = useRouter();
 
   const handleGoogleSignIn = async () => {

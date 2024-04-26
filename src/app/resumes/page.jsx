@@ -202,7 +202,7 @@ export default function Page() {
         {resumes.map((resume) => (
           <div
             key={resume.id}
-            className="h-[220px] w-[170px] border rounded-md shadow justify-between flex flex-col m-2"
+            className="flex flex-col m-2 h-[220px] w-[170px] border rounded-md shadow"
           >
             <div
               className="h-full flex justify-center items-center cursor-pointer"

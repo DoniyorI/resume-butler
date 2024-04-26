@@ -167,3 +167,14 @@
 .input.placeholder {
   color: #aaa; /* Light grey color for placeholder text */
 }
+
+.contentEditablePlaceholder::before {
+  content: attr(data-placeholder);
+  color: #aaa;  /* Placeholder text color, usually light grey */
+  display: block;
+}
+
+.contentEditablePlaceholder:focus::before,
+.contentEditablePlaceholder:not(:empty)::before {
+  display: none;
+}

@@ -50,33 +50,7 @@ export default function Navbar() {
             )}
           </Link>
           <div className="flex-1 space-y-6 pt-10 overflow-y-auto">
-            <Link href="/" className="flex items-center space-x-2"> 
-              <Image src={`/image/Home.svg`} alt="Home" width={20} height={20} />
-              {!isCollapsed && (
-                <span className="transition-opacity duration-200 ease-in-out opacity-100">
-                  Home
-                </span>
-              )}
-              {isCollapsed && (
-                <span className="transition-opacity duration-300 ease-in-out opacity-0">
-                  Home
-                </span>
-              )}
-            </Link>
-            <Link href="/profile" className="flex items-center space-x-2">
-              <Image src={`/image/Profile.svg`} alt="profile" width={20} height={20} />
-              {!isCollapsed && (
-                <span className="transition-opacity duration-300 ease-in-out opacity-100">
-                  Profile
-                </span>
-              )}
-              {isCollapsed && (
-                <span className="transition-opacity duration-300 ease-in-out opacity-0">
-                  Profile
-                </span>
-              )}
-            </Link>
-            <Link href="/applications" className="flex items-center space-x-2">
+          <Link href="/" className="flex items-center space-x-2">
               <Image src={`/image/Applications.svg`} alt="Applications" width={20} height={20} />
               {!isCollapsed && (
                 <span className="transition-opacity duration-300 ease-in-out opacity-100">
@@ -89,6 +63,8 @@ export default function Navbar() {
                 </span>
               )}
             </Link>
+            
+            
             <Link href="/resumes" className="flex items-center space-x-2">
               <Image src={`/image/Resume.svg`} alt="Resumes" width={20} height={20} />
               {!isCollapsed && (
@@ -155,6 +131,19 @@ export default function Navbar() {
               Logout
             </span>
           </Link>
+          <Link href="/profile" className="flex items-center space-x-2">
+              <Image src={`/image/Profile.svg`} alt="profile" width={20} height={20} />
+              {!isCollapsed && (
+                <span className="transition-opacity duration-300 ease-in-out opacity-100">
+                  Profile
+                </span>
+              )}
+              {isCollapsed && (
+                <span className="transition-opacity duration-300 ease-in-out opacity-0">
+                  Profile
+                </span>
+              )}
+            </Link>
         </div>
       </div>
     </div>
