@@ -420,46 +420,7 @@ const ZoomControls = ({ handleScaleChange }) => (
   </div>
 );
 
-const Projects = ({ item }) => {
-  const formatDate = (dateString) => {
-    const date = new Date(dateString.split(" at ")[0]); // Assuming the date format includes unnecessary suffixes
-    return date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
-  };
-  const formattedStartDate = formatDate(item.startDate);
-  let formattedEndDate = item.currentlyWorking
-    ? "Current"
-    : formatDate(item.endDate);
 
-  return (
-    <div className="">
-      <div className="flex justify-between items-baseline">
-        <h2 className="text-md font-bold">{item.projectName}</h2>
-        <span className="text-sm font-bold">
-          {formattedStartDate} -- {formattedEndDate}
-        </span>
-      </div>
-      <div className="text-sm flex justify-between">
-        <p>{item.position}</p>
-        <p className="italic">{item.location}</p>
-      </div>
-      <div className="ml-[22px]">
-        {" "}
-        {/* Adjust the margin-left here to move bullets to the right */}
-        <ul className="list-disc list-inside">
-          {item.description && item.description.length > 0 ? (
-            item.description.map((point, index) => (
-              <li key={index} className="text-sm">
-                {point}
-              </li>
-            ))
-          ) : (
-            <li className="text-sm">No details available.</li>
-          )}
-        </ul>
-      </div>
-    </div>
-  );
-};
 // {
 //   currentlyWorking: true,
 //   description: [
