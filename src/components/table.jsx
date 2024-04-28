@@ -19,7 +19,12 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { ArrowUpDown, ChevronDown, MoreHorizontal } from "lucide-react";
+import {
+  ArrowUpDown,
+  ChevronDown,
+  MoreHorizontal,
+  ListFilter,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -147,7 +152,18 @@ function ApplicationTable() {
           </Button>
         );
       },
-      cell: ({ row }) => <div className="">{row.getValue("companyName")}</div>,
+      cell: ({ row }) => (
+        row.original.portalLink ?
+          <a
+            href={row.original.portalLink}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <Button className="p-0 m-0 font-normal" variant="link">{row.getValue("companyName")}</Button>
+          </a>
+        :
+          <span>{row.getValue("companyName")}</span> // Using <span> for consistent HTML element usage
+      ),
     },
     {
       accessorKey: "role",
@@ -327,16 +343,17 @@ function ApplicationTable() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem>
-                <Link href={`/applications/${application.id}`}>
+              {/* <DropdownMenuItem>
+                <Link href={`/${application.id}`}>
                   View application details
                 </Link>
-              </DropdownMenuItem>
+              </DropdownMenuItem> */}
               <DropdownMenuItem>
-                <Button 
-                variant="ghost"
-                className="text-red-500 py-1 p-0 m-0 h-5" 
-                onClick={handleDelete}>
+                <Button
+                  variant="ghost"
+                  className="text-red-500 py-1 px-0 h-5"
+                  onClick={handleDelete}
+                >
                   Delete
                 </Button>
               </DropdownMenuItem>
@@ -410,7 +427,7 @@ function ApplicationTable() {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" className="ml-auto ">
-              Columns <ChevronDown className="ml-2 h-4 w-4" />
+              <ListFilter className="mr-2 h-4 w-4" /> Filter
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
