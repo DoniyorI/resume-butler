@@ -296,7 +296,7 @@ export default function Page({ params }) {
   const addSkills = () => {};
 
   return (
-    <div className="flex flex-col w-full p-10 font-sans">
+    <div className="flex flex-col w-full p-10 font-sans my-10">
       <Header title={resumeTitle} />
       <div className="flex-grow flex flex-col">
         <div className="flex flex-col items-center justify-center flex-grow p-4">

@@ -171,10 +171,9 @@ export default function Page() {
   }, [user]);
 
   return (
-    <div className="flex flex-col w-full min-h-screen py-10 px-10">
+    <div className="flex flex-col w-full min-h-screen my-10 py-10 px-10">
       <h1 className="text-2xl text-[#559F87] font-semibold">Resumes</h1>
-      <p className="mt-2 mb-6">Create and manage your Resume here</p>
-      <div className="flex justify-between pb-6 mx-2">
+      <div className="flex justify-between mx-2 my-2 mt-4">
         <Input
           placeholder="Filter by Resume Name"
           value={searchTerm}
@@ -196,7 +195,7 @@ export default function Page() {
           </SelectContent>
         </Select>
       </div>
-      Resume Editor
+      <h2 className="text-lg text-[#559F87] font-semibold mt-4">Your Resumes</h2>
       <div className="flex flex-wrap ">
         <ResumeDialog />
         {resumes.map((resume) => (
@@ -275,7 +274,7 @@ export default function Page() {
           </div>
         ))}
       </div>
-      Resumes you uploaded
+      <h2 className="text-lg text-[#559F87] font-semibold mt-4">Resume Uploaded</h2>
       <div className="flex flex-wrap">
         {PDFresumes.map((resume) => (
           <div

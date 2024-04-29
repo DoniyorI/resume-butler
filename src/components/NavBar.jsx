@@ -1,22 +1,26 @@
 "use client";
 import React, { useState } from "react";
-import Image from "next/image";
-import Link from "next/link";
-import { MdSettings, MdLogout } from "react-icons/md";
 import { useRouter, usePathname } from "next/navigation";
-import ToggleButton from "./LogoutButton";
-import { Home, List, GraduationCap} from "lucide-react";
+import { auth } from "@/lib/firebase/config";
+import { signOut } from "firebase/auth";
+
+import Link from "next/link";
+import Image from "next/image";
+
+import { LogOut } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import AddApplicationDialog from "@/components/AddApplication";
 
 export default function Navbar() {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const toggleMenu = () => setMenuOpen(!menuOpen);
+
   const router = useRouter();
   const pathname = usePathname();
 
-  if (pathname === "/login" || pathname === "/register") {
+  if (pathname === "/login" || pathname === "/register" || pathname === "/forgot-password") {
     return null;
   }
-
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  const toggleNavbar = () => setIsCollapsed(!isCollapsed);
 
   const handleLogout = async () => {
     try {
@@ -26,127 +30,106 @@ export default function Navbar() {
       console.error("Logout error", error);
     }
   };
-  const textClass = isCollapsed ? "opacity-0" : "opacity-100";
 
   return (
-    <>
-      <div
-        className={`h-screen flex flex-col justify-between px-4 py-6 bg-[#E0F6EF] max-w-[215px] transition-all duration-300 ease-in-out sticky top-0 left-0 z-10 ${
-          isCollapsed ? "w-[70px]" : "w-[215px]"
-        }`}
-      >
-        <div className="flex flex-col space-y-2 p-2">
-          <Link href="/" className="flex items-center space-x-2">
-            <Image src={`/image/Logo.svg`} alt="Logo" width={40} height={40} />
-            {!isCollapsed && (
-              <span className="transition-opacity duration-500 opacity-100">
-                Resume Butler
-              </span>
-            )}
-            {isCollapsed && (
-              <span className="transition-opacity duration-300 ease-in-out opacity-0">
-                Resume Butler
-              </span>
-            )}
-          </Link>
-          <div className="flex-1 space-y-6 pt-10 overflow-y-auto">
-          <Link href="/" className="flex items-center space-x-2">
-              <Image src={`/image/Applications.svg`} alt="Applications" width={20} height={20} />
-              {!isCollapsed && (
-                <span className="transition-opacity duration-300 ease-in-out opacity-100">
-                  Application
-                </span>
-              )}
-              {isCollapsed && (
-                <span className="transition-opacity duration-300 ease-in-out opacity-0">
-                  Application
-                </span>
-              )}
-            </Link>
-            
-            
-            <Link href="/resumes" className="flex items-center space-x-2">
-              <Image src={`/image/Resume.svg`} alt="Resumes" width={20} height={20} />
-              {!isCollapsed && (
-                <span className="transition-opacity duration-300 ease-in-out opacity-100">
-                  Resumes
-                </span>
-              )}
-              {isCollapsed && (
-                <span className="transition-opacity duration-300 ease-in-out opacity-0">
-                  Resumes
-                </span>
-              )}
-            </Link>
-            <Link href="/coverletters" className="flex items-center space-x-2">
-              <Image src={`/image/CoverLetter.svg`} alt="Cover Letter" width={20} height={20} />
-              {!isCollapsed && (
-                <span className="transition-opacity duration-300 ease-in-out opacity-100">
-                  Cover Letters
-                </span>
-              )}
-              {isCollapsed && (
-                <span className="transition-opacity duration-300 ease-in-out opacity-0">
-                  Cover Letters
-                </span>
-              )}
-            </Link>
-            <Link href="/cv" className="flex items-center space-x-2">
-              <Image src={`/image/CV.svg`} alt="CV" width={20} height={20} />
-              {/* <GraduationCap strokeWidth={1.25} /> */}
-              {!isCollapsed && (
-                <span className="transition-opacity duration-300 ease-in-out opacity-100">
-                  CV
-                </span>
-              )}
-              {isCollapsed && (
-                <span className="transition-opacity duration-300 ease-in-out opacity-0">
-                  CV
-                </span>
-              )}
-            </Link>
-          </div>
-          <div className="flex pt-10">
-            <ToggleButton
-              isCollapsed={isCollapsed}
-              toggleNavbar={toggleNavbar}
-            />
-          </div>
-        </div>
-        <div className="p-2">
-        <div className="flex flex-col space-y-2">
-          {/* <Link href="/settings" className="flex items-center space-x-2">
-            <MdSettings size={20} />
-            <span className={`transition-opacity duration-300 ease-in-out ${textClass}`}>
-              Settings
-            </span>
-          </Link> */}
-          <Link
-            href="/login"
+    <nav className="bg-white dark:bg-gray-900 fixed w-full z-20 top-0 start-0 border-b border-gray-200 dark:border-gray-600">
+      <div className="max-w-screen-xl flex flex-wrap items-center justify-between mx-auto p-4">
+        <Link
+          href="/"
+          className="flex items-center space-x-3 rtl:space-x-reverse"
+        >
+          <Image src="/image/Logo.svg" alt="Logo" width={32} height={32} />
+          <span className="self-center text-md font-normal whitespace-nowrap dark:text-white">
+            Resume Butler
+          </span>
+        </Link>
+
+        <div className="flex md:order-2 space-x-3 md:space-x-0 rtl:space-x-reverse">
+          <div className="flex space-x-2">
+          <AddApplicationDialog className="text-green-700 bg-green-200 hover:bg-green-300 focus:ring-4 focus:outline-none focus:ring-blue-300  rounded-lg text-sm px-4 py-2 text-center" />
+          <Button
             onClick={handleLogout}
-            className="flex items-center space-x-2"
+            className="text-red-700 bg-red-200 hover:bg-red-300 focus:ring-4 focus:outline-none focus:ring-blue-300  rounded-lg text-sm px-4 py-2 text-center"
           >
-            <MdLogout />
-            <span className={`transition-opacity duration-300 ease-in-out ${textClass}`}>
-              Logout
-            </span>
-          </Link>
-          <Link href="/profile" className="flex items-center space-x-2">
-              <Image src={`/image/Profile.svg`} alt="profile" width={20} height={20} />
-              {!isCollapsed && (
-                <span className="transition-opacity duration-300 ease-in-out opacity-100">
-                  Profile
-                </span>
-              )}
-              {isCollapsed && (
-                <span className="transition-opacity duration-300 ease-in-out opacity-0">
-                  Profile
-                </span>
-              )}
-            </Link>
+            <LogOut size={14} strokeWidth={2} className="text-black"/>
+          </Button>
+          </div>
+         
+          <Button
+            variant="outline"
+            onClick={toggleMenu}
+            className="inline-flex items-center p-2 w-10 h-10 justify-center text-sm text-gray-500 rounded-lg md:hidden hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-200 dark:text-gray-400 dark:hover:bg-gray-700 dark:focus:ring-gray-600"
+          >
+            <span className="sr-only">Open main menu</span>
+            <svg
+              className="w-5 h-5"
+              aria-hidden="true"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 17 14"
+            >
+              <path
+                stroke="currentColor"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M1 1h15M1 7h15M1 13h15"
+              />
+            </svg>
+          </Button>
+        </div>
+
+        <div
+          className={`items-center justify-between ${
+            menuOpen ? "block" : "hidden"
+          } w-full md:flex md:w-auto md:order-1`}
+          id="navbar-sticky"
+        >
+          <ul className="flex flex-col p-4 md:p-0 mt-4 font-normal border border-gray-100 rounded-lg bg-gray-50 md:space-x-8 rtl:space-x-reverse md:flex-row md:mt-0 md:border-0 md:bg-white dark:bg-gray-800 md:dark:bg-gray-900 dark:border-gray-700">
+            <li>
+              <Link
+                href="/"
+                className="block py-2 px-3 text-gray-900 rounded hover:bg-gray-100 md:hover:bg-transparent md:hover:text-green-800 md:p-0 md:dark:hover:text-green-400 dark:text-white dark:hover:bg-gray-700 dark:hover=text-white md:dark:hover:bg-transparent dark:border-gray-700"
+              >
+                Applications
+              </Link>
+            </li>
+           
+            <li>
+              <Link
+                href="/resumes"
+                className="block py-2 px-3 text-gray-900 rounded hover:bg-gray-100 md:hover:bg-transparent  md:hover:text-green-800 md:p-0 md:dark:hover:text-green-400 dark:text-white dark:hover:bg-gray-700 dark:hover=text-white md:dark:hover:bg-transparent dark:border-gray-700"
+              >
+                Resumes
+              </Link>
+            </li>
+            <li>
+              <Link
+                href="/coverletters"
+                className="block py-2 px-3 text-gray-900 rounded hover:bg-gray-100 md:hover:bg-transparent  md:hover:text-green-800 md:p-0 md:dark:hover:text-green-400 dark:text-white dark:hover:bg-gray-700 dark:hover=text-white md:dark:hover:bg-transparent dark:border-gray-700"
+              >
+                Cover Letters
+              </Link>
+            </li>
+            <li>
+              <Link
+                href="/profile"
+                className="block py-2 px-3 text-gray-900 rounded hover:bg-gray-100 md:hover:bg-transparent md:hover:text-green-800 md:p-0 md:dark:hover:text-green-400 dark:text-white dark:hover:bg-gray-700 dark:hover=text-white md:dark:hover:bg-transparent dark:border-gray-700"
+              >
+                Profile
+              </Link>
+            </li>
+            <li>
+              <Link
+                href="/cv"
+                className="block py-2 px-3 text-gray-900 rounded hover:bg-gray-100 md:hover:bg-transparent  md:hover:text-green-800 md:p-0 md:dark:hover:text-green-400 dark:text-white dark:hover:bg-gray-700 dark:hover=text-white md:dark:hover:bg-transparent dark:border-gray-700"
+              >
+                CV
+              </Link>
+            </li>
+          </ul>
         </div>
       </div>
-    </div>
-    </>
+    </nav>
   );
 }

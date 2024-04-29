@@ -154,8 +154,8 @@ export default function AddApplicationDialog() {
   return (
     <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
       <DialogTrigger asChild>
-        <Button className="text-[#188665] font-light hover:bg-green-100" variant="outline" onClick={() => setIsDialogOpen(true)}>
-          Add Application
+        <Button className="text-[#188665] font-medium hover:bg-green-100" variant="outline" onClick={() => setIsDialogOpen(true)}>
+          New Application
         </Button>
       </DialogTrigger>
       <DialogContent className="lg:min-w-[60vw]">

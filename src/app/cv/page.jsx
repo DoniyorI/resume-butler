@@ -7,7 +7,7 @@ import SkillForm from "@/components/SkillForm";
 
 export default function CV() {
   return (
-    <div className="flex flex-col justify-center">
+    <div className="flex flex-col justify-center my-5">
       <div className="text-center my-12 mt-16">
         <h1 className="text-3xl text-[#559F87]">Curriculum Vitae</h1>
         <p className="pt-4 font-light text-sm">
