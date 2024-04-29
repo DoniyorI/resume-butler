@@ -27,23 +27,26 @@ export default function Register() {
       return;
     }
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
       const user = userCredential.user;
       // Set up a new document in the 'users' collection with the user's UID
-      await setDoc(doc(db, 'users', user.uid), {
-        email: user.email // You can add more default fields here if needed
+      await setDoc(doc(db, "users", user.uid), {
+        email: user.email, // You can add more default fields here if needed
       });
-      router.push('/profile'); // Redirect to the profile page
+      router.push("/profile"); // Redirect to the profile page
     } catch (error) {
-      console.error('Error creating new user: ', error);
-      if (error.code === 'auth/email-already-in-use') {
-        alert('This email is already in use by another account.');
+      console.error("Error creating new user: ", error);
+      if (error.code === "auth/email-already-in-use") {
+        alert("This email is already in use by another account.");
       } else {
-        alert('Failed to create account. Please try again later.');
+        alert("Failed to create account. Please try again later.");
       }
     }
   };
-  
 
   return (
     <div className="w-full flex min-h-screen">
@@ -103,9 +106,33 @@ export default function Register() {
         <div className="w-7/12">
           <EmblaCarousel
             slides={[
-              { src: "/image/c1.png", alt: "Image 1", width: 192, height: 108 },
-              { src: "/image/c1.png", alt: "Image 2", width: 192, height: 108 },
-              { src: "/image/c1.png", alt: "Image 3", width: 192, height: 108 },
+              {
+                src: "/image/c1.png",
+                alt: "Image 2",
+                width: 192,
+                height: 108,
+                type: "image",
+              },
+              {
+                animation: "salesman",
+                alt: "Image 1",
+                type: "animation",
+              },
+
+              {
+                animation: "design",
+                alt: "Image 3",
+                width: 192,
+                height: 108,
+                type: "animation",
+              },
+              {
+                animation: "3",
+                alt: "Image 4",
+                width: 192,
+                height: 108,
+                type: "animation",
+              },
             ]}
             options={{ loop: true }}
           />

@@ -15,8 +15,8 @@ export default function RootLayout({ children }) {
     <html lang="en">
       <body className={inter.className}>
       <div className="flex flex-col min-h-screen">
-          <Navbar className="sticky top-0 w-full" />
-          <div className="flex-1 p-4">
+          <Navbar className="sticky top-0 w-full bg-[#FAFFFB]" />
+          <div className="bg-white">
             {children}
           </div>
           <Toaster />

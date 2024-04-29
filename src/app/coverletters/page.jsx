@@ -76,8 +76,8 @@ export default function Page() {
         console.log("Delete");
       };
   return (
-    <div className="flex flex-col w-full min-h-screen py-10 px-10">
-      <h1 className="text-2xl text-[#559F87] font-semibold">Cover Letters</h1>
+    <div className="flex flex-col w-full min-h-screen py-16 px-10 my-10">
+      <h1 className="text-2xl font-semibold text-[#559F87]">Cover Letters</h1>
       <p className="mt-2 mb-6">Create and manage your cover letters here.</p>
       <div className="flex justify-between pb-6 mx-2">
         <Input

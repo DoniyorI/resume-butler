@@ -171,8 +171,8 @@ export default function Page() {
   }, [user]);
 
   return (
-    <div className="flex flex-col w-full min-h-screen my-10 py-10 px-10">
-      <h1 className="text-2xl text-[#559F87] font-semibold">Resumes</h1>
+    <div className="flex flex-col w-full min-h-screen py-16 px-10 my-10">
+      <h1 className="text-2xl font-semibold text-[#559F87]">Resumes</h1>
       <div className="flex justify-between mx-2 my-2 mt-4">
         <Input
           placeholder="Filter by Resume Name"

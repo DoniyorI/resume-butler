@@ -10,10 +10,8 @@ import { Label } from "@/components/ui/label";
 
 import EmblaCarousel from "@/components/Carousel";
 
-// import { useSignInWithEmailAndPassword } from "react-firebase-hooks/auth";
 import { auth } from "@/lib/firebase/config";
 import { signInWithEmailAndPassword } from "firebase/auth";
-// import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 
 import GoogleAuthButton from "@/components/GoogleAuth";
 
@@ -32,7 +30,7 @@ export default function Login() {
     }
   };
   return (
-    <div className="flex min-h-screen flex-col lg:flex-row">
+    <div className="flex h-screen flex-col lg:flex-row">
       <div className="flex w-full lg:w-6/12 items-center justify-center py-12">
         <div className="mx-auto w-[350px] space-y-6">
           <div className="text-center space-y-2">
@@ -85,21 +83,30 @@ export default function Login() {
             slides={[
               {
                 src: "/image/c1.png",
-                alt: "Image 1",
-                width: 192,
-                height: 108,
-              },
-              {
-                src: "/image/c1.png",
                 alt: "Image 2",
                 width: 192,
                 height: 108,
+                type: "image"
               },
               {
-                src: "/image/c1.png",
+                animation: "salesman",
+                alt: "Image 1",
+                type: "animation"
+              },
+              
+              {
+                animation: "design",
                 alt: "Image 3",
                 width: 192,
                 height: 108,
+                type: "animation"
+              },
+              {
+                animation: "3",
+                alt: "Image 4",
+                width: 192,
+                height: 108,
+                type: "animation"
               },
             ]}
             options={{ loop: true }}
