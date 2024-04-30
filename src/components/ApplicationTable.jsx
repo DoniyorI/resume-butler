@@ -9,7 +9,15 @@ import {
   getDocs,
   updateDoc,
   deleteDoc,
+  query,
+  startAt,
+  orderBy,
+  startAfter,
+  limit,
+  where,
+  getCountFromServer,
 } from "firebase/firestore";
+
 import { AiOutlineFilePdf } from "react-icons/ai";
 import {
   flexRender,
@@ -19,12 +27,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import {
-  ArrowUpDown,
-  ChevronDown,
-  MoreHorizontal,
-  ListFilter,
-} from "lucide-react";
+import { ArrowUpDown, MoreHorizontal, ListFilter } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -56,36 +59,113 @@ function ApplicationTable() {
   const [rowSelection, setRowSelection] = useState({});
   const [loading, setLoading] = useState(true);
 
+  const [lastVisible, setLastVisible] = useState(null);
+  const [firstVisible, setFirstVisible] = useState(null);
+  const [cursorHistory, setCursorHistory] = useState([]);
+  const [totalApplications, setTotalApplications] = useState(0);
+  const [searchTerm, setSearchTerm] = useState("");
+
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        setLoading(true);
-        setUser(user);
-        try {
-          const applicationsRef = collection(
-            db,
-            "users",
-            user.uid,
-            "applications"
-          );
-          const querySnapshot = await getDocs(applicationsRef);
-          const loadedApplications = querySnapshot.docs.map((doc) => ({
-            id: doc.id,
-            ...doc.data(),
-            date: doc.data().date.toDate().toISOString().slice(0, 10), // Format Firestore Timestamp to Date String
-          }));
-          setApplications(loadedApplications);
-          console.log("Applications loaded:", loadedApplications);
-        } catch (error) {
-          console.error("Error fetching applications:", error);
-        } finally {
-          setLoading(false);
-        }
-      }
+       if (user) {
+          setLoading(true);
+          setUser(user);
+ 
+          try {
+             const applicationsRef = collection(db, "users", user.uid, "applications");
+ 
+             let queryConfig = query(applicationsRef, orderBy("date"), limit(10));
+             
+             // If a search term is specified, adjust the query to filter by company name
+             if (searchTerm) {
+                queryConfig = query(applicationsRef, orderBy("companyName"), where("companyName", ">=", searchTerm), where("companyName", "<=", searchTerm + "\uf8ff"));
+             }
+ 
+             const querySnapshot = await getDocs(queryConfig);
+ 
+             const loadedApplications = querySnapshot.docs.map((doc) => ({
+                id: doc.id,
+                ...doc.data(),
+                date: doc.data().date.toDate().toISOString().slice(0, 10),
+             }));
+ 
+             setApplications(loadedApplications);
+             setLastVisible(querySnapshot.docs[querySnapshot.docs.length - 1]); // Save the last document for next page navigation
+             setFirstVisible(querySnapshot.docs[0]); // Save the first document for previous page navigation
+             setCursorHistory([querySnapshot.docs[0]]); // Initialize cursor history
+          } catch (error) {
+             console.error("Error fetching applications:", error);
+          } finally {
+             setLoading(false);
+          }
+       }
     });
+ 
     return () => unsubscribe();
-  }, []);
+ }, [searchTerm]);
+ 
+ 
 
+  const nextPage = async () => {
+    if (!lastVisible) return;
+
+    setLoading(true);
+
+    const applicationsRef = collection(db, "users", user.uid, "applications");
+    const queryConfig = query(
+      applicationsRef,
+      orderBy("date"),
+      startAfter(lastVisible),
+      limit(10)
+    );
+
+    const querySnapshot = await getDocs(queryConfig);
+
+    const loadedApplications = querySnapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+      date: doc.data().date.toDate().toISOString().slice(0, 10),
+    }));
+
+    setApplications(loadedApplications);
+    setCursorHistory([...cursorHistory, querySnapshot.docs[0]]); // Add new cursor to history
+    setFirstVisible(querySnapshot.docs[0]); // Update first visible cursor
+    setLastVisible(querySnapshot.docs[querySnapshot.docs.length - 1]); // Update last visible cursor
+
+    setLoading(false);
+  };
+  const previousPage = async () => {
+    if (cursorHistory.length < 2) return; // No previous page
+ 
+    setLoading(true);
+ 
+    // Retrieve the previous cursor, which serves as the new starting point
+    const prevCursor = cursorHistory[cursorHistory.length - 2];
+ 
+    const applicationsRef = collection(db, "users", user.uid, "applications");
+    const queryConfig = query(applicationsRef, orderBy("date"), startAt(prevCursor), limit(10));
+ 
+    const querySnapshot = await getDocs(queryConfig);
+ 
+    const loadedApplications = querySnapshot.docs.map((doc) => ({
+       id: doc.id,
+       ...doc.data(),
+       date: doc.data().date.toDate().toISOString().slice(0, 10),
+    }));
+ 
+    setApplications(loadedApplications);
+ 
+    // Remove the last entry from cursor history, leaving only relevant ones
+    setCursorHistory(cursorHistory.slice(0, cursorHistory.length - 1));
+ 
+    // Update state variables to reflect the new page's boundaries
+    setFirstVisible(querySnapshot.docs[0]); // First visible cursor
+    setLastVisible(querySnapshot.docs[querySnapshot.docs.length - 1]); // Last visible cursor
+ 
+    setLoading(false);
+ };
+ 
   const columns = [
     {
       accessorKey: "resume",
@@ -152,18 +232,20 @@ function ApplicationTable() {
           </Button>
         );
       },
-      cell: ({ row }) => (
-        row.original.portalLink ?
+      cell: ({ row }) =>
+        row.original.portalLink ? (
           <a
             href={row.original.portalLink}
             target="_blank"
             rel="noopener noreferrer"
           >
-            <Button className="p-0 m-0 font-normal" variant="link">{row.getValue("companyName")}</Button>
+            <Button className="p-0 m-0 font-normal" variant="link">
+              {row.getValue("companyName")}
+            </Button>
           </a>
-        :
-          <span>{row.getValue("companyName")}</span> // Using <span> for consistent HTML element usage
-      ),
+        ) : (
+          <span>{row.getValue("companyName")}</span>
+        ), // Using <span> for consistent HTML element usage
     },
     {
       accessorKey: "role",
@@ -493,29 +575,36 @@ function ApplicationTable() {
         </Table>
       </div>
 
-      <div className="flex items-center justify-end space-x-2 py-4 mx-4">
-        <div>
-          <AddApplicationDialog />
+      <div className="flex items-center justify-between space-x-2 py-4 mx-4">
+        <div className="text-xs text-muted-foreground">
+          Showing{" "}
+          <strong>
+            {applications.length ? `${1}-${applications.length}` : "No"}
+          </strong>{" "}
+          of <strong>{totalApplications}</strong> applications
         </div>
-        {/* <div className="space-x-2 ">
+
+        <div class="space-x-2">
           <Button
             variant="outline"
             size="sm"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
+            onClick={() => previousPage()}
+            disabled={cursorHistory.length < 2}
           >
             Previous
           </Button>
+
           <Button
             variant="outline"
             size="sm"
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
+            onClick={() => nextPage()}
+            disabled={applications.length < 10}
           >
             Next
           </Button>
-        </div> */}
+        </div>
       </div>
+      
     </div>
   );
 }
