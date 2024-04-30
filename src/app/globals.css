@@ -107,7 +107,6 @@
   height: var(--slide-height);
 }
 
-
 .rdp-vhidden {
   @apply hidden;
 }
@@ -153,9 +152,6 @@
   outline: none; 
 }
 
-/* body {
-  font-family: 'Latin Modern Roman', serif;
-} */
 .input,
 .textarea {
   border: 1px solid #ccc;
@@ -165,12 +161,12 @@
 }
 
 .input.placeholder {
-  color: #aaa; /* Light grey color for placeholder text */
+  color: #aaa;
 }
 
 .contentEditablePlaceholder::before {
   content: attr(data-placeholder);
-  color: #aaa;  /* Placeholder text color, usually light grey */
+  color: #aaa;  
   display: block;
 }
 

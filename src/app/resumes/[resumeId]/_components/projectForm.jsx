@@ -1,3 +1,4 @@
+import { X } from "lucide-react";
 export const ProjectsForm = ({ item, onChange }) => {
   const handleInputChange = (field, e) => {
     const value = e.target.textContent.trim();
@@ -155,7 +156,7 @@ export const ProjectsForm = ({ item, onChange }) => {
                 <button
                   onClick={() => deleteDescriptionPoint(index)}
                   className="ml-1 cursor-pointer text-red-800 hover:text-red-500"
-                >X</button>
+                ><X size={16} /></button>
               </li>
             ))
           ) : (
@@ -177,7 +178,7 @@ export const ProjectsForm = ({ item, onChange }) => {
               <button
                   onClick={() => deleteDescriptionPoint(0)}
                   className="ml-1 cursor-pointer text-red-800 hover:text-red-500"
-                >X</button>
+                ><X size={16} /></button>
             </li>
           )}
         </ul>

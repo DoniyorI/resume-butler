@@ -1,11 +1,25 @@
-'use client';
+"use client";
+import {
+  getDocs,
+  updateDoc,
+  deleteDoc,
+  doc,
+  collection,
+} from "firebase/firestore";
+import {
+  ref,
+  listAll,
+  getMetadata,
+  getDownloadURL,
+  deleteObject,
+} from "firebase/storage";
+import { useAuthState } from "react-firebase-hooks/auth";
+import { db, auth, storage } from "@/lib/firebase/config";
 
-import React from "react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, use } from "react";
 import { EllipsisVertical } from "lucide-react";
 import { FiDownload, FiTrash2 } from "react-icons/fi";
 import { MdOutlineEdit } from "react-icons/md";
-
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -23,30 +37,26 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-const FetchedCoverLetters = [
-  {
-    id: "1",
-    title: "Software Engineer",
-    created: "2023-04-01",
-    lastUpdated: "2023-04-05",
-  },
-  {
-    id: "2",
-    title: "Product Manager",
-    created: "2023-03-15",
-    lastUpdated: "2023-03-20",
-  },
-];
+import CoverLetterDialog from "@/components/CoverLetterDialog";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 export default function Page() {
-    const [coverLetters, setCoverLetters] = useState(FetchedCoverLetters);
-    const [searchTerm, setSearchTerm] = useState("");
-    const [sortOrder, setSortOrder] = useState("Recently Opened");
-  
-    useEffect(() => {
-      const filteredCoverLetters = FetchedCoverLetters.filter((coverLetter) =>
+  const [coverLetters, setCoverLetters] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortOrder, setSortOrder] = useState("Recently Opened");
+  const [user, loading, error] = useAuthState(auth);
+  const router = useRouter();
+
+  const [editingId, setEditingId] = useState(null);
+  const [editingTitle, setEditingTitle] = useState("");
+
+  useEffect(() => {
+    const filteredCoverLetters = coverLetters
+      .filter((coverLetter) =>
       coverLetter.title.toLowerCase().includes(searchTerm.toLowerCase())
-      ).sort((a, b) => {
+      )
+      .sort((a, b) => {
         if (sortOrder === "A-Z") {
           return a.title.localeCompare(b.title);
         } else if (sortOrder === "Z-A") {
@@ -58,35 +68,115 @@ export default function Page() {
         }
         return 0;
       });
-      setCoverLetters(filteredCoverLetters);
-    }, [searchTerm, sortOrder]);
-    const handleDownloadPDF = (id) => {
-        console.log("Download PDF");
-      };
-      
-      const handleDownloadDOCX = (id) => {
-        console.log("Download DOCX");
-      };
-      
-      const handleRename = (id) => {
-        console.log("Rename");
-      };
-      
-      const handleDelete = (id) => {
-        console.log("Delete");
-      };
+    setCoverLetters(filteredCoverLetters);
+  }, [searchTerm, sortOrder]);
+
+  useEffect(() => {
+    if (loading) return;
+    if (error) console.error("Auth error:", error); // Handle possible auth errors
+    if (!user) {
+      router.push("/login");
+      return;
+    }
+
+    const fetchCoverLetters = async () => {
+      try {
+        const coverLettersRef = collection( db,`users/${user.uid}/coverletters`);
+        const querySnapshot = await getDocs(coverLettersRef);
+        const fetchedCoverLetters = querySnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+          dateCreated: doc
+            .data()
+            .dateCreated.toDate()
+            .toLocaleDateString("en-US", {
+              month: "2-digit",
+              day: "2-digit",
+              year: "numeric",
+            }),
+          lastUpdated: doc
+            .data()
+            .lastUpdated.toDate()
+            .toLocaleDateString("en-US", {
+              month: "2-digit",
+              day: "2-digit",
+              year: "numeric",
+            }),
+        }));
+        setCoverLetters(fetchedCoverLetters);
+        console
+      } catch (error) {
+        console.error("Error fetching cover letter:", error);
+      }
+    };
+
+    fetchCoverLetters();
+  }, [user, loading, error, router]);
+  const handleDownloadPDF = (id) => {
+    console.log("Download PDF");
+  };
+
+  const handleDownloadDOCX = (id) => {
+    console.log("Download DOCX");
+  };
+
+  const handleRename = (id, title) => {
+    setEditingId(id);
+    setEditingTitle(title || "");
+  };
+
+  const handleTitleChange = (event) => {
+    setEditingTitle(event.target.value);
+  };
+
+  const saveTitle = async (id) => {
+    if (editingTitle.trim() === "") {
+      return;
+    }
+    try {
+      const letterRef = doc(db, `users/${user.uid}/coverletters`, id);
+      await updateDoc(letterRef, { title: editingTitle });
+      setCoverLetters((coverLetters) =>
+        coverLetters.map((letter) =>
+          letter.id === id ? { ...letter, title: editingTitle } : letter
+        )
+      );
+      setEditingId(null);
+      toast("Title updated successfully");
+    } catch (error) {
+      console.error("Error updating title:", error);
+      toast("Failed to update title");
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!id) return;
+
+    try {
+      const letterRef = doc(db, `users/${user.uid}/coverletters`, id);
+      await deleteDoc(letterRef);
+      setCoverLetters((coverLetters) =>
+        coverLetters.filter((letter) => letter.id !== id)
+      );
+      toast("Cover letter deleted successfully");
+    } catch (error) {
+      console.error("Error deleting cover letter:", error);
+      toast("Failed to delete cover letter");
+    }
+  };
+
   return (
     <div className="flex flex-col w-full min-h-screen py-16 px-10 my-10">
       <h1 className="text-2xl font-semibold text-[#559F87]">Cover Letters</h1>
       <p className="mt-2 mb-6">Create and manage your cover letters here.</p>
       <div className="flex justify-between pb-6 mx-2">
         <Input
-          placeholder="Filter by Resume Name"
+          placeholder="Filter by Cover Letter Name"
           value={searchTerm}
           onChange={(event) => setSearchTerm(event.target.value)}
           className="max-w-sm"
         />
-        <Select defaultValue="Recently Opened"onValueChange={setSortOrder}>
+        <Select defaultValue="Recently Opened" onValueChange={setSortOrder}>
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Recently Opened" />
           </SelectTrigger>
@@ -102,15 +192,15 @@ export default function Page() {
         </Select>
       </div>
       <div className="flex flex-wrap ">
-        <div className="h-[220px] w-[170px] border rounded-lg shadow p-4 flex justify-center items-center cursor-pointer m-2 ">
-          <div className="font-bold text-slate-400">New</div>
-        </div>
+        <CoverLetterDialog />
         {coverLetters.map((letter) => (
           <div
             key={letter.id}
             className="h-[220px] w-[170px] border rounded-md shadow justify-between flex flex-col m-2"
           >
-            <div className="h-full flex justify-center items-center cursor-pointer ">
+            <div className="h-full flex justify-center items-center cursor-pointer"
+            onClick={() => router.push(`/coverletters/${letter.id}`)}
+            >
               Preview
             </div>
             <div className=" flex justify-between py-2 px-2 bg-slate-100">
@@ -135,19 +225,31 @@ export default function Page() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="text-sm">
-                <DropdownMenuItem className="text-xs cursor-pointer" onClick={() => handleDownloadPDF(letter.id)}>
-                  <FiDownload className="mr-2" /> Download PDF
-                </DropdownMenuItem>
-                <DropdownMenuItem className="text-xs cursor-pointer" onClick={() => handleDownloadDOCX(letter.id)}>
-                  <FiDownload className="mr-2" /> Download DOCX
-                </DropdownMenuItem>
-                <DropdownMenuItem className="text-xs cursor-pointer" onClick={() => handleRename(letter.id)}>
-                  <MdOutlineEdit className="mr-2" /> Rename
-                </DropdownMenuItem>
-                <DropdownMenuItem className="text-xs cursor-pointer text-red-500" onClick={() => handleDelete(letter.id)}>
-                  <FiTrash2 className="mr-2" /> Delete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
+                  <DropdownMenuItem
+                    className="text-xs cursor-pointer"
+                    onClick={() => handleDownloadPDF(letter.id)}
+                  >
+                    <FiDownload className="mr-2" /> Download PDF
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="text-xs cursor-pointer"
+                    onClick={() => handleDownloadDOCX(letter.id)}
+                  >
+                    <FiDownload className="mr-2" /> Download DOCX
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="text-xs cursor-pointer"
+                    onClick={() => handleRename(letter.id)}
+                  >
+                    <MdOutlineEdit className="mr-2" /> Rename
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="text-xs cursor-pointer text-red-500"
+                    onClick={() => handleDelete(letter.id)}
+                  >
+                    <FiTrash2 className="mr-2" /> Delete
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
               </DropdownMenu>
             </div>
           </div>

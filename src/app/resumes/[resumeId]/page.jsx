@@ -3,11 +3,12 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { auth, db } from "@/lib/firebase/config";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc } from "firebase/firestore";
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
+import { toast } from "sonner";
 
 import { Slider } from "@/components/ui/slider";
-import { InputSizer } from "@/components/InputSizer";
+import { InputSizer } from "@/app/resumes/[resumeId]/_components/InputSizer";
 import { ZoomIn, ZoomOut } from "lucide-react";
 
 import { EducationForm } from "./_components/educationForm";
@@ -25,94 +26,9 @@ export default function Page({ params }) {
       router.push("/login");
     }
   }, [user, loading, router]);
-
+  const [editingTitle, setEditingTitle] = useState(false);
   const [resumeTitle, setResumeTitle] = useState("");
-
-  const exampleEducation = [
-    {
-      degreeType: "Bachelor's",
-      endDate: "December 20, 2024 at 12:00:00 AM UTC-5",
-      location: "Buffalo, NY",
-      gpa: "3.72",
-      major: "Computer Science",
-      school: "University At Buffalo",
-      startDate: "August 30, 2021 at 12:00:00 AM UTC-4",
-    },
-  ];
-  const exampleExperience = [
-    {
-      companyName: "Resilience, Inc",
-      currentlyWorking: false,
-      description: [
-        "Revitalized legacy software using Expo with React Native, overhauling performance by 23% through modern development practices.",
-        "Led development of a robust quiz application, facilitating interactive learning and assessment.",
-        "Utilized LearnPress for quiz content delivery, enhancing user interaction & establishing a direct feedback loop.",
-      ],
-      endDate: "November 19, 2023 at 12:00:00 AM UTC-5",
-      experienceType: "",
-      location: "Remote",
-      position: "Software Developer Intern",
-      startDate: "July 14, 2023 at 12:00:00 AM UTC-4",
-    },
-    {
-      companyName: "University at Buffalo - Engineering & Applied Sciences",
-      currentlyWorking: true,
-      description: [
-        "Facilitated office hours for 250+ students in Web Applications, covering HTML/CSS, JavaScript, Python, Docker, RESTful APIs, Websockets, & OAuth, enhancing students’ full-stack development capabilities.",
-        "Boosted students’ understanding in Data Structures using Java by leading interactive recitations and hands-on exercises, resulting in a 20% increase in class comprehension among 300+ students.",
-        "Pioneered integration of project-based learning in curriculum, directly contributing to improved practical skills in software development and system design.",
-      ],
-      endDate: null,
-      experienceType: "Part-time",
-      location: "Buffalo, NY",
-      position: "Undergraduate Teaching Assistant",
-      startDate: "January 1, 2023 at 12:00:00 AM UTC-5",
-    },
-  ];
-  const exampleProjects = [
-    {
-      currentlyWorking: true,
-      description: [
-        "Designed an application to manage and tailor resumes, increasing interview callbacks by 25% through use of OpenAI’s APIs.",
-        "Established a user dashboard, improving user engagement by 20% by providing insights into application statuses and management tools.",
-        "Implemented a PDF reader to streamline resume and cover letter tailoring process.",
-        "Designed and implemented a resume and cover letter editor, enabling users to craft and personalize documents with an intuitive interface, option to download the final versions as PDFs.",
-      ],
-      endDate: null,
-      location: "Buffalo, NY",
-      position: "Full Stack Developer",
-      projectName: "Resume Butler",
-      startDate: "March 1, 2024 at 12:00:00 AM UTC-5",
-    },
-    {
-      currentlyWorking: false,
-      description: [
-        "Spearheaded development of a social media platform, implementing real-time chat and image upload features.",
-        "Enhanced security and user trust by integrating OAuth 2.0 with Gmail API for authentication.",
-        "Utilized Docker to standardize deployment processes across multiple development environments.",
-        "Secured against DoS attacks via Nginx, ensuring platform reliability and user safety.",
-      ],
-      endDate: "December 17, 2023 at 12:00:00 AM UTC-5",
-      location: "Buffalo, NY",
-      position: "Full Stack Developer",
-      projectName: "FiLo Chat",
-      startDate: "September 1, 2023 at 12:00:00 AM UTC-4",
-    },
-    {
-      currentlyWorking: false,
-      description: [
-        "Integrated OpenAI APIs for real-time, AI-driven solutions, enriching user interaction across various fields such as financial analysis, artistic creation, & programming and programming language translation.",
-        "Secured an exciting 1st place in the UB Hacking Machine Learning/Artificial Intelligence Category, recognized for developing a high-quality, innovative project within a 24-hour time frame.",
-      ],
-      endDate: "November 19, 2022 at 12:00:00 AM UTC-5",
-      location: "Buffalo, NY",
-      position: "Frontend Developer",
-      projectName: "Transform *WINNER*",
-      startDate: "November 19, 2022 at 12:00:00 AM UTC-5",
-    },
-  ];
-
-  const [education, setEducation] = useState(exampleEducation);
+  const [education, setEducation] = useState([]);
   const [experience, setExperience] = useState([]);
   const [projects, setProjects] = useState([]);
   const [skills, setSkills] = useState([]);
@@ -207,6 +123,19 @@ export default function Page({ params }) {
         return item.name;
       default:
         return null;
+    }
+  };
+
+  const autoSave = async () => {
+    if (user && params.resumeId) {
+      const resumeRef = doc(db, `users/${user.uid}/resumes`, params.resumeId);
+      await setDoc(resumeRef, { title: resumeTitle }, { merge: true });
+      toast("Title Updated Successfully", {
+        action: {
+          label: "OK",
+          onClick: () => toast.dismiss(),
+        },
+      })
     }
   };
 
@@ -330,7 +259,7 @@ export default function Page({ params }) {
 
   return (
     <div className="flex flex-col w-full p-10 font-sans my-10">
-      <Header title={resumeTitle} />
+      <Header title={resumeTitle} setResumeTitle={setResumeTitle} editingTitle={editingTitle} setEditingTitle={setEditingTitle} autoSave={autoSave} />
       <div className="flex-grow flex flex-col">
         <div className="flex flex-col items-center justify-center flex-grow p-4">
           <div
@@ -404,8 +333,27 @@ export default function Page({ params }) {
   );
 }
 
-const Header = ({ title }) => (
-  <h1 className="text-3xl font-medium text-[#559F87] mb-4">Resume: {title}</h1>
+const Header = ({ title, setResumeTitle, editingTitle, setEditingTitle, autoSave }) => (
+  <h1 className="text-3xl font-medium text-[#559F87] mb-4">
+    Resume:
+    {editingTitle ? (
+      <input
+        type="text"
+        value={title}
+        onChange={(e) => setResumeTitle(e.target.value)}
+        onBlur={() => { autoSave(); setEditingTitle(false); }}
+        className="bg-transparent border-b border-gray-600 ml-2"
+        placeholder="Title"
+      />
+    ) : (
+      <span
+      onDoubleClick={() => setEditingTitle(true)}
+      className="ml-2 cursor-pointer"
+      >
+        {title || "Title"}
+      </span>
+    )}
+  </h1>
 );
 
 const ResumeHeader = () => {
@@ -462,17 +410,3 @@ const ZoomControls = ({ handleScaleChange }) => (
   </div>
 );
 
-// {
-//   currentlyWorking: true,
-//   description: [
-//     "Designed an application to manage and tailor resumes, increasing interview callbacks by 25% through use of OpenAI’s APIs.",
-//     "Established a user dashboard, improving user engagement by 20% by providing insights into application statuses and management tools.",
-//     "Implemented a PDF reader to streamline resume and cover letter tailoring process.",
-//     "Designed and implemented a resume and cover letter editor, enabling users to craft and personalize documents with an intuitive interface, option to download the final versions as PDFs.",
-//   ],
-//   endDate: null,
-//   location: "Buffalo, NY",
-//   position: "Full Stack Developer",
-//   projectName: "Resume Butler",
-//   startDate: "March 1, 2024 at 12:00:00 AM UTC-5",
-// },
