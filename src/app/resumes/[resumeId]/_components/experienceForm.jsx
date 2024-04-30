@@ -40,6 +40,29 @@ export const ExperienceForm = ({ item, onChange }) => {
     ? "Current"
     : formatDate(item.endDate);
 
+  const handleDescriptionChange = (index, value) => {
+    const newDescription = [...item.description];
+    newDescription[index] = value;
+    onChange({ description: newDescription });
+  };
+
+  const addDescriptionPointBelow = (index) => {
+    const newDescription = [...item.description];
+    newDescription.splice(index + 1, 0, "");
+    onChange({ description: newDescription });
+  };
+
+  const deleteDescriptionPoint = (index) => {
+    const newDescription = [...item.description];
+    newDescription.splice(index, 1);
+    onChange({ description: newDescription });
+  };
+  const handlePaste = (e) => {
+    e.preventDefault();
+    const text = e.clipboardData.getData("text/plain");
+    document.execCommand("insertText", false, text);
+  };
+
   return (
     <div className="Experience">
       <div className="flex justify-between items-baseline">
@@ -51,6 +74,7 @@ export const ExperienceForm = ({ item, onChange }) => {
           role="textbox"
           onFocus={handleFocus}
           onBlur={handleBlur}
+          onPaste={handlePaste}
           onKeyDown={handleKeyDown}
           data-placeholder="Enter Company Name"
           data-field="companyName"
@@ -65,6 +89,7 @@ export const ExperienceForm = ({ item, onChange }) => {
             role="textbox"
             onFocus={handleFocus}
             onBlur={handleBlur}
+            onPaste={handlePaste}
             onKeyDown={handleKeyDown}
             data-placeholder="Enter Start Date"
             data-field="startDate"
@@ -81,6 +106,7 @@ export const ExperienceForm = ({ item, onChange }) => {
             role="textbox"
             onFocus={handleFocus}
             onBlur={handleBlur}
+            onPaste={handlePaste}
             onKeyDown={handleKeyDown}
             data-placeholder="Enter End Date"
             data-field="endDate"
@@ -91,12 +117,13 @@ export const ExperienceForm = ({ item, onChange }) => {
       <div className="text-sm flex justify-between">
         <span
           contentEditable
-          className={`input text-sm ${
+          className={`input italic text-sm ${
             !item.position ? "contentEditablePlaceholder" : ""
           }`}
           role="textbox"
           onFocus={handleFocus}
           onBlur={handleBlur}
+          onPaste={handlePaste}
           onKeyDown={handleKeyDown}
           data-placeholder="Enter Position"
           data-field="position"
@@ -110,33 +137,64 @@ export const ExperienceForm = ({ item, onChange }) => {
           role="textbox"
           onFocus={handleFocus}
           onBlur={handleBlur}
+          onPaste={handlePaste}
           onKeyDown={handleKeyDown}
           data-placeholder="Enter Location"
           data-field="location"
           dangerouslySetInnerHTML={{ __html: item.location || "" }}
         />
       </div>
-      <div className="ml-[22px]">
-        <ul className="list-disc list-inside">
+      <div className="pl-[22px] mt-1">
+        <ul className="list-inside">
           {item.description && item.description.length > 0 ? (
             item.description.map((point, index) => (
-              <li
-                key={index}
-                className="text-sm"
-                contentEditable
-                onFocus={handleFocus}
-                onBlur={(e) =>
-                  handleDescriptionChange(index, e.target.textContent)
-                }
-                onKeyDown={handleKeyDown}
-                data-placeholder="Enter Description Detail"
-                dangerouslySetInnerHTML={{
-                  __html: point || "Add description detail",
-                }}
-              ></li>
+              <li key={index} className="text-md flex items-center">
+                <span
+                  className="bullet-toggle mr-2"
+                  onClick={() => addDescriptionPointBelow(index)}
+                ></span>
+                <div
+                  contentEditable
+                  className={`input w-full text-sm ${
+                    !point ? "contentEditablePlaceholder" : ""
+                  }`}
+                  role="textbox"
+                  onFocus={handleFocus}
+                  onPaste={handlePaste}
+                  onBlur={(e) =>
+                    handleDescriptionChange(index, e.target.textContent)
+                  }
+                  onKeyDown={handleKeyDown}
+                  data-placeholder="Enter Description Detail"
+                  dangerouslySetInnerHTML={{ __html: point || "" }}
+                />
+                <button
+                  onClick={() => deleteDescriptionPoint(index)}
+                  className="ml-1 cursor-pointer text-red-800 hover:text-red-500"
+                >X</button>
+              </li>
             ))
           ) : (
-            <li className="text-sm">No details available.</li>
+            <li className="text-sm flex items-center">
+              <span
+                className="bullet-toggle mr-2"
+                onClick={() => addDescriptionPointBelow(0)}
+              ></span>
+              <div
+                contentEditable
+                className="input grow text-md contentEditablePlaceholder"
+                role="textbox"
+                onFocus={handleFocus}
+                onPaste={handlePaste}
+                onBlur={(e) => handleDescriptionChange(0, e.target.textContent)}
+                onKeyDown={handleKeyDown}
+                data-placeholder="Enter Description Detail"
+              />
+              <button
+                  onClick={() => deleteDescriptionPoint(0)}
+                  className="ml-1 cursor-pointer text-red-800 hover:text-red-500"
+                >X</button>
+            </li>
           )}
         </ul>
       </div>

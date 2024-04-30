@@ -14,6 +14,8 @@ import { EducationForm } from "./_components/educationForm";
 import { ExperienceForm } from "./_components/experienceForm";
 import { ProjectsForm } from "./_components/projectForm";
 
+import { Trash2 } from "lucide-react";
+
 export default function Page({ params }) {
   const [user, loading, error] = useAuthState(auth);
   const router = useRouter();
@@ -161,7 +163,7 @@ export default function Page({ params }) {
 
   // Zoom controls
   // * (scale / 100);
-  const [scale, setScale] = useState(114);
+  // const [scale, setScale] = useState(114);
   const width = 850;
   const height = 1100;
   const scaledPadding = 30;
@@ -179,7 +181,6 @@ export default function Page({ params }) {
   };
 
   const renderItem = (item, sectionId, index) => {
-    // Add index here
     switch (sectionId) {
       case "education":
         return (
@@ -196,10 +197,12 @@ export default function Page({ params }) {
           />
         );
       case "projects":
-        return <ProjectsForm
-        item={item}
-        onChange={(data) => handleProjectChange(index, data)}
-      />;
+        return (
+          <ProjectsForm
+            item={item}
+            onChange={(data) => handleProjectChange(index, data)}
+          />
+        );
       case "skills":
         return item.name;
       default:
@@ -228,11 +231,6 @@ export default function Page({ params }) {
       )
     );
   };
-  
-  //   const handleExperienceChange = (innerIndex, newExperienceData) => {
-  //     setExperience(prev => prev.map((exp, i) => i === innerIndex ? { ...exp, ...newExperienceData } : exp));
-  //     console.log(experience)
-  //   };
 
   if (loading || !user) {
     return <p>Loading...</p>;
@@ -295,6 +293,41 @@ export default function Page({ params }) {
 
   const addSkills = () => {};
 
+  const handleDelete = (section, index) => {    
+    switch (section) {
+      case "education":
+        deleteEducation(index);
+        break;
+      case "experience":
+        deleteExperience(index);
+        break;
+      case "projects":
+        deleteProjects(index);
+        break;
+      case "skills":
+        deleteSkills(index);
+        break;
+      default:
+        console.log("Unknown section");
+    }
+  };
+  
+  const deleteEducation = (index) => {
+    setEducation((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const deleteExperience = (index) => {
+    setExperience((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const deleteProjects = (index) => {
+    setProjects((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const deleteSkills = (index) => {
+    // implement similar logic here if needed
+  };
+
   return (
     <div className="flex flex-col w-full p-10 font-sans my-10">
       <Header title={resumeTitle} />
@@ -306,7 +339,7 @@ export default function Page({ params }) {
               height: `${height}px`,
               padding: `${scaledPadding}px`,
             }}
-            className="border border-black bg-white box-border overflow-hidden"
+            className="border border-gray-800 rounded-md bg-white box-border overflow-hidden"
           >
             <ResumeHeader />
             <DragDropContext onDragEnd={onDragEnd}>
@@ -324,12 +357,12 @@ export default function Page({ params }) {
                             ref={provided.innerRef}
                             {...provided.draggableProps}
                             {...provided.dragHandleProps}
-                            className="mb-2 mt-[-6pt] "
+                            className="mb-2 mt-[-6pt]"
                           >
                             <h2 className="flex justify-between text-left text-lg font-bold small-caps border-black pl-1 border-b-2">
                               <div>{section.title}</div>
                               <button
-                                className="text-[#188665] font-light text-sm hover:bg-green-100 px-2 py-1 "
+                                className="text-[#188665] font-light text-sm hover:bg-green-100 px-2 py-1"
                                 variant="ghost"
                                 onClick={() => handleAdd(section.title)}
                               >
@@ -340,9 +373,18 @@ export default function Page({ params }) {
                             {section.content.map((item, innerIndex) => (
                               <div
                                 key={innerIndex}
-                                className="text-left text-sm pl-2"
+                                className="text-left text-sm pl-2 relative"
                               >
                                 {renderItem(item, section.id, innerIndex)}
+                                <Trash2
+                                  size={16}
+                                  strokeWidth={1}
+
+                                  className="absolute -left-5 top-1/3 cursor-pointer hover:text-red-500"
+                                  onClick={() =>
+                                    handleDelete(section.id, innerIndex)
+                                  }
+                                />
                               </div>
                             ))}
                           </div>
@@ -419,7 +461,6 @@ const ZoomControls = ({ handleScaleChange }) => (
     <ZoomIn strokeWidth={2} />
   </div>
 );
-
 
 // {
 //   currentlyWorking: true,

@@ -9,7 +9,7 @@ import {
   addDoc,
   updateDoc,
   deleteDoc,
-  Timestamp
+  Timestamp,
 } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 
@@ -35,8 +35,7 @@ import { Calendar as CalendarIcon, Trash2 } from "lucide-react";
 
 import { Checkbox } from "@/components/ui/checkbox";
 import { format } from "date-fns";
-import { cn } from "@/lib/utils"
-
+import { cn } from "@/lib/utils";
 
 export default function ExperienceForm() {
   const [experienceEntries, setExperienceEntries] = useState([]);
@@ -47,13 +46,18 @@ export default function ExperienceForm() {
     const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
       if (authUser) {
         setUser(authUser);
-        const experienceCollectionRef = collection(db, "users", authUser.uid, "experience");
+        const experienceCollectionRef = collection(
+          db,
+          "users",
+          authUser.uid,
+          "experience"
+        );
         const snapshot = await getDocs(experienceCollectionRef);
-        const experienceData = snapshot.docs.map(doc => ({
+        const experienceData = snapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
           startDate: doc.data().startDate?.toDate() || "",
-          endDate: doc.data().endDate?.toDate() || ""
+          endDate: doc.data().endDate?.toDate() || "",
         }));
         setExperienceEntries(experienceData);
       } else {
@@ -85,7 +89,9 @@ export default function ExperienceForm() {
     if (entryToDelete.isNew) {
       setExperienceEntries(experienceEntries.filter((_, idx) => idx !== index));
     } else {
-      await deleteDoc(doc(db, "users", user.uid, "experience", entryToDelete.id));
+      await deleteDoc(
+        doc(db, "users", user.uid, "experience", entryToDelete.id)
+      );
       setExperienceEntries(experienceEntries.filter((_, idx) => idx !== index));
     }
   };
@@ -97,7 +103,6 @@ export default function ExperienceForm() {
     setExperienceEntries(updatedEntries);
   };
 
-
   const updateExperienceEntry = (index, field, value) => {
     console.log("updateExperienceEntry", index, field, value);
     const updatedEntries = experienceEntries.map((entry, idx) => {
@@ -108,7 +113,6 @@ export default function ExperienceForm() {
     });
     setExperienceEntries(updatedEntries);
   };
-
 
   const addDescriptionBullet = (index) => {
     const updatedEntries = experienceEntries.map((entry, idx) => {
@@ -123,7 +127,9 @@ export default function ExperienceForm() {
   const deleteDescriptionBullet = (entryIndex, bulletIndex) => {
     const updatedEntries = experienceEntries.map((entry, idx) => {
       if (idx === entryIndex) {
-        const updatedDescription = entry.description.filter((_, dIdx) => dIdx !== bulletIndex);
+        const updatedDescription = entry.description.filter(
+          (_, dIdx) => dIdx !== bulletIndex
+        );
         return { ...entry, description: updatedDescription };
       }
       return entry;
@@ -149,19 +155,33 @@ export default function ExperienceForm() {
 
   const handleSave = async () => {
     if (user) {
-      const experienceCollectionRef = collection(db, "users", user.uid, "experience");
+      const experienceCollectionRef = collection(
+        db,
+        "users",
+        user.uid,
+        "experience"
+      );
       try {
-        await Promise.all(experienceEntries.map(entry => {
-          const { id, isNew, ...data } = entry;
-          const entryWithTimestamps = {
-            ...data,
-            startDate: data.startDate ? Timestamp.fromDate(new Date(data.startDate)) : null,
-            endDate: data.endDate ? Timestamp.fromDate(new Date(data.endDate)) : null,
-          };
-          return isNew
-            ? addDoc(experienceCollectionRef, entryWithTimestamps)
-            : updateDoc(doc(db, "users", user.uid, "experience", id), entryWithTimestamps);
-        }));
+        await Promise.all(
+          experienceEntries.map((entry) => {
+            const { id, isNew, ...data } = entry;
+            const entryWithTimestamps = {
+              ...data,
+              startDate: data.startDate
+                ? Timestamp.fromDate(new Date(data.startDate))
+                : null,
+              endDate: data.endDate
+                ? Timestamp.fromDate(new Date(data.endDate))
+                : null,
+            };
+            return isNew
+              ? addDoc(experienceCollectionRef, entryWithTimestamps)
+              : updateDoc(
+                  doc(db, "users", user.uid, "experience", id),
+                  entryWithTimestamps
+                );
+          })
+        );
         toast("Experience entries saved successfully!");
       } catch (error) {
         console.error("Error saving experience entries: ", error);
@@ -182,16 +202,15 @@ export default function ExperienceForm() {
           + Add Education
         </Button>
       </div>
-      {experienceEntries.map((entry, index) => ( 
+      {experienceEntries.map((entry, index) => (
         <div className="flex flex-col space-y-4 pb-8 relative" key={index}>
-                  <Trash2
-          strokeWidth={1.25}
-          className="absolute left-[-50px] top-1/3 -translate-y-1/2 cursor-pointer hover:text-red-500"
-          onClick={() => deleteExperienceEntry(index)}
-        />
+          <Trash2
+            strokeWidth={1.25}
+            className="absolute left-[-50px] top-1/3 -translate-y-1/2 cursor-pointer hover:text-red-500"
+            onClick={() => deleteExperienceEntry(index)}
+          />
           <div className="flex space-x-6">
             <div className="flex-grow">
-  
               <Label>Company Name</Label>
               <Input
                 value={entry.companyName}
@@ -223,15 +242,12 @@ export default function ExperienceForm() {
             <div>
               <Label>Experience Type</Label>
               <Select
-              value={entry.experienceType}
-              onValueChange={(value) =>
-                updateExperienceEntry(index,"experienceType", value)
-              }
+                value={entry.experienceType}
+                onValueChange={(value) =>
+                  updateExperienceEntry(index, "experienceType", value)
+                }
               >
-                <SelectTrigger
-                  
-                  className="max-w-[300px] sm:w-[200px] md:w-[300px]"
-                >
+                <SelectTrigger className="max-w-[300px] sm:w-[200px] md:w-[300px]">
                   <SelectValue placeholder="Select Experience Type" />
                 </SelectTrigger>
                 <SelectContent>
@@ -243,7 +259,6 @@ export default function ExperienceForm() {
                   </SelectGroup>
                 </SelectContent>
               </Select>
-
             </div>
           </div>
           <div className="flex space-x-6">
@@ -366,10 +381,10 @@ export default function ExperienceForm() {
                   }
                 />
                 <Trash2
-                strokeWidth={1.25}
-                className="cursor-pointer hover:text-red-500"
-                onClick={() => deleteDescriptionBullet(index, dIndex)}
-              />
+                  strokeWidth={1.25}
+                  className="cursor-pointer hover:text-red-500"
+                  onClick={() => deleteDescriptionBullet(index, dIndex)}
+                />
               </div>
             ))}
           </div>

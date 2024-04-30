@@ -49,9 +49,10 @@ export default function Navbar() {
           <AddApplicationDialog className="text-green-700 bg-green-200 hover:bg-green-300 focus:ring-4 focus:outline-none focus:ring-blue-300  rounded-lg text-sm px-4 py-2 text-center" />
           <Button
             onClick={handleLogout}
-            className="text-red-700 bg-red-200 hover:bg-red-300 focus:ring-4 focus:outline-none focus:ring-blue-300  rounded-lg text-sm px-4 py-2 text-center"
+            variant="outline"
+            className="bg-red-100 hover:bg-red-300 focus:ring-4 focus:outline-none focus:ring-blue-300  rounded-lg text-sm px-4 py-2 text-center"
           >
-            <LogOut size={14} strokeWidth={2} className="text-black"/>
+            <LogOut size={14} strokeWidth={2.25} className="text-black"/>
           </Button>
           </div>
          

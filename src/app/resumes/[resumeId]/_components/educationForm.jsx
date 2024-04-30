@@ -19,6 +19,11 @@ export function EducationForm({ item, onChange }) {
         e.target.textContent = ''; // Clear placeholder on focus if text is placeholder
       }
     };
+    const handlePaste = (e) => {
+      e.preventDefault();
+      const text = e.clipboardData.getData("text/plain");
+      document.execCommand("insertText", false, text);
+    };
   
     const handleBlur = (e) => {
       const field = e.target.getAttribute('data-field');
@@ -46,6 +51,7 @@ export function EducationForm({ item, onChange }) {
             role="textbox"
             onFocus={handleFocus}
             onBlur={handleBlur}
+            onPaste={handlePaste}
             onKeyDown={handleKeyDown}
             data-placeholder="Enter School Name"
             data-field="school"
@@ -59,6 +65,7 @@ export function EducationForm({ item, onChange }) {
             role="textbox"
             onFocus={handleFocus}
             onBlur={handleBlur}
+            onPaste={handlePaste}
             onKeyDown={handleKeyDown}
             data-placeholder="Enter End Date"
             data-field="endDate"
@@ -74,6 +81,7 @@ export function EducationForm({ item, onChange }) {
             className={`input ${!item.degreeType ? 'contentEditablePlaceholder' : ''}`}
             role="textbox"
             onFocus={handleFocus}
+            onPaste={handlePaste}
             onBlur={handleBlur}
             onKeyDown={handleKeyDown}
             data-placeholder="Degree Type"
@@ -98,6 +106,7 @@ export function EducationForm({ item, onChange }) {
             className={`input ${!item.gpa ? 'contentEditablePlaceholder' : ''}`}
             role="textbox"
             onFocus={handleFocus}
+            onPaste={handlePaste}
             onBlur={handleBlur}
             onKeyDown={handleKeyDown}
             data-placeholder="GPA"
@@ -111,6 +120,7 @@ export function EducationForm({ item, onChange }) {
             className={`input italic ${!item.location ? 'contentEditablePlaceholder' : ''}`}
             role="textbox"
             onFocus={handleFocus}
+            onPaste={handlePaste}
             onBlur={handleBlur}
             onKeyDown={handleKeyDown}
             data-placeholder="Location"

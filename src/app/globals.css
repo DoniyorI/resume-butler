@@ -178,3 +178,13 @@
 .contentEditablePlaceholder:not(:empty)::before {
   display: none;
 }
+.bullet-toggle:before {
+  content: "•";
+  color: black;
+}
+
+.bullet-toggle:hover:before {
+  content: "+";
+  font-weight: bold;
+  color: green;
+}
