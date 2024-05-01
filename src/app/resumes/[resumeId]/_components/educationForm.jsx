@@ -1,11 +1,24 @@
 import React from "react"
 
 export function EducationForm({ item, onChange }) {
-    const handleInputChange = (field, e) => {
-      const value = e.target.textContent.trim();
-      console.log(value)
-      onChange({ [field]: value });
-    };
+
+  const handleInputChange = (field, e) => {
+    const value = e.target.textContent.trim();
+    const newEducationData = { ...item, [field]: value };
+    onChange(newEducationData);
+  };
+
+  const handleBlur = (e) => {
+    const field = e.target.getAttribute('data-field');
+    const value = e.target.textContent.trim();
+    if (!value) {
+      e.target.textContent = e.target.getAttribute("data-placeholder");
+      e.target.classList.add('contentEditablePlaceholder');
+    } else {
+      e.target.classList.remove('contentEditablePlaceholder');
+    }
+    handleInputChange(field, { target: { textContent: value } });
+  };
   
     const handleKeyDown = (e) => {
       if (e.key === 'Enter') {
@@ -25,17 +38,17 @@ export function EducationForm({ item, onChange }) {
       document.execCommand("insertText", false, text);
     };
   
-    const handleBlur = (e) => {
-      const field = e.target.getAttribute('data-field');
-      const value = e.target.textContent.trim();
-      if (!value) {
-        e.target.textContent = e.target.getAttribute("data-placeholder");
-        e.target.classList.add('contentEditablePlaceholder');
-      } else {
-        e.target.classList.remove('contentEditablePlaceholder');
-      }
-      handleInputChange(field, { target: { textContent: value } });
-    };
+    // const handleBlur = (e) => {
+    //   const field = e.target.getAttribute('data-field');
+    //   const value = e.target.textContent.trim();
+    //   if (!value) {
+    //     e.target.textContent = e.target.getAttribute("data-placeholder");
+    //     e.target.classList.add('contentEditablePlaceholder');
+    //   } else {
+    //     e.target.classList.remove('contentEditablePlaceholder');
+    //   }
+    //   handleInputChange(field, { target: { textContent: value } });
+    // };
     
   
     const endDateString = item.endDate ? item.endDate.split(" at ")[0] : "";

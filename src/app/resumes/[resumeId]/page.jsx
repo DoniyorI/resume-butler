@@ -14,6 +14,7 @@ import { ZoomIn, ZoomOut } from "lucide-react";
 import { EducationForm } from "./_components/educationForm";
 import { ExperienceForm } from "./_components/experienceForm";
 import { ProjectsForm } from "./_components/projectForm";
+import { ResumeHeader } from "./_components/resumeHeader";
 
 import { Trash2 } from "lucide-react";
 
@@ -32,37 +33,50 @@ export default function Page({ params }) {
   const [experience, setExperience] = useState([]);
   const [projects, setProjects] = useState([]);
   const [skills, setSkills] = useState([]);
-  const [sections, setSections] = useState([
-    { id: "education", title: "Education", content: education },
-    { id: "experience", title: "Experience", content: experience },
-    { id: "projects", title: "Projects", content: projects },
-    { id: "skills", title: "Skills", content: skills },
-  ]);
+  const [sections, setSections] = useState([]);
 
   useEffect(() => {
-    setSections([
-      { id: "education", title: "Education", content: education },
-      { id: "experience", title: "Experience", content: experience },
-      { id: "projects", title: "Projects", content: projects },
-      { id: "skills", title: "Skills", content: skills },
-    ]);
-  }, [education, experience, projects, skills]);
+    const updatedSections = sections.map((section) => {
+          switch (section.id) {
+            case "education":
+              return { ...section, content: education };
+            case "experience":
+              return { ...section, content: experience };
+            case "projects":
+              return { ...section, content: projects };
+            case "skills":
+              return { ...section, content: skills };
+            default:
+              return section;
+          }
+        });
+      
+        setSections(updatedSections);
+    saveSectionsToFirestore();
+ }, [education, experience, projects, skills]);
 
   useEffect(() => {
     if (user && params.resumeId) {
       const resumeRef = doc(db, `users/${user.uid}/resumes`, params.resumeId);
+      const userRef = doc(db, `users/${user.uid}`);
 
       getDoc(resumeRef)
         .then((docSnap) => {
           if (docSnap.exists()) {
             const resumeData = docSnap.data();
             setResumeTitle(resumeData.title);
-            // setSections({
-            //   education: resumeData.education || [],
-            //   experience: resumeData.experience || [],
-            //   projects: resumeData.projects || [],
-            //   skills: resumeData.skills.map(skill => ({ id: skill, content: skill })) || [] // Assuming skills are simple strings
-            // });
+            setEducation(resumeData.education || []);
+            console.log("Education:", resumeData.education);
+            setExperience(resumeData.experience || []);
+            setProjects(resumeData.projects || []);
+            setSkills(resumeData.skills || []);
+            const orderedSections = resumeData.order || [
+            { id: "education", title: "Education", content: resumeData.education || [] },
+            { id: "experience", title: "Experience", content: resumeData.experience || [] },
+            { id: "projects", title: "Projects", content: resumeData.projects || [] },
+            { id: "skills", title: "Skills", content: resumeData.skills || [] },
+          ];
+          setSections(orderedSections);
           } else {
             console.error(
               "Resume not found or you're not authorized to view it"
@@ -87,14 +101,181 @@ export default function Page({ params }) {
   //   setScale(value[0]);
   // };
 
-  const onDragEnd = (result) => {
+  const saveSectionsToFirestore = async () => {
+    console.log("Saving sections to firestore")
+    console.log("Education:", education);
+    console.log("Experience:", experience);
+    if (user && params.resumeId) {
+      const resumeRef = doc(db, `users/${user.uid}/resumes`, params.resumeId);
+      await setDoc(resumeRef, {
+        title: resumeTitle,
+        education: education,
+        experience: experience,
+        projects: projects,
+        skills: skills,
+      }, { merge: true });
+    }
+  };
+
+  const onDragEnd = async (result) => {
     if (!result.destination) return;
     const items = Array.from(sections);
     const [reorderedItem] = items.splice(result.source.index, 1);
     items.splice(result.destination.index, 0, reorderedItem);
     setSections(items);
-    console.log("Reordered sections:", items);
+    if (user && params.resumeId) {
+      const resumeRef = doc(db, `users/${user.uid}/resumes`, params.resumeId);
+      await setDoc(resumeRef, {
+        order: items,
+      }, { merge: true });
+    }  };
+
+  const autoSave = async () => {
+    if (user && params.resumeId) {
+      const resumeRef = doc(db, `users/${user.uid}/resumes`, params.resumeId);
+      await setDoc(resumeRef, { title: resumeTitle }, { merge: true });
+      toast("Title Updated Successfully", {
+        action: {
+          label: "OK",
+          onClick: () => toast.dismiss(),
+        },
+      });
+    }
   };
+
+  const handleEducationChange = async (index, newEducationData) => {
+    console.log("Education data:", newEducationData);
+    await setEducation((prev) =>
+      prev.map((item, idx) =>
+        idx === index ? { ...item, ...newEducationData } : item
+      )
+    );
+  };
+
+  const handleExperienceChange = async (index, newExperience) => {
+    console.log("Experience data:", newExperience);
+    await setExperience((prev) =>
+      prev.map((item, idx) =>
+        idx === index ? { ...item, ...newExperience } : item
+      )
+    );
+  };
+
+  const handleProjectChange = async (index, newProject) => {
+    await setProjects((prev) =>
+      prev.map((item, idx) =>
+        idx === index ? { ...item, ...newProject } : item
+      )
+    );
+  };
+
+
+
+  const handleAdd = (section) => {
+    switch (section) {
+      case "Education":
+        console.log("Adding education");
+        addEducation();
+        break;
+      case "Experience":
+        addExperience();
+        break;
+      case "Projects":
+        addProjects();
+        break;
+      case "Skills":
+        addSkills();
+        break;
+      default:
+        console.log("Unknown section");
+    }
+  };
+
+  const addEducation = () => {
+    console.log("Adding education in function");
+    const newEducation = {
+      degreeType: "",
+      endDate: "",
+      location: "",
+      gpa: "",
+      major: "",
+      school: "",
+      startDate: "",
+    };
+    setEducation((prev) => [...prev, newEducation]);
+
+    saveSectionsToFirestore();
+  };
+
+  const addExperience = () => {
+    const newExperience = {
+      companyName: "",
+      position: "",
+      startDate: "",
+      endDate: "",
+      location: "",
+      description: "",
+      currentlyWorking: false,
+    };
+    setExperience((prev) => [...prev, newExperience]);
+    saveSectionsToFirestore();
+  };
+
+  const addProjects = () => {
+    const newProject = {
+      projectName: "",
+      description: "",
+      startDate: "",
+      endDate: "",
+      currentlyWorking: false,
+    };
+    setProjects((prev) => [...prev, newProject]);
+    saveSectionsToFirestore();
+  };
+
+  const addSkills = () => {};
+
+  const handleDelete = (section, index) => {    
+    switch (section) {
+      case "education":
+        deleteEducation(index);
+        break;
+      case "experience":
+        deleteExperience(index);
+        break;
+      case "projects":
+        deleteProjects(index);
+        break;
+      case "skills":
+        deleteSkills(index);
+        break;
+      default:
+        console.log("Unknown section");
+    }
+  };
+
+  const deleteEducation = (index) => {
+    setEducation((prev) => prev.filter((_, i) => i !== index));
+    saveSectionsToFirestore();
+  };
+
+  const deleteExperience = (index) => {
+    setExperience((prev) => prev.filter((_, i) => i !== index));
+    saveSectionsToFirestore();
+  };
+
+  const deleteProjects = (index) => {
+    setProjects((prev) => prev.filter((_, i) => i !== index));
+    saveSectionsToFirestore();
+  };
+
+  const deleteSkills = (index) => {};
+
+
+  if (loading || !user) {
+    return <p>Loading...</p>;
+  }
+
 
   const renderItem = (item, sectionId, index) => {
     switch (sectionId) {
@@ -126,140 +307,15 @@ export default function Page({ params }) {
     }
   };
 
-  const autoSave = async () => {
-    if (user && params.resumeId) {
-      const resumeRef = doc(db, `users/${user.uid}/resumes`, params.resumeId);
-      await setDoc(resumeRef, { title: resumeTitle }, { merge: true });
-      toast("Title Updated Successfully", {
-        action: {
-          label: "OK",
-          onClick: () => toast.dismiss(),
-        },
-      })
-    }
-  };
-
-  const handleEducationChange = (index, newEducationData) => {
-    setEducation((prevEducation) =>
-      prevEducation.map((item, idx) =>
-        idx === index ? { ...item, ...newEducationData } : item
-      )
-    );
-  };
-  const handleExperienceChange = (index, newExperience) => {
-    setExperience((prevExperience) =>
-      prevExperience.map((item, idx) =>
-        idx === index ? { ...item, ...newExperience } : item
-      )
-    );
-  };
-  const handleProjectChange = (index, newProject) => {
-    setProjects((prevProject) =>
-      prevProject.map((item, idx) =>
-        idx === index ? { ...item, ...newProject } : item
-      )
-    );
-  };
-
-  if (loading || !user) {
-    return <p>Loading...</p>;
-  }
-
-  const handleAdd = (section) => {
-    switch (section) {
-      case "Education":
-        addEducation();
-        break;
-      case "Experience":
-        addExperience();
-        break;
-      case "Projects":
-        addProjects();
-        break;
-      case "Skills":
-        addSkills();
-        break;
-      default:
-        console.log("Unknown section");
-    }
-  };
-
-  const addEducation = () => {
-    const newEducation = {
-      degreeType: "",
-      endDate: "",
-      location: "",
-      gpa: "",
-      major: "",
-      school: "",
-      startDate: "",
-    };
-    setEducation((prev) => [...prev, newEducation]);
-  };
-  const addExperience = () => {
-    const newExperience = {
-      companyName: "",
-      position: "",
-      startDate: "",
-      endDate: "",
-      location: "",
-      description: "",
-      currentlyWorking: false,
-    };
-    setExperience((prev) => [...prev, newExperience]);
-  };
-
-  const addProjects = () => {
-    const newProject = {
-      projectName: "",
-      description: "",
-      startDate: "",
-      endDate: "",
-      currentlyWorking: false,
-    };
-    setProjects((prev) => [...prev, newProject]);
-  };
-
-  const addSkills = () => {};
-
-  const handleDelete = (section, index) => {    
-    switch (section) {
-      case "education":
-        deleteEducation(index);
-        break;
-      case "experience":
-        deleteExperience(index);
-        break;
-      case "projects":
-        deleteProjects(index);
-        break;
-      case "skills":
-        deleteSkills(index);
-        break;
-      default:
-        console.log("Unknown section");
-    }
-  };
-  
-  const deleteEducation = (index) => {
-    setEducation((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const deleteExperience = (index) => {
-    setExperience((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const deleteProjects = (index) => {
-    setProjects((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const deleteSkills = (index) => {
-    // implement similar logic here if needed
-  };
-
   return (
     <div className="flex flex-col w-full p-10 font-sans my-10">
-      <Header title={resumeTitle} setResumeTitle={setResumeTitle} editingTitle={editingTitle} setEditingTitle={setEditingTitle} autoSave={autoSave} />
+      <Header
+        title={resumeTitle}
+        setResumeTitle={setResumeTitle}
+        editingTitle={editingTitle}
+        setEditingTitle={setEditingTitle}
+        autoSave={autoSave}
+      />
       <div className="flex-grow flex flex-col">
         <div className="flex flex-col items-center justify-center flex-grow p-4">
           <div
@@ -270,7 +326,7 @@ export default function Page({ params }) {
             }}
             className="border border-gray-800 rounded-md bg-white box-border overflow-hidden"
           >
-            <ResumeHeader />
+            <ResumeHeader className="mb-2" params={params}/>
             <DragDropContext onDragEnd={onDragEnd}>
               <Droppable droppableId="sections" type="sections">
                 {(provided) => (
@@ -308,7 +364,6 @@ export default function Page({ params }) {
                                 <Trash2
                                   size={16}
                                   strokeWidth={1}
-
                                   className="absolute -left-5 top-1/3 cursor-pointer hover:text-red-500"
                                   onClick={() =>
                                     handleDelete(section.id, innerIndex)
@@ -333,7 +388,13 @@ export default function Page({ params }) {
   );
 }
 
-const Header = ({ title, setResumeTitle, editingTitle, setEditingTitle, autoSave }) => (
+const Header = ({
+  title,
+  setResumeTitle,
+  editingTitle,
+  setEditingTitle,
+  autoSave,
+}) => (
   <h1 className="text-3xl font-medium text-[#559F87] mb-4">
     Resume:
     {editingTitle ? (
@@ -341,61 +402,23 @@ const Header = ({ title, setResumeTitle, editingTitle, setEditingTitle, autoSave
         type="text"
         value={title}
         onChange={(e) => setResumeTitle(e.target.value)}
-        onBlur={() => { autoSave(); setEditingTitle(false); }}
+        onBlur={() => {
+          autoSave();
+          setEditingTitle(false);
+        }}
         className="bg-transparent border-b border-gray-600 ml-2"
         placeholder="Title"
       />
     ) : (
       <span
-      onDoubleClick={() => setEditingTitle(true)}
-      className="ml-2 cursor-pointer"
+        onDoubleClick={() => setEditingTitle(true)}
+        className="ml-2 cursor-pointer"
       >
         {title || "Title"}
       </span>
     )}
   </h1>
 );
-
-const ResumeHeader = () => {
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [linkedin, setLinkedin] = useState("");
-  const [github, setGithub] = useState("");
-
-  return (
-    <>
-      <div className="text-center">
-        <input
-          type="text"
-          className="bg-transparent text-center w-full focus:outline-none text-3xl uppercase font-bold"
-          placeholder="Your Name"
-        />
-      </div>
-      <div className="flex justify-center items-center space-x-2">
-        <InputSizer placeholder="Email" value={email} onChange={setEmail} />
-        <span>|</span>
-        <InputSizer
-          placeholder="Phone Number"
-          value={phone}
-          onChange={setPhone}
-        />
-        <span>|</span>
-        <InputSizer
-          placeholder="LinkedIn Profile"
-          value={linkedin}
-          onChange={setLinkedin}
-        />
-        <span>|</span>
-        <InputSizer
-          label="GitHub: "
-          placeholder="GitHub Profile"
-          value={github}
-          onChange={setGithub}
-        />
-      </div>
-    </>
-  );
-};
 
 const ZoomControls = ({ handleScaleChange }) => (
   <div className="fixed flex space-x-2 right-5 bottom-5 w-[15%]">
@@ -409,4 +432,3 @@ const ZoomControls = ({ handleScaleChange }) => (
     <ZoomIn strokeWidth={2} />
   </div>
 );
-
