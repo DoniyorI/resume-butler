@@ -69,7 +69,7 @@ export const ProjectsForm = ({ item, onChange }) => {
       <div className="flex justify-between items-baseline">
         <span
           contentEditable
-          className={`input text-sm ${
+          className={`input text-sm font-semibold ${
             !item.projectName ? "contentEditablePlaceholder" : ""
           }`}
           role="textbox"
@@ -84,7 +84,7 @@ export const ProjectsForm = ({ item, onChange }) => {
 
         <span
           contentEditable
-          className={`input text-sm ${
+          className={`input text-sm font-semibold ${
             !item.endDate && !item.currentlyWorking
               ? "contentEditablePlaceholder"
               : ""
@@ -96,7 +96,7 @@ export const ProjectsForm = ({ item, onChange }) => {
           onKeyDown={handleKeyDown}
           data-placeholder="Enter End Date"
           data-field="endDate"
-          dangerouslySetInnerHTML={{ __html: formattedEndDate || "" }}
+          dangerouslySetInnerHTML={{ __html: item.endDate || "" }}
         />
       </div>
       <div className="text-sm flex justify-between">

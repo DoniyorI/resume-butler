@@ -197,7 +197,11 @@ export default function Page() {
       </div>
       <h2 className="text-lg text-[#559F87] font-semibold mt-4">Your Resumes</h2>
       <div className="flex flex-wrap ">
+
+        
         <ResumeDialog />
+
+
         {resumes.map((resume) => (
           <div
             key={resume.id}

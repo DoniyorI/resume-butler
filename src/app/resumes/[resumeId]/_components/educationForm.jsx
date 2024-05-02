@@ -60,7 +60,7 @@ export function EducationForm({ item, onChange }) {
         <div className="flex justify-between items-end mt-3">
           <span
             contentEditable
-            className={`input text-md font-bold ${!item.school ? 'contentEditablePlaceholder' : ''}`}
+            className={`input text-md font-semibold ${!item.school ? 'contentEditablePlaceholder' : ''}`}
             role="textbox"
             onFocus={handleFocus}
             onBlur={handleBlur}
@@ -70,11 +70,11 @@ export function EducationForm({ item, onChange }) {
             data-field="school"
             dangerouslySetInnerHTML={{ __html: item.school || "" }}
           />
-          <div>
+          <div className="font-semibold">
             Expected {" "}
           <span
             contentEditable
-            className={`input text-sm ${!item.endDate ? 'contentEditablePlaceholder' : ''}`}
+            className={`input text-sm${!item.endDate ? 'contentEditablePlaceholder' : ''}`}
             role="textbox"
             onFocus={handleFocus}
             onBlur={handleBlur}
@@ -87,7 +87,7 @@ export function EducationForm({ item, onChange }) {
           </div>
          
         </div>
-        <div className="text-sm flex justify-between">
+        <div className="text-sm flex justify-between italic">
           <div className="flex items-center">
           <span
             contentEditable
@@ -101,7 +101,7 @@ export function EducationForm({ item, onChange }) {
             data-field="degreeType"
             dangerouslySetInnerHTML={{ __html: item.degreeType || "" }}
           />
-          <span className="label">{" "} in {" "}</span>
+          <span className="label">{" "},</span>
           <span
             contentEditable
             className={`input ${!item.major ? 'contentEditablePlaceholder' : ''}`}
@@ -113,7 +113,7 @@ export function EducationForm({ item, onChange }) {
             data-field="major"
             dangerouslySetInnerHTML={{ __html: item.major || "" }}
           />
-          <span className="label">{" "}, GPA {" "}</span>
+          <span className="label">{" "},</span>
           <span
             contentEditable
             className={`input ${!item.gpa ? 'contentEditablePlaceholder' : ''}`}
@@ -126,6 +126,7 @@ export function EducationForm({ item, onChange }) {
             data-field="gpa"
             dangerouslySetInnerHTML={{ __html: item.gpa || "" }}
           />
+          GPA
           </div>
           
           <span

@@ -69,7 +69,7 @@ export const ExperienceForm = ({ item, onChange }) => {
       <div className="flex justify-between items-baseline">
         <span
           contentEditable
-          className={`input text-sm ${
+          className={`input text-sm font-semibold ${
             !item.companyName ? "contentEditablePlaceholder" : ""
           }`}
           role="textbox"
@@ -84,7 +84,7 @@ export const ExperienceForm = ({ item, onChange }) => {
         <div className="flex">
           <span
             contentEditable
-            className={`input text-sm ${
+            className={`input text-sm font-semibold ${
               !item.startDate ? "contentEditablePlaceholder" : ""
             }`}
             role="textbox"
@@ -99,7 +99,7 @@ export const ExperienceForm = ({ item, onChange }) => {
           {" -- "}
           <span
             contentEditable
-            className={`input text-sm ${
+            className={`input text-sm font-semibold ${
               !item.endDate && !item.currentlyWorking
                 ? "contentEditablePlaceholder"
                 : ""
@@ -111,7 +111,7 @@ export const ExperienceForm = ({ item, onChange }) => {
             onKeyDown={handleKeyDown}
             data-placeholder="Enter End Date"
             data-field="endDate"
-            dangerouslySetInnerHTML={{ __html: formattedEndDate || "" }}
+            dangerouslySetInnerHTML={{ __html: item.endDate || "" }}
           />
         </div>
       </div>

@@ -27,6 +27,7 @@ export default function Page({ params }) {
       router.push("/login");
     }
   }, [user, loading, router]);
+
   const [editingTitle, setEditingTitle] = useState(false);
   const [resumeTitle, setResumeTitle] = useState("");
   const [education, setEducation] = useState([]);
@@ -34,88 +35,94 @@ export default function Page({ params }) {
   const [projects, setProjects] = useState([]);
   const [skills, setSkills] = useState([]);
   const [sections, setSections] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    const updatedSections = sections.map((section) => {
-          switch (section.id) {
-            case "education":
-              return { ...section, content: education };
-            case "experience":
-              return { ...section, content: experience };
-            case "projects":
-              return { ...section, content: projects };
-            case "skills":
-              return { ...section, content: skills };
-            default:
-              return section;
-          }
-        });
-      
-        setSections(updatedSections);
-    saveSectionsToFirestore();
- }, [education, experience, projects, skills]);
 
-  useEffect(() => {
-    if (user && params.resumeId) {
-      const resumeRef = doc(db, `users/${user.uid}/resumes`, params.resumeId);
-      const userRef = doc(db, `users/${user.uid}`);
+ const saveSectionsToFirestore = async () => {
+  if (user && params.resumeId) {
+    const resumeRef = doc(db, `users/${user.uid}/resumes`, params.resumeId);
+    await setDoc(resumeRef, {
+      title: resumeTitle,
+      education: education,
+      experience: experience,
+      projects: projects,
+      skills: skills,
+    }, { merge: true });
+  }
+};
 
-      getDoc(resumeRef)
-        .then((docSnap) => {
-          if (docSnap.exists()) {
-            const resumeData = docSnap.data();
-            setResumeTitle(resumeData.title);
-            setEducation(resumeData.education || []);
-            console.log("Education:", resumeData.education);
-            setExperience(resumeData.experience || []);
-            setProjects(resumeData.projects || []);
-            setSkills(resumeData.skills || []);
-            const orderedSections = resumeData.order || [
-            { id: "education", title: "Education", content: resumeData.education || [] },
-            { id: "experience", title: "Experience", content: resumeData.experience || [] },
-            { id: "projects", title: "Projects", content: resumeData.projects || [] },
-            { id: "skills", title: "Skills", content: resumeData.skills || [] },
-          ];
-          setSections(orderedSections);
-          } else {
-            console.error(
-              "Resume not found or you're not authorized to view it"
-            );
-            router.push("/404");
-          }
-        })
-        .catch((error) => {
-          console.error("Error fetching resume:", error);
-          router.push("/404");
-        });
-    }
-  }, [user, params.resumeId, router]);
+ useEffect(() => {
+   if (user && params.resumeId) {
+     const resumeRef = doc(db, `users/${user.uid}/resumes`, params.resumeId);
+     console.log("Fetching resume data...");
+     console.log("Resume ref:", resumeRef);
+
+     getDoc(resumeRef)
+       .then((docSnap) => {
+         if (docSnap.exists()) {
+
+           const resumeData = docSnap.data();
+           console.log("Resume data:", resumeData);
+           setResumeTitle(resumeData.title);
+           setEducation(resumeData.education || []);
+           setExperience(resumeData.experience || []);
+           setProjects(resumeData.projects || []);
+           setSkills(resumeData.skills || []);
+           
+           const orderedSections = resumeData.order || [
+             { id: "education", title: "Education", content: resumeData.education || [] },
+             { id: "experience", title: "Experience", content: resumeData.experience || [] },
+             { id: "projects", title: "Projects", content: resumeData.projects || [] },
+             { id: "skills", title: "Skills", content: resumeData.skills || [] },
+           ];
+           
+           setSections(orderedSections);
+           setIsLoading(false); // Set loading to false once data is fetched
+         } else {
+           router.push("/404");
+         }
+       })
+       .catch((error) => {
+         console.error("Error fetching resume:", error);
+         router.push("/404");
+       });
+   }
+ }, [user, params.resumeId, router]);
+
+ useEffect(() => {
+  const updatedSections = sections.map((section) => {
+        switch (section.id) {
+          case "education":
+            return { ...section, content: education };
+          case "experience":
+            return { ...section, content: experience };
+          case "projects":
+            return { ...section, content: projects };
+          case "skills":
+            return { ...section, content: skills };
+          default:
+            return section;
+        }
+      });
+      setSections(updatedSections);
+}, [education, experience, projects, skills]);
+ 
+ if (isLoading) {
+   return <div>Loading...</div>; 
+ }
+
+
 
   // Zoom controls
   // * (scale / 100);
   // const [scale, setScale] = useState(114);
   const width = 850;
-  const height = 1100;
+  const height = 1254;
   const scaledPadding = 30;
   // const handleScaleChange = (value) => {
   //   setScale(value[0]);
   // };
 
-  const saveSectionsToFirestore = async () => {
-    console.log("Saving sections to firestore")
-    console.log("Education:", education);
-    console.log("Experience:", experience);
-    if (user && params.resumeId) {
-      const resumeRef = doc(db, `users/${user.uid}/resumes`, params.resumeId);
-      await setDoc(resumeRef, {
-        title: resumeTitle,
-        education: education,
-        experience: experience,
-        projects: projects,
-        skills: skills,
-      }, { merge: true });
-    }
-  };
 
   const onDragEnd = async (result) => {
     if (!result.destination) return;
@@ -144,12 +151,12 @@ export default function Page({ params }) {
   };
 
   const handleEducationChange = async (index, newEducationData) => {
-    console.log("Education data:", newEducationData);
     await setEducation((prev) =>
       prev.map((item, idx) =>
         idx === index ? { ...item, ...newEducationData } : item
       )
     );
+    saveSectionsToFirestore();
   };
 
   const handleExperienceChange = async (index, newExperience) => {
@@ -159,6 +166,8 @@ export default function Page({ params }) {
         idx === index ? { ...item, ...newExperience } : item
       )
     );
+    saveSectionsToFirestore();
+
   };
 
   const handleProjectChange = async (index, newProject) => {
@@ -167,9 +176,8 @@ export default function Page({ params }) {
         idx === index ? { ...item, ...newProject } : item
       )
     );
+    saveSectionsToFirestore();
   };
-
-
 
   const handleAdd = (section) => {
     switch (section) {
@@ -310,7 +318,7 @@ export default function Page({ params }) {
   return (
     <div className="flex flex-col w-full p-10 font-sans my-10">
       <Header
-        title={resumeTitle}
+        resumeTitle={resumeTitle}
         setResumeTitle={setResumeTitle}
         editingTitle={editingTitle}
         setEditingTitle={setEditingTitle}
@@ -389,34 +397,22 @@ export default function Page({ params }) {
 }
 
 const Header = ({
-  title,
+  resumeTitle,
   setResumeTitle,
   editingTitle,
   setEditingTitle,
   autoSave,
 }) => (
-  <h1 className="text-3xl font-medium text-[#559F87] mb-4">
+  <h1 className="text-3xl font-medium text-[#559F87] mb-4 cursor-default">
     Resume:
-    {editingTitle ? (
       <input
         type="text"
-        value={title}
+        value={resumeTitle}
         onChange={(e) => setResumeTitle(e.target.value)}
-        onBlur={() => {
-          autoSave();
-          setEditingTitle(false);
-        }}
-        className="bg-transparent border-b border-gray-600 ml-2"
-        placeholder="Title"
+        onBlur={() => {autoSave()}}
+        className="bg-transparent ml-2"
+        placeholder="Untitled Resume"
       />
-    ) : (
-      <span
-        onDoubleClick={() => setEditingTitle(true)}
-        className="ml-2 cursor-pointer"
-      >
-        {title || "Title"}
-      </span>
-    )}
   </h1>
 );
 
