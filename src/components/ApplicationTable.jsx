@@ -79,7 +79,7 @@ function ApplicationTable() {
             "applications"
           );
 
-          let queryConfig = query(applicationsRef, orderBy("date"), limit(10));
+          let queryConfig = query(applicationsRef, orderBy("date"), limit(50));
 
           // If a search term is specified, adjust the query to filter by company name
           if (searchTerm) {
@@ -92,17 +92,19 @@ function ApplicationTable() {
           }
 
           const querySnapshot = await getDocs(queryConfig);
-
           const loadedApplications = querySnapshot.docs.map((doc) => ({
             id: doc.id,
             ...doc.data(),
-            date: doc.data().date.toDate().toISOString().slice(0, 10),
+            date: doc.data().date.toDate().toISOString().slice(0, 50),
           }));
 
           setApplications(loadedApplications);
           setLastVisible(querySnapshot.docs[querySnapshot.docs.length - 1]); // Save the last document for next page navigation
           setFirstVisible(querySnapshot.docs[0]); // Save the first document for previous page navigation
           setCursorHistory([querySnapshot.docs[0]]); // Initialize cursor history
+          const totalCountQuery = query(applicationsRef);
+          const totalCountSnapshot = await getDocs(totalCountQuery);
+          setTotalApplications(totalCountSnapshot.size);
         } catch (error) {
           console.error("Error fetching applications:", error);
         } finally {
@@ -124,7 +126,7 @@ function ApplicationTable() {
       applicationsRef,
       orderBy("date"),
       startAfter(lastVisible),
-      limit(10)
+      limit(50)
     );
 
     const querySnapshot = await getDocs(queryConfig);
@@ -132,7 +134,7 @@ function ApplicationTable() {
     const loadedApplications = querySnapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
-      date: doc.data().date.toDate().toISOString().slice(0, 10),
+      date: doc.data().date.toDate().toISOString().slice(0, 50),
     }));
 
     setApplications(loadedApplications);
@@ -147,15 +149,13 @@ function ApplicationTable() {
 
     setLoading(true);
 
-    // Retrieve the previous cursor, which serves as the new starting point
     const prevCursor = cursorHistory[cursorHistory.length - 2];
-
     const applicationsRef = collection(db, "users", user.uid, "applications");
     const queryConfig = query(
       applicationsRef,
       orderBy("date"),
       startAt(prevCursor),
-      limit(10)
+      limit(50)
     );
 
     const querySnapshot = await getDocs(queryConfig);
@@ -163,18 +163,13 @@ function ApplicationTable() {
     const loadedApplications = querySnapshot.docs.map((doc) => ({
       id: doc.id,
       ...doc.data(),
-      date: doc.data().date.toDate().toISOString().slice(0, 10),
+      date: doc.data().date.toDate().toISOString().slice(0, 50),
     }));
 
     setApplications(loadedApplications);
-
-    // Remove the last entry from cursor history, leaving only relevant ones
     setCursorHistory(cursorHistory.slice(0, cursorHistory.length - 1));
-
-    // Update state variables to reflect the new page's boundaries
     setFirstVisible(querySnapshot.docs[0]); // First visible cursor
     setLastVisible(querySnapshot.docs[querySnapshot.docs.length - 1]); // Last visible cursor
-
     setLoading(false);
   };
 
@@ -610,7 +605,7 @@ function ApplicationTable() {
             variant="outline"
             size="sm"
             onClick={() => nextPage()}
-            disabled={applications.length < 10}
+            disabled={applications.length < 50}
           >
             Next
           </Button>
