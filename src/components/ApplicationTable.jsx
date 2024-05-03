@@ -27,7 +27,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { ArrowUpDown, MoreHorizontal, ListFilter } from "lucide-react";
+import { ArrowUpDown, MoreHorizontal, ListFilter, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -404,9 +404,7 @@ function ApplicationTable() {
       enableHiding: false,
       cell: ({ row }) => {
         const application = row.original;
-
         const handleDelete = async () => {
-          console.log("trying to delete");
           try {
             console.log(user.uid, application.id);
             const docRef = doc(
@@ -417,7 +415,10 @@ function ApplicationTable() {
               application.id
             );
             await deleteDoc(docRef);
-            toast("Application deleted successfully!"); // Notify the user of success
+            setApplications(currentApplications => 
+              currentApplications.filter(app => app.id !== application.id)
+            );
+            toast("Application deleted successfully!");
           } catch (error) {
             console.error("Error deleting application:", error);
             toast("Failed to delete application.");
@@ -440,9 +441,10 @@ function ApplicationTable() {
               <DropdownMenuItem>
                 <Button
                   variant="ghost"
-                  className="text-red-500 py-1 px-0 h-5"
+                  className="text-red-700 hover:text-red-500 py-1 px-0 h-5"
                   onClick={handleDelete}
                 >
+                  <Trash2 className="mr-1" size={15}/>
                   Delete
                 </Button>
               </DropdownMenuItem>

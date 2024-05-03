@@ -15,8 +15,7 @@ import {
 } from "firebase/storage";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { db, auth, storage } from "@/lib/firebase/config";
-
-import { useState, useEffect, use } from "react";
+import { useState, useEffect } from "react";
 import { EllipsisVertical } from "lucide-react";
 import { FiDownload, FiTrash2 } from "react-icons/fi";
 import { MdOutlineEdit } from "react-icons/md";
@@ -54,7 +53,7 @@ export default function Page() {
 
   useEffect(() => {
     if (loading) return;
-    if (error) console.error("Auth error:", error); // Handle possible auth errors
+    if (error) console.error("Auth error:", error); 
     if (!user) {
       router.push("/login");
       return;

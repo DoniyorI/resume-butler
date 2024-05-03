@@ -1,7 +1,8 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { auth } from "@/lib/firebase/config";
+import { onAuthStateChanged } from "firebase/auth";
 import { signOut } from "firebase/auth";
 
 import Link from "next/link";
@@ -12,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import AddApplicationDialog from "@/components/AddApplication";
 
 export default function Navbar() {
+  const [currentUser, setCurrentUser] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const toggleMenu = () => setMenuOpen(!menuOpen);
 
@@ -25,7 +27,6 @@ export default function Navbar() {
   ) {
     return null;
   }
-
   const handleLogout = async () => {
     try {
       await signOut(auth);

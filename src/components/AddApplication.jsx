@@ -46,7 +46,6 @@ export default function AddApplicationDialog() {
   const [coverLetterFile, setCoverLetterFile] = useState(null);
   const [companyName, setCompanyName] = useState("");
   const [portalLink, setPortalLink] = useState("");
-  // const [jobDescription, setJobDescription] = useState('');
   const [role, setRole] = useState("");
   const [status, setStatus] = useState("");
   const [location, setLocation] = useState("");
@@ -115,10 +114,9 @@ export default function AddApplicationDialog() {
         description: "Your application data has been saved.",
         action: {
           label: "OK",
-          onClick: () => {}, // Optionally handle the action click
+          onClick: () => {}, 
         },
       });
-      // clear form fields after saving
       setResumeFile(null);
       setCoverLetterFile(null);
       setCompanyName("");
