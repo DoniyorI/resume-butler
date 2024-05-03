@@ -9,7 +9,7 @@ import {
   addDoc,
   updateDoc,
   deleteDoc,
-  Timestamp
+  Timestamp,
 } from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import { format } from "date-fns";
@@ -45,9 +45,19 @@ export default function EducationForm() {
     const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
       if (authUser) {
         setUser(authUser);
-        const educationCollectionRef = collection(db, "users", authUser.uid, "education");
+        const educationCollectionRef = collection(
+          db,
+          "users",
+          authUser.uid,
+          "education"
+        );
         const snapshot = await getDocs(educationCollectionRef);
-        const educationData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), startDate: doc.data().startDate?.toDate() || "", endDate: doc.data().endDate?.toDate() || "" }));
+        const educationData = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+          startDate: doc.data().startDate?.toDate() || "",
+          endDate: doc.data().endDate?.toDate() || "",
+        }));
         setEducationEntries(educationData);
       } else {
         router.push("/login");
@@ -59,7 +69,16 @@ export default function EducationForm() {
   const addEducationEntry = () => {
     setEducationEntries([
       ...educationEntries,
-      { school: "",location: "", major: "", degreeType: "", gpa: "", startDate: "", endDate: "", isNew: true },
+      {
+        school: "",
+        location: "",
+        major: "",
+        degreeType: "",
+        gpa: "",
+        startDate: "",
+        endDate: "",
+        isNew: true,
+      },
     ]);
   };
 
@@ -78,26 +97,42 @@ export default function EducationForm() {
     if (entryToDelete.isNew) {
       setEducationEntries(educationEntries.filter((_, idx) => idx !== index));
     } else {
-      await deleteDoc(doc(db, "users", user.uid, "education", entryToDelete.id));
+      await deleteDoc(
+        doc(db, "users", user.uid, "education", entryToDelete.id)
+      );
       setEducationEntries(educationEntries.filter((_, idx) => idx !== index));
     }
   };
 
   const handleSave = async () => {
     if (user) {
-      const educationCollectionRef = collection(db, "users", user.uid, "education");
+      const educationCollectionRef = collection(
+        db,
+        "users",
+        user.uid,
+        "education"
+      );
       try {
-        await Promise.all(educationEntries.map(entry => {
-          const { id, isNew, ...data } = entry;
-          const entryWithTimestamps = {
-            ...data,
-            startDate: data.startDate ? Timestamp.fromDate(new Date(data.startDate)) : null,
-            endDate: data.endDate ? Timestamp.fromDate(new Date(data.endDate)) : null,
-          };
-          return isNew
-            ? addDoc(educationCollectionRef, entryWithTimestamps)
-            : updateDoc(doc(db, "users", user.uid, "education", id), entryWithTimestamps);
-        }));
+        await Promise.all(
+          educationEntries.map((entry) => {
+            const { id, isNew, ...data } = entry;
+            const entryWithTimestamps = {
+              ...data,
+              startDate: data.startDate
+                ? Timestamp.fromDate(new Date(data.startDate))
+                : null,
+              endDate: data.endDate
+                ? Timestamp.fromDate(new Date(data.endDate))
+                : null,
+            };
+            return isNew
+              ? addDoc(educationCollectionRef, entryWithTimestamps)
+              : updateDoc(
+                  doc(db, "users", user.uid, "education", id),
+                  entryWithTimestamps
+                );
+          })
+        );
         toast("Education entries saved successfully!");
       } catch (error) {
         console.error("Error saving education entries: ", error);
@@ -131,27 +166,26 @@ export default function EducationForm() {
             onClick={() => deleteEducationEntry(index)}
           />
           <div className="flex space-x-6 ">
-          <div className="flex-grow">
-            <Label>School</Label>
-            <Input
-              value={entry.school}
-              onChange={(e) =>
-                updateEducationEntry(index, "school", e.target.value)
-              }
-            />
-          </div>
-          <div className="flex-grow">
-            <Label>Location</Label>
-            <Input
-              value={entry.location}
-              onChange={(e) =>
-                updateEducationEntry(index, "location", e.target.value)
-              }
-            />
+            <div className="flex-grow">
+              <Label>School</Label>
+              <Input
+                value={entry.school}
+                onChange={(e) =>
+                  updateEducationEntry(index, "school", e.target.value)
+                }
+              />
+            </div>
+            <div className="flex-grow">
+              <Label>Location</Label>
+              <Input
+                value={entry.location}
+                onChange={(e) =>
+                  updateEducationEntry(index, "location", e.target.value)
+                }
+              />
+            </div>
           </div>
 
-          </div>
-          
           <div className="flex space-x-6">
             <div className="flex-grow">
               <Label>Major</Label>

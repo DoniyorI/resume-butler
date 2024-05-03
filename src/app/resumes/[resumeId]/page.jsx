@@ -37,81 +37,97 @@ export default function Page({ params }) {
   const [sections, setSections] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  const saveSectionsToFirestore = async () => {
+    if (user && params.resumeId) {
+      const resumeRef = doc(db, `users/${user.uid}/resumes`, params.resumeId);
+      await setDoc(
+        resumeRef,
+        {
+          title: resumeTitle,
+          education: education,
+          experience: experience,
+          projects: projects,
+          skills: skills,
+        },
+        { merge: true }
+      );
+    }
+  };
 
- const saveSectionsToFirestore = async () => {
-  if (user && params.resumeId) {
-    const resumeRef = doc(db, `users/${user.uid}/resumes`, params.resumeId);
-    await setDoc(resumeRef, {
-      title: resumeTitle,
-      education: education,
-      experience: experience,
-      projects: projects,
-      skills: skills,
-    }, { merge: true });
+  useEffect(() => {
+    if (user && params.resumeId) {
+      const resumeRef = doc(db, `users/${user.uid}/resumes`, params.resumeId);
+      console.log("Fetching resume data...");
+      console.log("Resume ref:", resumeRef);
+
+      getDoc(resumeRef)
+        .then((docSnap) => {
+          if (docSnap.exists()) {
+            const resumeData = docSnap.data();
+            console.log("Resume data:", resumeData);
+            setResumeTitle(resumeData.title);
+            setEducation(resumeData.education || []);
+            setExperience(resumeData.experience || []);
+            setProjects(resumeData.projects || []);
+            setSkills(resumeData.skills || []);
+
+            const orderedSections = resumeData.order || [
+              {
+                id: "education",
+                title: "Education",
+                content: resumeData.education || [],
+              },
+              {
+                id: "experience",
+                title: "Experience",
+                content: resumeData.experience || [],
+              },
+              {
+                id: "projects",
+                title: "Projects",
+                content: resumeData.projects || [],
+              },
+              {
+                id: "skills",
+                title: "Skills",
+                content: resumeData.skills || [],
+              },
+            ];
+
+            setSections(orderedSections);
+            setIsLoading(false); // Set loading to false once data is fetched
+          } else {
+            router.push("/404");
+          }
+        })
+        .catch((error) => {
+          console.error("Error fetching resume:", error);
+          router.push("/404");
+        });
+    }
+  }, [user, params.resumeId, router]);
+
+  useEffect(() => {
+    const updatedSections = sections.map((section) => {
+      switch (section.id) {
+        case "education":
+          return { ...section, content: education };
+        case "experience":
+          return { ...section, content: experience };
+        case "projects":
+          return { ...section, content: projects };
+        case "skills":
+          return { ...section, content: skills };
+        default:
+          return section;
+      }
+    });
+    setSections(updatedSections);
+  }, [education, experience, projects, skills]);
+
+  if (isLoading) {
+    return <div>Loading...</div>;
   }
-};
-
- useEffect(() => {
-   if (user && params.resumeId) {
-     const resumeRef = doc(db, `users/${user.uid}/resumes`, params.resumeId);
-     console.log("Fetching resume data...");
-     console.log("Resume ref:", resumeRef);
-
-     getDoc(resumeRef)
-       .then((docSnap) => {
-         if (docSnap.exists()) {
-
-           const resumeData = docSnap.data();
-           console.log("Resume data:", resumeData);
-           setResumeTitle(resumeData.title);
-           setEducation(resumeData.education || []);
-           setExperience(resumeData.experience || []);
-           setProjects(resumeData.projects || []);
-           setSkills(resumeData.skills || []);
-           
-           const orderedSections = resumeData.order || [
-             { id: "education", title: "Education", content: resumeData.education || [] },
-             { id: "experience", title: "Experience", content: resumeData.experience || [] },
-             { id: "projects", title: "Projects", content: resumeData.projects || [] },
-             { id: "skills", title: "Skills", content: resumeData.skills || [] },
-           ];
-           
-           setSections(orderedSections);
-           setIsLoading(false); // Set loading to false once data is fetched
-         } else {
-           router.push("/404");
-         }
-       })
-       .catch((error) => {
-         console.error("Error fetching resume:", error);
-         router.push("/404");
-       });
-   }
- }, [user, params.resumeId, router]);
-
- useEffect(() => {
-  const updatedSections = sections.map((section) => {
-        switch (section.id) {
-          case "education":
-            return { ...section, content: education };
-          case "experience":
-            return { ...section, content: experience };
-          case "projects":
-            return { ...section, content: projects };
-          case "skills":
-            return { ...section, content: skills };
-          default:
-            return section;
-        }
-      });
-      setSections(updatedSections);
-}, [education, experience, projects, skills]);
- 
- if (isLoading) {
-   return <div>Loading...</div>; 
- }
-
-
 
   // Zoom controls
   // * (scale / 100);
@@ -123,7 +139,6 @@ export default function Page({ params }) {
   //   setScale(value[0]);
   // };
 
-
   const onDragEnd = async (result) => {
     if (!result.destination) return;
     const items = Array.from(sections);
@@ -132,10 +147,15 @@ export default function Page({ params }) {
     setSections(items);
     if (user && params.resumeId) {
       const resumeRef = doc(db, `users/${user.uid}/resumes`, params.resumeId);
-      await setDoc(resumeRef, {
-        order: items,
-      }, { merge: true });
-    }  };
+      await setDoc(
+        resumeRef,
+        {
+          order: items,
+        },
+        { merge: true }
+      );
+    }
+  };
 
   const autoSave = async () => {
     if (user && params.resumeId) {
@@ -167,7 +187,6 @@ export default function Page({ params }) {
       )
     );
     saveSectionsToFirestore();
-
   };
 
   const handleProjectChange = async (index, newProject) => {
@@ -243,7 +262,7 @@ export default function Page({ params }) {
 
   const addSkills = () => {};
 
-  const handleDelete = (section, index) => {    
+  const handleDelete = (section, index) => {
     switch (section) {
       case "education":
         deleteEducation(index);
@@ -279,11 +298,9 @@ export default function Page({ params }) {
 
   const deleteSkills = (index) => {};
 
-
   if (loading || !user) {
     return <p>Loading...</p>;
   }
-
 
   const renderItem = (item, sectionId, index) => {
     switch (sectionId) {
@@ -334,7 +351,7 @@ export default function Page({ params }) {
             }}
             className="border border-gray-800 rounded-md bg-white box-border overflow-hidden"
           >
-            <ResumeHeader className="mb-2" params={params}/>
+            <ResumeHeader className="mb-2" params={params} />
             <DragDropContext onDragEnd={onDragEnd}>
               <Droppable droppableId="sections" type="sections">
                 {(provided) => (
@@ -405,14 +422,16 @@ const Header = ({
 }) => (
   <h1 className="text-3xl font-medium text-[#559F87] mb-4 cursor-default">
     Resume:
-      <input
-        type="text"
-        value={resumeTitle}
-        onChange={(e) => setResumeTitle(e.target.value)}
-        onBlur={() => {autoSave()}}
-        className="bg-transparent ml-2"
-        placeholder="Untitled Resume"
-      />
+    <input
+      type="text"
+      value={resumeTitle}
+      onChange={(e) => setResumeTitle(e.target.value)}
+      onBlur={() => {
+        autoSave();
+      }}
+      className="bg-transparent ml-2"
+      placeholder="Untitled Resume"
+    />
   </h1>
 );
 

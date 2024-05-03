@@ -6,7 +6,13 @@ import {
   doc,
   collection,
 } from "firebase/firestore";
-import { ref, listAll, getMetadata, getDownloadURL, deleteObject } from "firebase/storage";
+import {
+  ref,
+  listAll,
+  getMetadata,
+  getDownloadURL,
+  deleteObject,
+} from "firebase/storage";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { db, auth, storage } from "@/lib/firebase/config";
 
@@ -113,7 +119,7 @@ export default function Page() {
 
   const handleRename = (id, title) => {
     setEditingId(id);
-    setEditingTitle(title || ""); 
+    setEditingTitle(title || "");
   };
 
   const handleTitleChange = (event) => {
@@ -137,13 +143,11 @@ export default function Page() {
     } catch (error) {
       console.error("Error updating title:", error);
       toast("Title failed updated");
-
     }
   };
 
   const handleDelete = async (id) => {
     if (!id) return;
-
     try {
       const resumeRef = doc(db, `users/${user.uid}/resumes`, id);
       await deleteDoc(resumeRef);
@@ -151,24 +155,48 @@ export default function Page() {
       toast("Resume deleted successfully");
     } catch (error) {
       console.error("Error deleting resume:", error);
-      toast("Resume Failed to delete")
+      toast("Resume Failed to delete");
     }
   };
 
   const handleDeletePDF = async (fullPath) => {
     const fileRef = ref(storage, fullPath);
-
     try {
-        await deleteObject(fileRef);
-        toast("File successfully deleted!");
-        setPDFResumes(prevFiles => prevFiles.filter(PDFresumes => PDFresumes.path !== fullPath));
+      await deleteObject(fileRef);
+      toast("File successfully deleted!");
+      setPDFResumes((prevFiles) =>
+        prevFiles.filter((PDFresumes) => PDFresumes.path !== fullPath)
+      );
     } catch (error) {
-        console.error("Error deleting file: ", error);
+      console.error("Error deleting file: ", error);
     }
-};
+  };
   useEffect(() => {
     fetchResumes(user).then(setPDFResumes);
   }, [user]);
+
+  const fetchResumes = async (userId) => {
+    const resumesRef = ref(storage, `users/${userId.uid}/resumes`);
+    try {
+      const snapshot = await listAll(resumesRef);
+      const metadataPromises = snapshot.items.map((itemRef) =>
+        Promise.all([getMetadata(itemRef), getDownloadURL(itemRef)]).then(
+          ([metadata, url]) => ({
+            name: itemRef.name,
+            path: itemRef.fullPath,
+            url: url,
+            date: formatDate(metadata.timeCreated),
+          })
+        )
+      );
+
+      const resumeFiles = await Promise.all(metadataPromises);
+      return resumeFiles;
+    } catch (error) {
+      console.error("Error fetching resumes: ", error);
+      return [];
+    }
+  };
 
   return (
     <div className="flex flex-col w-full min-h-screen py-16 px-10 my-10">
@@ -195,13 +223,11 @@ export default function Page() {
           </SelectContent>
         </Select>
       </div>
-      <h2 className="text-lg text-[#559F87] font-semibold mt-4">Your Resumes</h2>
+      <h2 className="text-lg text-[#559F87] font-semibold mt-4">
+        Editable Resumes
+      </h2>
       <div className="flex flex-wrap ">
-
-        
         <ResumeDialog />
-
-
         {resumes.map((resume) => (
           <div
             key={resume.id}
@@ -278,7 +304,7 @@ export default function Page() {
           </div>
         ))}
       </div>
-      <h2 className="text-lg text-[#559F87] font-semibold mt-4">Resume Uploaded</h2>
+      <h2 className="text-lg text-[#559F87] font-semibold mt-4">PDF Resume</h2>
       <div className="flex flex-wrap">
         {PDFresumes.map((resume) => (
           <div
@@ -291,7 +317,7 @@ export default function Page() {
               rel="noopener noreferrer"
               className="h-full flex justify-center items-center cursor-pointer"
             >
-              Preview
+              view
             </a>
             <div className="flex justify-between py-2 px-2 bg-slate-100">
               <div className="flex flex-col">
@@ -339,33 +365,6 @@ export default function Page() {
     </div>
   );
 }
-
-const fetchResumes = async (userId) => {
-  if (!userId) {
-    console.error("User ID is null or undefined.");
-    return [];
-  }
-  const resumesRef = ref(storage, `users/${userId.uid}/resumes`);
-  try {
-    const snapshot = await listAll(resumesRef);
-    const metadataPromises = snapshot.items.map((itemRef) =>
-      Promise.all([getMetadata(itemRef), getDownloadURL(itemRef)]).then(
-        ([metadata, url]) => ({
-          name: itemRef.name,
-          path: itemRef.fullPath,
-          url: url,
-          date: formatDate(metadata.timeCreated),
-        })
-      )
-    );
-
-    const resumeFiles = await Promise.all(metadataPromises);
-    return resumeFiles;
-  } catch (error) {
-    console.error("Error fetching resumes: ", error);
-    return [];
-  }
-};
 
 const formatDate = (dateString) => {
   const date = new Date(dateString);

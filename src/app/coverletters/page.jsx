@@ -54,7 +54,7 @@ export default function Page() {
   useEffect(() => {
     const filteredCoverLetters = coverLetters
       .filter((coverLetter) =>
-      coverLetter.title.toLowerCase().includes(searchTerm.toLowerCase())
+        coverLetter.title.toLowerCase().includes(searchTerm.toLowerCase())
       )
       .sort((a, b) => {
         if (sortOrder === "A-Z") {
@@ -81,7 +81,10 @@ export default function Page() {
 
     const fetchCoverLetters = async () => {
       try {
-        const coverLettersRef = collection( db,`users/${user.uid}/coverletters`);
+        const coverLettersRef = collection(
+          db,
+          `users/${user.uid}/coverletters`
+        );
         const querySnapshot = await getDocs(coverLettersRef);
         const fetchedCoverLetters = querySnapshot.docs.map((doc) => ({
           id: doc.id,
@@ -104,7 +107,7 @@ export default function Page() {
             }),
         }));
         setCoverLetters(fetchedCoverLetters);
-        console
+        console;
       } catch (error) {
         console.error("Error fetching cover letter:", error);
       }
@@ -169,13 +172,15 @@ export default function Page() {
     const fileRef = ref(storage, fullPath);
 
     try {
-        await deleteObject(fileRef);
-        toast("File successfully deleted!");
-        setPDFLetter(prevFiles => prevFiles.filter(PDFLetter => PDFLetter.path !== fullPath));
+      await deleteObject(fileRef);
+      toast("File successfully deleted!");
+      setPDFLetter((prevFiles) =>
+        prevFiles.filter((PDFLetter) => PDFLetter.path !== fullPath)
+      );
     } catch (error) {
-        console.error("Error deleting file: ", error);
+      console.error("Error deleting file: ", error);
     }
-};
+  };
   useEffect(() => {
     fetchLetters(user).then(setPDFLetter);
   }, [user]);
@@ -198,16 +203,14 @@ export default function Page() {
           })
         )
       );
-  
+
       const letterFiles = await Promise.all(metadataPromises);
-      console.log("Letter files: ", letterFiles);
       return letterFiles;
     } catch (error) {
       console.error("Error fetching Cover letter: ", error);
       return [];
     }
   };
-
 
   return (
     <div className="flex flex-col w-full min-h-screen py-16 px-10 my-10">
@@ -235,7 +238,9 @@ export default function Page() {
           </SelectContent>
         </Select>
       </div>
-      <h2 className="text-lg text-[#559F87] font-semibold mt-4">Cover Letters</h2>
+      <h2 className="text-lg text-[#559F87] font-semibold mt-4">
+        Editable Cover Letters
+      </h2>
       <div className="flex flex-wrap ">
         <CoverLetterDialog />
         {coverLetters.map((letter) => (
@@ -243,8 +248,9 @@ export default function Page() {
             key={letter.id}
             className="h-[220px] w-[170px] border rounded-md shadow justify-between flex flex-col m-2"
           >
-            <div className="h-full flex justify-center items-center cursor-pointer"
-            onClick={() => router.push(`/coverletters/${letter.id}`)}
+            <div
+              className="h-full flex justify-center items-center cursor-pointer"
+              onClick={() => router.push(`/coverletters/${letter.id}`)}
             >
               Preview
             </div>
@@ -300,7 +306,9 @@ export default function Page() {
           </div>
         ))}
       </div>
-      <h2 className="text-lg text-[#559F87] font-semibold mt-4">PDF Cover Letters</h2>
+      <h2 className="text-lg text-[#559F87] font-semibold mt-4">
+        PDF Cover Letters
+      </h2>
       <div className="flex flex-wrap">
         {PDFLetter.map((letter) => (
           <div

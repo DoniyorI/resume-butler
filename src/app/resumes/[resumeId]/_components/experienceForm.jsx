@@ -172,7 +172,9 @@ export const ExperienceForm = ({ item, onChange }) => {
                 <button
                   onClick={() => deleteDescriptionPoint(index)}
                   className="ml-1 cursor-pointer text-red-800 hover:text-red-500"
-                ><X size={16} /></button>
+                >
+                  <X size={16} />
+                </button>
               </li>
             ))
           ) : (
@@ -192,9 +194,11 @@ export const ExperienceForm = ({ item, onChange }) => {
                 data-placeholder="Enter Description Detail"
               />
               <button
-                  onClick={() => deleteDescriptionPoint(0)}
-                  className="ml-1 cursor-pointer text-red-800 hover:text-red-500"
-                ><X size={16} /></button>
+                onClick={() => deleteDescriptionPoint(0)}
+                className="ml-1 cursor-pointer text-red-800 hover:text-red-500"
+              >
+                <X size={16} />
+              </button>
             </li>
           )}
         </ul>

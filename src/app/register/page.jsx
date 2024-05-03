@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -51,6 +52,18 @@ export default function Register() {
   return (
     <div className="w-full flex min-h-screen">
       <div className="w-full lg:w-1/2 flex items-center justify-center p-12">
+        <div className="absolute left-5 top-5 flex items-center space-x-2">
+          <Image
+            src="/image/Logo.svg"
+            alt="Logo"
+            width="0"
+            height="0"
+            className="w-8 h-auto"
+          />
+          <span className="self-center text-md font-medium  whitespace-nowrap dark:text-white">
+            Resume Butler
+          </span>
+        </div>
         <div className="mx-auto w-[350px]">
           <div className="text-center mb-6">
             <h1 className="text-3xl font-bold">Sign Up</h1>
@@ -112,19 +125,27 @@ export default function Register() {
                 width: 192,
                 height: 108,
                 type: "image",
+                title: "Tailored to Stand Out",
+                description:
+                  "Elevate Your Application process with AI and Secure Your Next Job Interview!",
               },
               {
                 animation: "salesman",
                 alt: "Image 1",
                 type: "animation",
+                title: "Tracking for Success",
+                description:
+                  "Seamlessly integrate your strengths into every job application.",
               },
-
               {
                 animation: "design",
                 alt: "Image 3",
                 width: 192,
                 height: 108,
                 type: "animation",
+                title: "Stay Organized with Ease",
+                description:
+                  "Streamline your job search by tracking every application seamlessly. Stay on top of every opportunity.",
               },
               {
                 animation: "3",
@@ -132,6 +153,9 @@ export default function Register() {
                 width: 192,
                 height: 108,
                 type: "animation",
+                title: "Precision in Every Application",
+                description:
+                  "Every job application is unique. Let us tailor your resume to fit perfectly.",
               },
             ]}
             options={{ loop: true }}

@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 
-export default function StatusButton({ status, onClick }){
+export default function StatusButton({ status, onClick }) {
   let variant = "default";
   let color = "gray-500";
 
@@ -33,4 +33,4 @@ export default function StatusButton({ status, onClick }){
       {status}
     </Button>
   );
-};
+}

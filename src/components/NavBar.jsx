@@ -18,7 +18,11 @@ export default function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
 
-  if (pathname === "/login" || pathname === "/register" || pathname === "/forgot-password") {
+  if (
+    pathname === "/login" ||
+    pathname === "/register" ||
+    pathname === "/forgot-password"
+  ) {
     return null;
   }
 
@@ -38,24 +42,29 @@ export default function Navbar() {
           href="/"
           className="flex items-center space-x-3 rtl:space-x-reverse"
         >
-          <Image src="/image/Logo.svg" alt="Logo" width={32} height={32} />
-          <span className="self-center text-md font-normal whitespace-nowrap dark:text-white">
+          <Image
+            src="/image/Logo.svg"
+            alt="Logo"
+            width="0"
+            height="0"
+            className="w-8 h-auto"
+          />
+          <span className="self-center text-md font-medium whitespace-nowrap dark:text-white">
             Resume Butler
           </span>
         </Link>
-
         <div className="flex md:order-2 space-x-3 md:space-x-0 rtl:space-x-reverse">
           <div className="flex space-x-2">
-          <AddApplicationDialog className="text-green-700 bg-green-200 hover:bg-green-300 focus:ring-4 focus:outline-none focus:ring-blue-300  rounded-lg text-sm px-4 py-2 text-center" />
-          <Button
-            onClick={handleLogout}
-            variant="outline"
-            className="bg-red-100 hover:bg-red-300 focus:ring-4 focus:outline-none focus:ring-blue-300  rounded-lg text-sm px-4 py-2 text-center"
-          >
-            <LogOut size={14} strokeWidth={2.25} className="text-black"/>
-          </Button>
+            <AddApplicationDialog className="text-green-700 bg-green-200 hover:bg-green-300 focus:ring-4 focus:outline-none focus:ring-blue-300  rounded-lg text-sm px-4 py-2 text-center" />
+            <Button
+              onClick={handleLogout}
+              variant="outline"
+              className="bg-red-100 hover:bg-red-300 focus:ring-4 focus:outline-none focus:ring-blue-300  rounded-lg text-sm px-4 py-2 text-center"
+            >
+              <LogOut size={14} strokeWidth={2.25} className="text-black" />
+            </Button>
           </div>
-         
+
           <Button
             variant="outline"
             onClick={toggleMenu}
@@ -71,9 +80,9 @@ export default function Navbar() {
             >
               <path
                 stroke="currentColor"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                stroke-width="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2"
                 d="M1 1h15M1 7h15M1 13h15"
               />
             </svg>
@@ -95,7 +104,7 @@ export default function Navbar() {
                 Applications
               </Link>
             </li>
-           
+
             <li>
               <Link
                 href="/resumes"

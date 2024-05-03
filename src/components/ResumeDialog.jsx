@@ -15,7 +15,14 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
+import {
+  Form,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormMessage,
+} from "@/components/ui/form";
 import {
   Dialog,
   DialogContent,
@@ -26,15 +33,20 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 
-
-const formSchema = z.object({
-  resumeName: z.string().min(1, "Resume Name is required."),
-  jobDescription: z.string().optional(),
-  useAI: z.boolean(),
-}).refine((data) => data.useAI ? data.jobDescription && data.jobDescription.length > 0 : true, {
-  message: "Job Description is required when using AI.",
-  path: ["jobDescription"],
-});
+const formSchema = z
+  .object({
+    resumeName: z.string().min(1, "Resume Name is required."),
+    jobDescription: z.string().optional(),
+    useAI: z.boolean(),
+  })
+  .refine(
+    (data) =>
+      data.useAI ? data.jobDescription && data.jobDescription.length > 0 : true,
+    {
+      message: "Job Description is required when using AI.",
+      path: ["jobDescription"],
+    }
+  );
 
 export default function ResumeDialog() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -47,11 +59,11 @@ export default function ResumeDialog() {
       resumeName: "",
       jobDescription: "",
       useAI: false,
-    }
+    },
   });
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, currentUser => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
     });
     return () => unsubscribe(); // Clean up subscription
@@ -64,14 +76,14 @@ export default function ResumeDialog() {
         title: formData.resumeName,
         dateCreated: new Date(),
         lastUpdated: new Date(),
-        education: [], // list of dict with school, major, degree, graduation, gpa  
+        education: [], // list of dict with school, major, degree, graduation, gpa
         experience: [], // list of dict with company, position, dates, description
         projects: [], // list of dict with name, dates, description
-        skills: [] // list of skills
+        skills: [], // list of skills
       });
       router.push(`/resumes/${resumeRef.id}`);
       //close dialog
-      
+
       setIsDialogOpen(false);
     } else {
       alert("You must be logged in to create a resume.");
@@ -87,34 +99,37 @@ export default function ResumeDialog() {
     form.setValue("useAI", !useAI);
   };
 
-      //create a new resume in database user/{userid}/resumes/{resumeid}
-      //resume structure
-      //subcollections for each section
-        //Education
-          //School
-          //Major, Type of Degree
-          //Expected Graduation
-          //GPA
-        //Experience
-          //Company
-          //Position
-          //Dates
-          //Description
-            //dictionary for each bullet points
-        //Projects
-          //Name
-          //Dates
-          //Description
-            //dictionary for each bullet points
-        //Skills
-          //List of skills
-      // calls backend to generate a resume based on the job description fills in the resume structure with the generated resume
-      //navigate to the new resume page
+  //create a new resume in database user/{userid}/resumes/{resumeid}
+  //resume structure
+  //subcollections for each section
+  //Education
+  //School
+  //Major, Type of Degree
+  //Expected Graduation
+  //GPA
+  //Experience
+  //Company
+  //Position
+  //Dates
+  //Description
+  //dictionary for each bullet points
+  //Projects
+  //Name
+  //Dates
+  //Description
+  //dictionary for each bullet points
+  //Skills
+  //List of skills
+  // calls backend to generate a resume based on the job description fills in the resume structure with the generated resume
+  //navigate to the new resume page
 
   return (
     <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
       <DialogTrigger asChild>
-        <div onClick={handleOpenDialog} className="h-[220px] w-[170px] border rounded-lg shadow p-4 flex justify-center items-center cursor-pointer m-2">
+        <div
+          onClick={handleOpenDialog}
+          className="h-[220px] w-[170px] border rounded-lg shadow p-4 flex justify-center items-center cursor-pointer m-2"
+        >
           <div className="font-bold text-slate-400">New</div>
         </div>
       </DialogTrigger>
@@ -125,7 +140,10 @@ export default function ResumeDialog() {
             Let's create a new resume to help you land your dream job!
           </DialogDescription>
         </DialogHeader>
-        <form onSubmit={form.handleSubmit(handleNextStep)} className="space-y-4">
+        <form
+          onSubmit={form.handleSubmit(handleNextStep)}
+          className="space-y-4"
+        >
           <div>
             <Label htmlFor="resumeName">Resume Name</Label>
             <Input
@@ -134,7 +152,9 @@ export default function ResumeDialog() {
               placeholder="Enter resume name"
             />
             {form.formState.errors.resumeName && (
-              <p className="text-red-500">{form.formState.errors.resumeName.message}</p>
+              <p className="text-red-500">
+                {form.formState.errors.resumeName.message}
+              </p>
             )}
           </div>
           <div className="flex space-x-2 justify-start items-center">
@@ -154,14 +174,14 @@ export default function ResumeDialog() {
                 placeholder="Watch AI tailor your resume..."
               />
               {form.formState.errors.jobDescription && (
-                <p className="text-red-500">{form.formState.errors.jobDescription.message}</p>
+                <p className="text-red-500">
+                  {form.formState.errors.jobDescription.message}
+                </p>
               )}
             </div>
           )}
           <DialogFooter>
-            <Button type="submit">
-              Next Step
-            </Button>
+            <Button type="submit">Next Step</Button>
           </DialogFooter>
         </form>
       </DialogContent>

@@ -1,7 +1,13 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { db, auth } from "@/lib/firebase/config";
-import { collection, doc, setDoc, getDocs, deleteDoc } from "firebase/firestore";
+import {
+  collection,
+  doc,
+  setDoc,
+  getDocs,
+  deleteDoc,
+} from "firebase/firestore";
 import { onAuthStateChanged } from "firebase/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,7 +24,10 @@ export default function SkillForm() {
         setUser(authUser);
         const skillsRef = collection(db, "users", authUser.uid, "skills");
         const snapshot = await getDocs(skillsRef);
-        const loadedSkills = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const loadedSkills = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
         setSkills(loadedSkills);
       }
     });
@@ -36,7 +45,7 @@ export default function SkillForm() {
 
   const handleDeleteSkill = async (skillId) => {
     await deleteDoc(doc(db, "users", user.uid, "skills", skillId));
-    setSkills(skills.filter(skill => skill.id !== skillId));
+    setSkills(skills.filter((skill) => skill.id !== skillId));
   };
 
   return (
@@ -71,17 +80,17 @@ export default function SkillForm() {
           const zIndex = skills.length - index;
           return (
             <div
-              key={skill.id}  // Changed from index to skill.id
+              key={skill.id} // Changed from index to skill.id
               style={{
                 transform: `rotate(${rotation}deg)`,
-                zIndex
+                zIndex,
               }}
               className="bg-green-100 hover:bg-green-200 py-1 pl-4 pr-2 space-x-2 rounded-md flex items-center shadow-lg"
             >
               <div className="font-light text-sm">{skill.name}</div>
               <div className="text-red-500 hover:bg-emerald-100 rounded-md p-2">
                 <RiDeleteBack2Line
-                  onClick={() => handleDeleteSkill(skill.id)}  // Changed from skill to skill.id
+                  onClick={() => handleDeleteSkill(skill.id)} // Changed from skill to skill.id
                   className=""
                 />
               </div>
