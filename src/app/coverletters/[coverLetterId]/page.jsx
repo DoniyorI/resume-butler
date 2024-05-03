@@ -9,9 +9,22 @@ import { doc, getDoc, setDoc } from "firebase/firestore";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { useRouter } from "next/navigation";
 
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import { toast } from "sonner";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { isValid, format } from "date-fns";
+
 function CoverLetterEditor({ params }) {
   const [user, loading, error] = useAuthState(auth);
   const [editorState, setEditorState] = useState(EditorState.createEmpty());
+  const [date, setDate] = useState("");
+  const [editingTitle, setEditingTitle] = useState(false);
+
   const router = useRouter();
   const [header, setHeader] = useState({
     contactPhone: "",
@@ -42,6 +55,7 @@ function CoverLetterEditor({ params }) {
             const coverLetterData = docSnap.data();
             setCoverLetterTitle(coverLetterData.title);
             setHeader(coverLetterData.header);
+            setDate(new Date(coverLetterData.date));
             setEditorState(
               EditorState.createWithContent(
                 convertFromRaw(coverLetterData.content)
@@ -74,28 +88,27 @@ function CoverLetterEditor({ params }) {
           title: coverLetterTitle,
           content: rawContent,
           header: header,
+          date: date.toISOString(),
         },
         { merge: true }
       );
 
       console.log("Cover letter saved");
     }
-
     const contentState = editorState.getCurrentContent();
     const rawContent = convertToRaw(contentState);
-
     const coverLetterRef = doc(
       db,
       `users/${user.uid}/coverletters`,
       params.coverLetterId
     );
-
     await setDoc(
       coverLetterRef,
       {
         title: coverLetterTitle,
         content: rawContent,
         header: header,
+        date: date.toISOString(),
       },
       { merge: true }
     );
@@ -103,9 +116,37 @@ function CoverLetterEditor({ params }) {
     console.log("Cover letter saved");
   };
 
+  const autoSave = async () => {
+    if (user && params.coverLetterId) {
+      const coverLetterRef = doc(
+        db,
+        `users/${user.uid}/coverletters`,
+        params.coverLetterId
+      );
+      await setDoc(
+        coverLetterRef,
+        { title: coverLetterTitle },
+        { merge: true }
+      );
+      console.log("Cover letter saved");
+      toast("Title Updated Successfully", {
+        action: {
+          label: "OK",
+          onClick: () => toast.dismiss(),
+        },
+      });
+    }
+  };
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setHeader({ ...header, [name]: value });
+    handleSave();
+  };
+
+  const handleDateChange = (selectedDate) => {
+    setDate(selectedDate);
+    handleSave();
   };
 
   if (loading || !user) {
@@ -114,6 +155,13 @@ function CoverLetterEditor({ params }) {
 
   return (
     <div className="flex flex-col w-full p-10 font-sans my-10">
+      <Header
+        title={coverLetterTitle}
+        setCoverLetterTitle={setCoverLetterTitle}
+        editingTitle={editingTitle}
+        setEditingTitle={setEditingTitle}
+        autoSave={autoSave}
+      />
       <div className="flex flex-col items-center justify-center flex-grow p-4">
         <div className="w-[850px] h-[1100px] border border-gray-800 rounded-md bg-white box-border overflow-hidden p-4">
           <div className="border-b-2 border-black p-4 flex justify-between items-center">
@@ -124,18 +172,18 @@ function CoverLetterEditor({ params }) {
                 name="contactPhone"
                 value={header.contactPhone}
                 onChange={handleInputChange}
-                className="p-2"
+                className="border px-1"
               />
               <input
                 type="text"
                 name="contactEmail"
                 value={header.contactEmail}
                 onChange={handleInputChange}
-                className="p-2"
+                className="border px-1 flex-grow"
               />
             </div>
 
-            {/* Center: Name and Target Job */}
+            {/* Center: Name */}
             <div className="text-center">
               <input
                 type="text"
@@ -153,27 +201,50 @@ function CoverLetterEditor({ params }) {
                 name="linkedin"
                 value={header.linkedin}
                 onChange={handleInputChange}
-                className="text-right"
+                className="border px-1 text-right"
               />
               <input
                 type="text"
                 name="portfolio"
                 value={header.portfolio}
                 onChange={handleInputChange}
-                className="text-right"
+                className="border px-1 text-right"
               />
             </div>
           </div>
+          <div className="flex flex-col p-4">
+            <div className="flex items-center pb-1">
+              <div>Date:</div>
+              <div>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      className="text-left text-md p-2 font-medium"
+                    >
+                      {isValid(date) ? format(date, "PPP") : "Select a date"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent>
+                    <Calendar
+                      mode="single"
+                      selected={date}
+                      onSelect={handleDateChange}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
 
-          <div className="flex flex-col">
-            <div>Date</div>
-            <div>Dear Hiring Manager,</div>
+            <div className="py-1 pb-3">Dear Hiring Manager,</div>
             <Editor
               editorState={editorState}
+              className=""
               onChange={setEditorState}
+              onBlur={handleSave}
               placeholder="Write your cover letter here..."
             />
-            <div>Thank you,</div>
+            <div className="mt-3">Sincerely,</div>
             <input
               type="text"
               name="name"
@@ -198,16 +269,40 @@ function CoverLetterEditor({ params }) {
           </div>
         </div>
       </div>
-      <div className="flex justify-center mt-4">
-        <button
-          onClick={handleSave}
-          className="px-4 py-2 bg-blue-500 text-white"
-        >
-          Save
-        </button>
-      </div>
+      <div className="flex justify-center mt-4"></div>
     </div>
   );
 }
 
 export default CoverLetterEditor;
+const Header = ({
+  title,
+  setCoverLetterTitle,
+  editingTitle,
+  setEditingTitle,
+  autoSave,
+}) => (
+  <h1 className="text-3xl font-medium text-[#559F87] mb-4">
+    Cover Letter:
+    {editingTitle ? (
+      <input
+        type="text"
+        value={title}
+        onChange={(e) => setCoverLetterTitle(e.target.value)}
+        onBlur={() => {
+          autoSave();
+          setEditingTitle(false);
+        }}
+        className="bg-transparent border-gray-600 ml-2"
+        placeholder="Untitled Cover Letter"
+      />
+    ) : (
+      <span
+        onDoubleClick={() => setEditingTitle(true)}
+        className="ml-2 cursor-pointer"
+      >
+        {title || "Untitled Cover Letter"}
+      </span>
+    )}
+  </h1>
+);
