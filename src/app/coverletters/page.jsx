@@ -11,17 +11,19 @@ import {
   listAll,
   getMetadata,
   getDownloadURL,
+  uploadBytes,
   deleteObject,
 } from "firebase/storage";
 import { useAuthState } from "react-firebase-hooks/auth";
 import { db, auth, storage } from "@/lib/firebase/config";
 
 import { useState, useEffect, use } from "react";
-import { EllipsisVertical } from "lucide-react";
+import { EllipsisVertical, CloudUpload } from "lucide-react";
 import { FiDownload, FiTrash2 } from "react-icons/fi";
 import { MdOutlineEdit } from "react-icons/md";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -44,6 +46,7 @@ import { toast } from "sonner";
 export default function Page() {
   const [coverLetters, setCoverLetters] = useState([]);
   const [PDFLetter, setPDFLetter] = useState([]);
+  const [file, setFile] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortOrder, setSortOrder] = useState("Recently Opened");
   const [user, loading, error] = useAuthState(auth);
@@ -72,49 +75,90 @@ export default function Page() {
   }, [searchTerm, sortOrder]);
 
   useEffect(() => {
-    if (loading) return;
-    if (error) console.error("Auth error:", error); // Handle possible auth errors
-    if (!user) {
-      router.push("/login");
-      return;
+  if (loading) return;
+  if (error) console.error("Auth error:", error); // Handle possible auth errors
+  if (!user) {
+    router.push("/login");
+    return;
+  }
+
+  const fetchData = async () => {
+    try {
+      const [fetchedCoverLetters, pdfLetters] = await Promise.all([
+        fetchCoverLetters(user),
+        fetchLetters(user),
+      ]);
+      
+      setCoverLetters(fetchedCoverLetters);
+      setPDFLetter(pdfLetters);
+    } catch (error) {
+      console.error("Error fetching data:", error);
     }
+  };
 
-    const fetchCoverLetters = async () => {
-      try {
-        const coverLettersRef = collection(
-          db,
-          `users/${user.uid}/coverletters`
-        );
-        const querySnapshot = await getDocs(coverLettersRef);
-        const fetchedCoverLetters = querySnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-          dateCreated: doc
-            .data()
-            .dateCreated.toDate()
-            .toLocaleDateString("en-US", {
-              month: "2-digit",
-              day: "2-digit",
-              year: "numeric",
-            }),
-          lastUpdated: doc
-            .data()
-            .lastUpdated.toDate()
-            .toLocaleDateString("en-US", {
-              month: "2-digit",
-              day: "2-digit",
-              year: "numeric",
-            }),
-        }));
-        setCoverLetters(fetchedCoverLetters);
-        console;
-      } catch (error) {
-        console.error("Error fetching cover letter:", error);
-      }
-    };
+  fetchData();
+}, [user, loading, error, router]);
 
-    fetchCoverLetters();
-  }, [user, loading, error, router]);
+const fetchCoverLetters = async (user) => {
+  try {
+    const coverLettersRef = collection(
+      db,
+      `users/${user.uid}/coverletters`
+    );
+    const querySnapshot = await getDocs(coverLettersRef);
+    const fetchedCoverLetters = querySnapshot.docs.map((doc) => ({
+      id: doc.id,
+      ...doc.data(),
+      dateCreated: doc
+        .data()
+        .dateCreated.toDate()
+        .toLocaleDateString("en-US", {
+          month: "2-digit",
+          day: "2-digit",
+          year: "numeric",
+        }),
+      lastUpdated: doc
+        .data()
+        .lastUpdated.toDate()
+        .toLocaleDateString("en-US", {
+          month: "2-digit",
+          day: "2-digit",
+          year: "numeric",
+        }),
+    }));
+    return fetchedCoverLetters;
+  } catch (error) {
+    console.error("Error fetching cover letters:", error);
+    return [];
+  }
+};
+
+const fetchLetters = async (user) => {
+  if (!user) {
+    console.error("User is null or undefined.");
+    return [];
+  }
+  const coverLetterRef = ref(storage, `users/${user.uid}/coverletters`);
+  try {
+    const snapshot = await listAll(coverLetterRef);
+    const metadataPromises = snapshot.items.map((itemRef) =>
+      Promise.all([getMetadata(itemRef), getDownloadURL(itemRef)]).then(
+        ([metadata, url]) => ({
+          name: itemRef.name,
+          path: itemRef.fullPath,
+          url: url,
+          date: formatDate(metadata.timeCreated),
+        })
+      )
+    );
+
+    const letterFiles = await Promise.all(metadataPromises);
+    return letterFiles;
+  } catch (error) {
+    console.error("Error fetching PDF letters: ", error);
+    return [];
+  }
+};
   const handleDownloadPDF = (id) => {
     console.log("Download PDF");
   };
@@ -181,42 +225,51 @@ export default function Page() {
       console.error("Error deleting file: ", error);
     }
   };
-  useEffect(() => {
-    fetchLetters(user).then(setPDFLetter);
-  }, [user]);
 
-  const fetchLetters = async (userId) => {
-    if (!userId) {
-      console.error("User ID is null or undefined.");
-      return [];
-    }
-    const resumesRef = ref(storage, `users/${userId.uid}/coverletters`);
-    try {
-      const snapshot = await listAll(resumesRef);
-      const metadataPromises = snapshot.items.map((itemRef) =>
-        Promise.all([getMetadata(itemRef), getDownloadURL(itemRef)]).then(
-          ([metadata, url]) => ({
-            name: itemRef.name,
-            path: itemRef.fullPath,
-            url: url,
-            date: formatDate(metadata.timeCreated),
-          })
-        )
-      );
-
-      const letterFiles = await Promise.all(metadataPromises);
-      return letterFiles;
-    } catch (error) {
-      console.error("Error fetching Cover letter: ", error);
-      return [];
+  const handleFileChange = (event) => {
+    const selectedFile = event.target.files[0];
+    if (selectedFile) {
+      if (validateFileType(selectedFile)) {
+        setFile(selectedFile);
+        uploadFile(selectedFile);
+      } else {
+        console.error(
+          "Unsupported file type. Please upload PDF, DOCX, or TXT files."
+        );
+      }
     }
   };
 
+  const uploadFile = async (file) => {
+    if (!file) return "";
+    console.log("Uploading file...");
+    const fileRef = ref(storage, `users/${user.uid}/coverletters/${file.name}`);
+    await uploadBytes(fileRef, file);
+    console.log("File uploaded successfully!");
+    const newCoverLetter = {
+      name: file.name,
+      path: fileRef.fullPath,
+      url: await getDownloadURL(fileRef),
+      date: formatDate(new Date()),
+    };
+    setPDFLetter((prevLetters) => [...prevLetters, newCoverLetter]);
+  };
+
+  const validateFileType = (file) => {
+    const allowedTypes = [
+      "application/pdf",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "text/plain",
+    ];
+    return allowedTypes.includes(file.type);
+  };
+
+
+
   return (
-    <div className="flex flex-col w-full min-h-screen py-16 px-10 my-10">
+    <div className="flex flex-col w-full min-h-screen pt-24 pb-10 px-10">
       <h1 className="text-2xl font-semibold text-[#559F87]">Cover Letters</h1>
-      <p className="mt-2 mb-6">Create and manage your cover letters here.</p>
-      <div className="flex justify-between pb-6 mx-2">
+      <div className="flex justify-between mx-2 my-1 mt-3">
         <Input
           placeholder="Filter by Cover Letter Name"
           value={searchTerm}
@@ -306,10 +359,24 @@ export default function Page() {
           </div>
         ))}
       </div>
-      <h2 className="text-lg text-[#559F87] font-semibold mt-4">
-        PDF Cover Letters
+      <h2 className="text-lg text-[#559F87] font-semibold">
+        Uploaded Cover Letters
       </h2>
+      
       <div className="flex flex-wrap">
+      <Button variant="ghost" className="hover:bg-green-50 mx-2 h-[220px] w-[170px] border  border-dashed  rounded-lg shadow p-4 flex justify-center items-center cursor-pointer m-2 ">
+          <Label className="space-x-2 flex justify-center items-center font-light" htmlFor="file-upload">
+            <CloudUpload strokeWidth={1}/>
+            <p>Upload</p>
+          </Label>
+          <Input
+            id="file-upload"
+            type="file"
+            accept=".pdf,.docx,.txt"
+            style={{ display: "none" }}
+            onChange={(e) => handleFileChange(e)}
+          />
+        </Button>
         {PDFLetter.map((letter) => (
           <div
             key={letter.path}
@@ -321,7 +388,7 @@ export default function Page() {
               rel="noopener noreferrer"
               className="h-full flex justify-center items-center cursor-pointer"
             >
-              Preview
+            View
             </a>
             <div className="flex justify-between py-2 px-2 bg-slate-100">
               <div className="flex flex-col">
@@ -365,6 +432,7 @@ export default function Page() {
             </div>
           </div>
         ))}
+        
       </div>
     </div>
   );

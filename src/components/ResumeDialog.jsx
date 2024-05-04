@@ -16,14 +16,6 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import {
-  Form,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormControl,
-  FormMessage,
-} from "@/components/ui/form";
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -66,7 +58,7 @@ export default function ResumeDialog() {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
     });
-    return () => unsubscribe(); // Clean up subscription
+    return () => unsubscribe(); 
   }, []);
 
   const handleNextStep = async (formData) => {

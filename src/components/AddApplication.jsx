@@ -1,9 +1,16 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth, db, storage } from "@/lib/firebase/config";
 import { doc, setDoc, Timestamp } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import {
+  ref,
+  uploadBytes,
+  getDownloadURL,
+  listAll,
+  getMetadata,
+} from "firebase/storage";
+import { AiOutlineFilePdf } from "react-icons/ai";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -53,10 +60,15 @@ export default function AddApplicationDialog() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const router = useRouter();
+  const [selectedResume, setSelectedResume] = useState("");
+  const [selectedCoverLetter, setSelectedCoverLetter] = useState("");
+  const [resumes, setResumes] = useState([]);
+  const [coverLetters, setCoverLetters] = useState([]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
+        console.log("User signed in:", user);
         setCurrentUser(user);
       } else {
         router.push("/login");
@@ -64,6 +76,86 @@ export default function AddApplicationDialog() {
     });
     return () => unsubscribe();
   }, []);
+
+  const prevIsDialogOpen = useRef();
+
+  useEffect(() => {
+    // Check if isDialogOpen is true and the previous value was false
+    if (isDialogOpen && !prevIsDialogOpen.current) {
+      if (!currentUser) return;
+      fetchResumes(currentUser.uid)
+        .then((resumes) => {
+          setResumes(resumes);
+        })
+        .catch((error) => {
+          console.error("Error fetching resumes:", error);
+        });
+
+      fetchLetters(currentUser.uid)
+        .then((coverLetter) => {
+          setCoverLetters(coverLetter);
+        })
+        .catch((error) => {
+          console.error("Error fetching cover letter:", error);
+        });
+    }
+
+    // Update the previous value of isDialogOpen
+    prevIsDialogOpen.current = isDialogOpen;
+  }, [isDialogOpen, currentUser]);
+
+  const fetchResumes = async (userId) => {
+    if (!userId) {
+      console.error("User ID is null or undefined.");
+      return [];
+    }
+    const resumesRef = ref(storage, `users/${userId}/resumes`);
+    try {
+      const snapshot = await listAll(resumesRef);
+      const metadataPromises = snapshot.items.map(async (itemRef) => {
+        const metadata = await getMetadata(itemRef);
+        const url = await getDownloadURL(itemRef);
+        return {
+          name: itemRef.name,
+          path: itemRef.fullPath,
+          url: url,
+          date: formatDate(metadata.timeCreated),
+        };
+      });
+
+      const resumeFiles = await Promise.all(metadataPromises);
+      return resumeFiles;
+    } catch (error) {
+      console.error("Error fetching resumes: ", error);
+      return [];
+    }
+  };
+  const fetchLetters = async (user) => {
+    if (!user) {
+      console.error("User is null or undefined.");
+      return [];
+    }
+    const coverLetterRef = ref(storage, `users/${user}/coverletters`);
+    try {
+      const snapshot = await listAll(coverLetterRef);
+      const metadataPromises = snapshot.items.map((itemRef) =>
+        Promise.all([getMetadata(itemRef), getDownloadURL(itemRef)]).then(
+          ([metadata, url]) => ({
+            name: itemRef.name,
+            path: itemRef.fullPath,
+            url: url,
+            date: formatDate(metadata.timeCreated),
+          })
+        )
+      );
+
+      const letterFiles = await Promise.all(metadataPromises);
+      return letterFiles;
+    } catch (error) {
+      console.error("Error fetching PDF letters: ", error);
+      return [];
+    }
+  };
 
   const handleFileChange = (event, setter) => {
     setter(event.target.files[0]);
@@ -83,12 +175,27 @@ export default function AddApplicationDialog() {
     }
     setIsSaving(true);
     try {
-      const resume = await uploadFile(currentUser.uid, resumeFile, "resumes");
-      const coverLetter = await uploadFile(
-        currentUser.uid,
-        coverLetterFile,
-        "coverletters"
-      );
+      let resume;
+      if (resumeFile) {
+        resume = await uploadFile(currentUser.uid, resumeFile, "resumes");
+      } else {
+        resume = selectedResume; // Use the selected existing resume URL
+      }
+      let coverLetter;
+      if (coverLetterFile) {
+        coverLetter = await uploadFile(
+          currentUser.uid,
+          resumeFile,
+          "coverletters"
+        );
+      } else {
+        coverLetter = selectedCoverLetter; // Use the selected existing resume URL
+      }
+      // const coverLetter = await uploadFile(
+      //   currentUser.uid,
+      //   coverLetterFile,
+      //   "coverletters"
+      // );
 
       const applicationData = {
         resume,
@@ -98,7 +205,7 @@ export default function AddApplicationDialog() {
         role,
         status,
         location,
-        date: new Date(date).toLocaleDateString("en-US"), 
+        date: new Date(date).toLocaleDateString("en-US"),
         comments,
       };
       const userDocRef = doc(
@@ -108,7 +215,7 @@ export default function AddApplicationDialog() {
       );
       await setDoc(userDocRef, applicationData);
       setIsDialogOpen(false);
-      
+
       setResumeFile(null);
       setCoverLetterFile(null);
       setCompanyName("");
@@ -118,7 +225,9 @@ export default function AddApplicationDialog() {
       setLocation("");
       setDate(new Date());
       setComments("");
-      window.dispatchEvent(new CustomEvent('newApplication', { detail: applicationData }));
+      window.dispatchEvent(
+        new CustomEvent("newApplication", { detail: applicationData })
+      );
       toast("Application successfully uploaded", {
         description: "Your application data has been saved.",
         action: {
@@ -138,7 +247,50 @@ export default function AddApplicationDialog() {
     } finally {
       setIsSaving(false);
     }
-};
+  };
+
+  const handleFileUpload = async (file) => {
+    if (!file) return; // Handle case when no file is selected
+    await uploadFile(currentUser.uid, file, "resumes").then((url) => {
+      setResumes((prevResumes) => [
+        ...prevResumes,
+        { name: file.name, url: url },
+      ]);
+      setSelectedResume(file.name);
+      setResumeFile(file);
+    });
+  };
+
+  const handleResumeChange = async (value) => {
+    if (value === "upload") {
+      const fileInput = document.createElement("input");
+      fileInput.type = "file";
+      fileInput.onchange = (event) => {
+        const file = event.target.files[0];
+        setSelectedResume(`New File: ${file.name}`); // Update the selectedResume state with a custom value indicating a new file
+        setResumeFile(file); // Store the selected file in state
+      };
+      fileInput.click(); // Simulate a click event to open the file picker
+    } else {
+      setSelectedResume(value); // Set selected resume to the URL
+      setResumeFile(null); // Set resumeFile to null when selecting an existing resume
+    }
+  };
+  const handleCoverLetterChange = async (value) => {
+    if (value === "upload") {
+      const fileInput = document.createElement("input");
+      fileInput.type = "file";
+      fileInput.onchange = (event) => {
+        const file = event.target.files[0];
+        setSelectedCoverLetter(`New File: ${file.name}`); // Update the selectedResume state with a custom value indicating a new file
+        setCoverLetterFile(file); // Store the selected file in state
+      };
+      fileInput.click(); // Simulate a click event to open the file picker
+    } else {
+      setSelectedCoverLetter(value); // Set selected resume to the URL
+      setCoverLetterFile(null); // Set resumeFile to null when selecting an existing resume
+    }
+  };
 
   const statuses = [
     { label: "Applied", value: "applied" },
@@ -174,21 +326,89 @@ export default function AddApplicationDialog() {
                 <Label htmlFor="resume" className="text-right">
                   Resume
                 </Label>
-                <Input
+                <Select
                   id="resume"
-                  type="file"
-                  onChange={(e) => handleFileChange(e, setResumeFile)}
-                />
+                  value={selectedResume}
+                  onValueChange={handleResumeChange}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a Resume" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectItem value="upload">
+                        <Input
+                          className="border-none w-full bg-transparent px-0"
+                          id="cover-letter"
+                          type="file"
+                          onChange={(e) => handleFileChange(e, setResumeFile)}
+                        />
+                      </SelectItem>
+                      {resumes.map((resume) => (
+                        <SelectItem key={resume.path} value={resume.url}>
+                          <div className="flex justify-center items-center">
+                            <AiOutlineFilePdf className="text-red-700 mr-1" />
+                            {resume.name}
+                          </div>
+                        </SelectItem>
+                      ))}
+                      {selectedResume &&
+                        selectedResume.startsWith("New File:") && (
+                          <SelectItem value={selectedResume}>
+                            <div className="flex justify-center items-center">
+                              <AiOutlineFilePdf className="text-red-700 mr-1" />
+                              {selectedResume.slice(10)}
+                            </div>
+                          </SelectItem>
+                        )}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="flex-grow">
                 <Label htmlFor="cover-letter" className="text-right">
                   Cover Letter
                 </Label>
-                <Input
+                <Select
                   id="cover-letter"
-                  type="file"
-                  onChange={(e) => handleFileChange(e, setCoverLetterFile)}
-                />
+                  value={selectedCoverLetter}
+                  onValueChange={handleCoverLetterChange}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a Cover Letter" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectItem value="upload">
+                        <Input
+                          className="border-none w-full bg-transparent px-0"
+                          id="cover-letter-file"
+                          type="file"
+                          onChange={(e) =>
+                            handleFileChange(e, setCoverLetterFile)
+                          }
+                        />
+                      </SelectItem>
+                      {coverLetters.map((letter) => (
+                        <SelectItem key={letter.path} value={letter.url}>
+                          <div className="flex justify-center items-center">
+                            <AiOutlineFilePdf className="text-red-700 mr-1" />
+                            {letter.name}
+                          </div>
+                        </SelectItem>
+                      ))}
+                      {selectedCoverLetter &&
+                        selectedCoverLetter.startsWith("New File:") && (
+                          <SelectItem value={selectedCoverLetter}>
+                            <div className="flex justify-center items-center">
+                              <AiOutlineFilePdf className="text-red-700 mr-1" />
+                              {selectedCoverLetter.slice(10)}
+                            </div>
+                          </SelectItem>
+                        )}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div>
@@ -324,3 +544,12 @@ export default function AddApplicationDialog() {
     </Dialog>
   );
 }
+const formatDate = (dateString) => {
+  const date = new Date(dateString);
+  return `${padTo2Digits(date.getMonth() + 1)}/${padTo2Digits(
+    date.getDate()
+  )}/${date.getFullYear()}`;
+};
+const padTo2Digits = (num) => {
+  return num.toString().padStart(2, "0");
+};

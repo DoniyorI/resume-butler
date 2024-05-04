@@ -10,17 +10,20 @@ import {
   ref,
   listAll,
   getMetadata,
+  uploadBytes,
   getDownloadURL,
   deleteObject,
 } from "firebase/storage";
+
 import { useAuthState } from "react-firebase-hooks/auth";
 import { db, auth, storage } from "@/lib/firebase/config";
 import { useState, useEffect } from "react";
-import { EllipsisVertical } from "lucide-react";
+import { EllipsisVertical, CloudUpload } from "lucide-react";
 import { FiDownload, FiTrash2 } from "react-icons/fi";
 import { MdOutlineEdit } from "react-icons/md";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,6 +46,7 @@ import { toast } from "sonner";
 export default function Page() {
   const [resumes, setResumes] = useState([]);
   const [PDFresumes, setPDFResumes] = useState([]);
+  const [file, setFile] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortOrder, setSortOrder] = useState("Recently Opened");
   const [user, loading, error] = useAuthState(auth);
@@ -50,47 +54,88 @@ export default function Page() {
 
   const [editingId, setEditingId] = useState(null);
   const [editingTitle, setEditingTitle] = useState("");
-
   useEffect(() => {
     if (loading) return;
-    if (error) console.error("Auth error:", error); 
+    if (error) console.error("Auth error:", error);
     if (!user) {
       router.push("/login");
       return;
     }
 
-    const fetchResumes = async () => {
+    const fetchData = async () => {
       try {
-        const resumesRef = collection(db, `users/${user.uid}/resumes`);
-        const querySnapshot = await getDocs(resumesRef);
-        const fetchedResumes = querySnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-          dateCreated: doc
-            .data()
-            .dateCreated.toDate()
-            .toLocaleDateString("en-US", {
-              month: "2-digit",
-              day: "2-digit",
-              year: "numeric",
-            }),
-          lastUpdated: doc
-            .data()
-            .lastUpdated.toDate()
-            .toLocaleDateString("en-US", {
-              month: "2-digit",
-              day: "2-digit",
-              year: "numeric",
-            }),
-        }));
+        const [fetchedResumes, uploadedResumes] = await Promise.all([
+          fetchResumes(user),
+          fetchUploadedResumes(user),
+        ]);
+
         setResumes(fetchedResumes);
+        setPDFResumes(uploadedResumes);
       } catch (error) {
-        console.error("Error fetching resumes:", error);
+        console.error("Error fetching data:", error);
       }
     };
 
-    fetchResumes();
+    fetchData();
   }, [user, loading, error, router]);
+
+  const fetchResumes = async (user) => {
+    try {
+      const resumesRef = collection(db, `users/${user.uid}/resumes`);
+      const querySnapshot = await getDocs(resumesRef);
+      const fetchedResumes = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+        dateCreated: doc
+          .data()
+          .dateCreated.toDate()
+          .toLocaleDateString("en-US", {
+            month: "2-digit",
+            day: "2-digit",
+            year: "numeric",
+          }),
+        lastUpdated: doc
+          .data()
+          .lastUpdated.toDate()
+          .toLocaleDateString("en-US", {
+            month: "2-digit",
+            day: "2-digit",
+            year: "numeric",
+          }),
+      }));
+      return fetchedResumes;
+    } catch (error) {
+      console.error("Error fetching resumes:", error);
+      return [];
+    }
+  };
+
+  const fetchUploadedResumes = async (user) => {
+    if (!user) {
+      console.error("User is null or undefined.");
+      return [];
+    }
+    const resumesRef = ref(storage, `users/${user.uid}/resumes`);
+    try {
+      const snapshot = await listAll(resumesRef);
+      const metadataPromises = snapshot.items.map(async (itemRef) => {
+        const metadata = await getMetadata(itemRef);
+        const url = await getDownloadURL(itemRef);
+        return {
+          name: itemRef.name,
+          path: itemRef.fullPath,
+          url: url,
+          date: formatDate(metadata.timeCreated),
+        };
+      });
+
+      const resumeFiles = await Promise.all(metadataPromises);
+      return resumeFiles;
+    } catch (error) {
+      console.error("Error fetching uploaded resumes: ", error);
+      return [];
+    }
+  };
 
   useEffect(() => {
     const filteredResumes = resumes
@@ -170,37 +215,48 @@ export default function Page() {
       console.error("Error deleting file: ", error);
     }
   };
-  useEffect(() => {
-    fetchResumes(user).then(setPDFResumes);
-  }, [user]);
 
-  const fetchResumes = async (userId) => {
-    const resumesRef = ref(storage, `users/${userId.uid}/resumes`);
-    try {
-      const snapshot = await listAll(resumesRef);
-      const metadataPromises = snapshot.items.map((itemRef) =>
-        Promise.all([getMetadata(itemRef), getDownloadURL(itemRef)]).then(
-          ([metadata, url]) => ({
-            name: itemRef.name,
-            path: itemRef.fullPath,
-            url: url,
-            date: formatDate(metadata.timeCreated),
-          })
-        )
-      );
-
-      const resumeFiles = await Promise.all(metadataPromises);
-      return resumeFiles;
-    } catch (error) {
-      console.error("Error fetching resumes: ", error);
-      return [];
+  const handleFileChange = (event) => {
+    const selectedFile = event.target.files[0];
+    if (selectedFile) {
+      if (validateFileType(selectedFile)) {
+        setFile(selectedFile);
+        uploadFile(selectedFile);
+      } else {
+        console.error(
+          "Unsupported file type. Please upload PDF, DOCX, or TXT files."
+        );
+      }
     }
   };
 
+  const validateFileType = (file) => {
+    const allowedTypes = [
+      "application/pdf",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "text/plain",
+    ];
+    return allowedTypes.includes(file.type);
+  };
+
+  const uploadFile = async (file) => {
+    if (!file) return "";
+    const fileRef = ref(storage, `users/${user.uid}/resumes/${file.name}`);
+    await uploadBytes(fileRef, file);
+    // Add the newly uploaded file to PDFResumes
+    const newResume = {
+      name: file.name,
+      path: fileRef.fullPath,
+      url: await getDownloadURL(fileRef),
+      date: formatDate(new Date()),
+    };
+    setPDFResumes((prevResumes) => [...prevResumes, newResume]);
+  };
+
   return (
-    <div className="flex flex-col w-full min-h-screen py-16 px-10 my-10">
+    <div className="flex flex-col w-full min-h-screen pt-24 pb-10 px-10">
       <h1 className="text-2xl font-semibold text-[#559F87]">Resumes</h1>
-      <div className="flex justify-between mx-2 my-2 mt-4">
+      <div className="flex justify-between mx-2 my-1 mt-3">
         <Input
           placeholder="Filter by Resume Name"
           value={searchTerm}
@@ -303,8 +359,28 @@ export default function Page() {
           </div>
         ))}
       </div>
-      <h2 className="text-lg text-[#559F87] font-semibold mt-4">PDF Resume</h2>
+      <h2 className="text-lg text-[#559F87] font-semibold">Uploaded Resumes</h2>
+
       <div className="flex flex-wrap">
+        <Button
+          variant="ghost"
+          className="hover:bg-green-50 mx-2 h-[220px] w-[170px] border  border-dashed  rounded-lg shadow p-4 flex justify-center items-center cursor-pointer m-2 "
+        >
+          <Label
+            className="space-x-2 flex justify-center items-center font-light"
+            htmlFor="file-upload"
+          >
+            <CloudUpload strokeWidth={1} />
+            <p>Upload</p>
+          </Label>
+          <Input
+            id="file-upload"
+            type="file"
+            accept=".pdf,.docx,.txt"
+            style={{ display: "none" }}
+            onChange={(e) => handleFileChange(e)}
+          />
+        </Button>
         {PDFresumes.map((resume) => (
           <div
             key={resume.path}
@@ -316,7 +392,7 @@ export default function Page() {
               rel="noopener noreferrer"
               className="h-full flex justify-center items-center cursor-pointer"
             >
-              view
+              View
             </a>
             <div className="flex justify-between py-2 px-2 bg-slate-100">
               <div className="flex flex-col">

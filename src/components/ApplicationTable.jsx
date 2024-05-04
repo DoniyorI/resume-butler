@@ -1,5 +1,6 @@
 "use client";
 
+
 import React, { useState, useEffect } from "react";
 import { auth, db } from "@/lib/firebase/config";
 import { onAuthStateChanged } from "firebase/auth";
@@ -27,6 +28,7 @@ import {
 } from "@tanstack/react-table";
 import { ArrowUpDown, MoreHorizontal, ListFilter, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
@@ -66,11 +68,11 @@ function ApplicationTable() {
       setApplications((prevApplications) => [...prevApplications, newApp]);
     };
 
-    window.addEventListener('newApplication', handleNewApplication);
+    window.addEventListener("newApplication", handleNewApplication);
 
     // Clean up the event listener
     return () => {
-      window.removeEventListener('newApplication', handleNewApplication);
+      window.removeEventListener("newApplication", handleNewApplication);
     };
   }, []);
 
@@ -80,7 +82,12 @@ function ApplicationTable() {
         setLoading(true);
         setUser(user);
         try {
-          const applicationsRef = collection(db,"users",user.uid,"applications");
+          const applicationsRef = collection(
+            db,
+            "users",
+            user.uid,
+            "applications"
+          );
           let queryConfig = query(applicationsRef, orderBy("date"), limit(50));
           if (searchTerm) {
             queryConfig = query(
@@ -93,12 +100,14 @@ function ApplicationTable() {
 
           const querySnapshot = await getDocs(queryConfig);
           const loadedApplications = querySnapshot.docs.map((doc) => {
-            const applicationData = doc.data();
-            const date = applicationData.date && applicationData.date.toDate ? applicationData.date.toDate().toISOString().slice(0, 50) : "";
+            const rawData = doc.data();
+            const date = new Date(rawData.date); // Parse the date from the Firestore data
+            const formattedDate = date.toLocaleDateString("en-US"); // Format the date as MM/DD/YYYY
+
             return {
               id: doc.id,
-              ...applicationData,
-              date,
+              ...rawData,
+              date: formattedDate,
             };
           });
 
@@ -109,9 +118,8 @@ function ApplicationTable() {
           const totalCountQuery = query(applicationsRef);
           const totalCountSnapshot = await getDocs(totalCountQuery);
           setTotalApplications(totalCountSnapshot.size);
-          
-          console.log("Applications loaded:", loadedApplications);
 
+          console.log("Applications loaded:", loadedApplications);
         } catch (error) {
           console.error("Error fetching applications:", error);
         } finally {
@@ -122,7 +130,6 @@ function ApplicationTable() {
     return () => {
       unsubscribe();
     };
-
   }, [searchTerm]);
 
   const nextPage = async () => {
@@ -227,7 +234,7 @@ function ApplicationTable() {
               href={row.getValue("coverLetter")}
               target="_blank" // Open in a new tab
               rel="noopener noreferrer"
-              className="text-green-700"
+              className="text-red-700"
             >
               <AiOutlineFilePdf className="mx-auto" size={20} />
             </a>
@@ -376,25 +383,25 @@ function ApplicationTable() {
       },
       cell: ({ row }) => {
         const [editing, setEditing] = useState(false);
-        const [value, setValue] = useState(row.getValue("comments"));
-
+        const [value, setValue] = useState(row.getValue("comments") || "");
+      
         const toggleEdit = () => {
           setEditing(!editing);
         };
-
+      
         const handleChange = (e) => {
           setValue(e.target.value);
         };
-
+      
         const handleBlur = () => {
-          updateComment(row.original.id, value); // Update the comment in the database
+          updateComment(row.original.id, value.trim()); 
           setEditing(false);
         };
-
+      
         return (
           <div onDoubleClick={toggleEdit}>
             {editing ? (
-              <Input
+              <Textarea
                 type="text"
                 value={value}
                 onChange={handleChange}
@@ -402,7 +409,9 @@ function ApplicationTable() {
                 autoFocus
               />
             ) : (
-              <span>{value}</span>
+              <span onDoubleClick={toggleEdit}>{value || (
+                <span className="text-gray-300">No Comment</span>
+              )} </span>
             )}
           </div>
         );
@@ -424,8 +433,8 @@ function ApplicationTable() {
               application.id
             );
             await deleteDoc(docRef);
-            setApplications(currentApplications => 
-              currentApplications.filter(app => app.id !== application.id)
+            setApplications((currentApplications) =>
+              currentApplications.filter((app) => app.id !== application.id)
             );
             toast("Application deleted successfully!");
           } catch (error) {
@@ -453,7 +462,7 @@ function ApplicationTable() {
                   className="text-red-700 hover:text-red-500 py-1 px-0 h-5"
                   onClick={handleDelete}
                 >
-                  <Trash2 className="mr-1" size={15}/>
+                  <Trash2 className="mr-1" size={15} />
                   Delete
                 </Button>
               </DropdownMenuItem>
