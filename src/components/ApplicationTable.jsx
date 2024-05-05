@@ -17,7 +17,7 @@ import {
   limit,
   where,
 } from "firebase/firestore";
-import { AiOutlineFilePdf } from "react-icons/ai";
+import { AiOutlineFilePdf,AiOutlineFileText } from "react-icons/ai";
 import {
   flexRender,
   getCoreRowModel,
@@ -181,6 +181,7 @@ function ApplicationTable() {
       ...doc.data(),
       date: doc.data().date.toDate().toISOString().slice(0, 50),
     }));
+    console.log("Loaded applications:", loadedApplications);
 
     setApplications(loadedApplications);
     setCursorHistory(cursorHistory.slice(0, cursorHistory.length - 1));
@@ -205,13 +206,14 @@ function ApplicationTable() {
         <div className="flex justify-start mx-10">
           {row.getValue("resume") && (
             <a
-              href={row.getValue("resume")}
-              target="_blank" // Open in a new tab
-              rel="noopener noreferrer"
-              className="text-red-700 "
-            >
-              <AiOutlineFilePdf className="mx-auto" size={20} />
-            </a>
+            href={row.getValue("resume")}
+            target="_blank" // Open in a new tab
+            rel="noopener noreferrer"
+          >
+            {row.original.resumeType === 'pdf' ? 
+              <AiOutlineFilePdf className="mx-auto text-red-700" size={20} /> : 
+              <AiOutlineFileText className="mx-auto text-blue-700" size={20} />}
+          </a>
           )}
         </div>
       ),
@@ -228,16 +230,18 @@ function ApplicationTable() {
         </Button>
       ),
       cell: ({ row }) => (
+        console.log(row.original),
         <div className="flex justify-start mx-10">
           {row.getValue("coverLetter") && (
             <a
               href={row.getValue("coverLetter")}
               target="_blank" // Open in a new tab
               rel="noopener noreferrer"
-              className="text-red-700"
             >
-              <AiOutlineFilePdf className="mx-auto" size={20} />
-            </a>
+              {row.original.coverLetterType === 'pdf' ? 
+              <AiOutlineFilePdf className="mx-auto text-red-500" size={20} /> : 
+              <AiOutlineFileText className="mx-auto text-blue-500" size={20} />}
+          </a>
           )}
         </div>
       ),

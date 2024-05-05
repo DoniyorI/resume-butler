@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth, db, storage } from "@/lib/firebase/config";
-import { doc, setDoc, Timestamp } from "firebase/firestore";
+import { doc, setDoc, getDocs, collection } from "firebase/firestore";
 import {
   ref,
   uploadBytes,
@@ -10,7 +10,7 @@ import {
   listAll,
   getMetadata,
 } from "firebase/storage";
-import { AiOutlineFilePdf } from "react-icons/ai";
+import { AiOutlineFilePdf, AiOutlineFileText } from "react-icons/ai";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -68,7 +68,6 @@ export default function AddApplicationDialog() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
-        console.log("User signed in:", user);
         setCurrentUser(user);
       } else {
         router.push("/login");
@@ -109,51 +108,211 @@ export default function AddApplicationDialog() {
       console.error("User ID is null or undefined.");
       return [];
     }
+
+    // Fetch from storage
     const resumesRef = ref(storage, `users/${userId}/resumes`);
+    const storageResumes = await fetchFromStorage(resumesRef);
+
+    // Fetch from Firestore
+    const dbResumesRef = collection(db, `users/${userId}/resumes`);
+    const firestoreResumes = await fetchFromFirestore(dbResumesRef);
+
+    // Combine results
+    return [...storageResumes, ...firestoreResumes];
+  };
+
+  const fetchFromStorage = async (resumesRef) => {
     try {
       const snapshot = await listAll(resumesRef);
       const metadataPromises = snapshot.items.map(async (itemRef) => {
         const metadata = await getMetadata(itemRef);
         const url = await getDownloadURL(itemRef);
         return {
-          name: itemRef.name,
+          title: itemRef.name,
           path: itemRef.fullPath,
           url: url,
           date: formatDate(metadata.timeCreated),
+          type: "pdf",
+          resumeType: "storage",
         };
       });
-
-      const resumeFiles = await Promise.all(metadataPromises);
-      return resumeFiles;
+      return await Promise.all(metadataPromises);
     } catch (error) {
-      console.error("Error fetching resumes: ", error);
+      console.error("Error fetching resumes from storage: ", error);
       return [];
     }
   };
-  const fetchLetters = async (user) => {
-    if (!user) {
-      console.error("User is null or undefined.");
+
+  const fetchFromFirestore = async (resumesRef) => {
+    try {
+      const querySnapshot = await getDocs(resumesRef);
+      return querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        title: doc.data().title || "Untitled",
+        url: `/resumes/${doc.id}`,
+        date: doc.data().dateCreated.toDate().toLocaleDateString("en-US"),
+        type: doc.data().type || "doc",
+        resumeType: "database",
+      }));
+    } catch (error) {
+      console.error("Error fetching resumes from Firestore: ", error);
       return [];
     }
-    const coverLetterRef = ref(storage, `users/${user}/coverletters`);
+  };
+
+  const fetchLetters = async (userId) => {
+    if (!userId) {
+      console.error("User ID is null or undefined.");
+      return [];
+    }
+
+    // Fetch from storage
+    const coverLetterRef = ref(storage, `users/${userId}/coverletters`);
+    const storageLetters = await fetchLetterFromStorage(coverLetterRef);
+
+    // Fetch from Firestore
+    const dbLettersRef = collection(db, `users/${userId}/coverletters`);
+    const firestoreLetters = await fetchLetterFromFirestore(dbLettersRef);
+
+    // Combine results from both storage and Firestore
+    return [...storageLetters, ...firestoreLetters];
+  };
+
+  const fetchLetterFromStorage = async (coverLetterRef) => {
     try {
       const snapshot = await listAll(coverLetterRef);
-      const metadataPromises = snapshot.items.map((itemRef) =>
-        Promise.all([getMetadata(itemRef), getDownloadURL(itemRef)]).then(
-          ([metadata, url]) => ({
-            name: itemRef.name,
-            path: itemRef.fullPath,
-            url: url,
-            date: formatDate(metadata.timeCreated),
-          })
-        )
-      );
-
-      const letterFiles = await Promise.all(metadataPromises);
-      return letterFiles;
+      const metadataPromises = snapshot.items.map(async (itemRef) => {
+        const metadata = await getMetadata(itemRef);
+        const url = await getDownloadURL(itemRef);
+        return {
+          title: itemRef.name,
+          path: itemRef.fullPath,
+          url: url,
+          date: formatDate(metadata.timeCreated),
+          type: "pdf",
+          letterType: "storage",
+        };
+      });
+      return await Promise.all(metadataPromises);
     } catch (error) {
-      console.error("Error fetching PDF letters: ", error);
+      console.error("Error fetching cover letters from storage: ", error);
       return [];
+    }
+  };
+
+  const fetchLetterFromFirestore = async (coverLetterRef) => {
+    try {
+      const querySnapshot = await getDocs(coverLetterRef);
+      return querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        title: doc.data().title || "Untitled",
+        url: `/coverletters/${doc.id}`,
+        date: doc.data().dateCreated.toDate().toLocaleDateString("en-US"),
+        type: doc.data().type || "doc",
+        letterType: "database",
+      }));
+    } catch (error) {
+      console.error("Error fetching cover letters from Firestore: ", error);
+      return [];
+    }
+  };
+
+  const handleSave = async () => {
+    if (!currentUser) {
+      toast("No user signed in", {
+        description: "Please sign in to save the application.",
+      });
+      return;
+    }
+    setIsSaving(true);
+    try {
+      let resumeInfo, coverLetter;
+      if (resumeFile) {
+        const uploadResult = await uploadFile(
+          currentUser.uid,
+          resumeFile,
+          "resumes"
+        );
+        resumeInfo = {
+          url: uploadResult,
+          type: "pdf",
+        };
+      } else if (selectedResume) {
+        resumeInfo = {
+          url: selectedResume.url,
+          type: selectedResume.type,
+        };
+      }
+
+      if (coverLetterFile) {
+        const uploadResult = await uploadFile(
+          currentUser.uid,
+          coverLetterFile,
+          "coverletters"
+        );
+        coverLetter = {
+          url: uploadResult,
+          type: "pdf",
+        };
+      } else if (selectedResume) {
+        coverLetter = {
+          url: selectedCoverLetter.url,
+          type: selectedCoverLetter.type,
+        };
+      }
+
+      const applicationData = {
+        resume: resumeInfo ? resumeInfo.url : null,
+        resumeType: resumeInfo ? resumeInfo.type : null,
+        coverLetter: coverLetter ? coverLetter.url : null,
+        coverLetterType: coverLetter ? coverLetter.type : null,
+        companyName,
+        portalLink,
+        role,
+        status,
+        location,
+        date: new Date(date).toLocaleDateString("en-US"),
+        comments,
+      };
+
+      // Save application data
+      const userDocRef = doc(
+        db,
+        `users/${currentUser.uid}/applications`,
+        `${Date.now()}`
+      );
+      await setDoc(userDocRef, applicationData);
+      setIsDialogOpen(false);
+
+      // Reset fields
+      setResumeFile(null);
+      setCoverLetterFile(null);
+      setSelectedCoverLetter("");
+      setSelectedResume("");
+      setCompanyName("");
+      setPortalLink("");
+      setRole("");
+      setStatus("applied");
+      setLocation("");
+      setDate(new Date());
+      setComments("");
+
+      // Dispatch event and show success message
+      window.dispatchEvent(
+        new CustomEvent("newApplication", { detail: applicationData })
+      );
+      toast("Application successfully uploaded", {
+        description: "Your application data has been saved.",
+      });
+    } catch (error) {
+      console.error("Error saving application data:", error);
+      toast("Failed to upload application", {
+        description:
+          error.message || "An error occurred while saving your data.",
+        action: { label: "Retry", onClick: handleSave },
+      });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -168,87 +327,6 @@ export default function AddApplicationDialog() {
     return getDownloadURL(fileRef);
   };
 
-  const handleSave = async () => {
-    if (!currentUser) {
-      alert("No user signed in");
-      return;
-    }
-    setIsSaving(true);
-    try {
-      let resume;
-      if (resumeFile) {
-        resume = await uploadFile(currentUser.uid, resumeFile, "resumes");
-      } else {
-        resume = selectedResume; // Use the selected existing resume URL
-      }
-      let coverLetter;
-      if (coverLetterFile) {
-        coverLetter = await uploadFile(
-          currentUser.uid,
-          resumeFile,
-          "coverletters"
-        );
-      } else {
-        coverLetter = selectedCoverLetter; // Use the selected existing resume URL
-      }
-      // const coverLetter = await uploadFile(
-      //   currentUser.uid,
-      //   coverLetterFile,
-      //   "coverletters"
-      // );
-
-      const applicationData = {
-        resume,
-        coverLetter,
-        companyName,
-        portalLink,
-        role,
-        status,
-        location,
-        date: new Date(date).toLocaleDateString("en-US"),
-        comments,
-      };
-      const userDocRef = doc(
-        db,
-        `users/${currentUser.uid}/applications`,
-        `${Date.now()}`
-      );
-      await setDoc(userDocRef, applicationData);
-      setIsDialogOpen(false);
-
-      setResumeFile(null);
-      setCoverLetterFile(null);
-      setCompanyName("");
-      setPortalLink("");
-      setRole("");
-      setStatus("");
-      setLocation("");
-      setDate(new Date());
-      setComments("");
-      window.dispatchEvent(
-        new CustomEvent("newApplication", { detail: applicationData })
-      );
-      toast("Application successfully uploaded", {
-        description: "Your application data has been saved.",
-        action: {
-          label: "OK",
-          onClick: () => {},
-        },
-      });
-    } catch (error) {
-      console.error("Error saving application data:", error);
-      toast("Failed to upload application", {
-        description: "An error occurred while saving your data.",
-        action: {
-          label: "Retry",
-          onClick: handleSave,
-        },
-      });
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
   const handleFileUpload = async (file) => {
     if (!file) return; // Handle case when no file is selected
     await uploadFile(currentUser.uid, file, "resumes").then((url) => {
@@ -261,34 +339,49 @@ export default function AddApplicationDialog() {
     });
   };
 
-  const handleResumeChange = async (value) => {
-    if (value === "upload") {
+  const handleResumeChange = (selectedValue) => {
+    if (selectedValue === "upload") {
       const fileInput = document.createElement("input");
       fileInput.type = "file";
       fileInput.onchange = (event) => {
         const file = event.target.files[0];
-        setSelectedResume(`New File: ${file.name}`); // Update the selectedResume state with a custom value indicating a new file
-        setResumeFile(file); // Store the selected file in state
+        if (file) {
+          setSelectedResume({
+            url: `New File: ${file.name}`,
+            type: "pdf",
+            isNew: true, // Additional flag to indicate this is a new file
+          });
+          setResumeFile(file); // Store the selected file in state
+        }
       };
       fileInput.click(); // Simulate a click event to open the file picker
     } else {
-      setSelectedResume(value); // Set selected resume to the URL
-      setResumeFile(null); // Set resumeFile to null when selecting an existing resume
+      const selected = resumes.find((resume) => resume.url === selectedValue);
+      setSelectedResume(selected || {});
     }
   };
-  const handleCoverLetterChange = async (value) => {
-    if (value === "upload") {
+
+  const handleCoverLetterChange = async (selectedValue) => {
+    if (selectedValue === "upload") {
       const fileInput = document.createElement("input");
       fileInput.type = "file";
       fileInput.onchange = (event) => {
         const file = event.target.files[0];
-        setSelectedCoverLetter(`New File: ${file.name}`); // Update the selectedResume state with a custom value indicating a new file
-        setCoverLetterFile(file); // Store the selected file in state
+        if (file) {
+          setSelectedCoverLetter({
+            url: `New File: ${file.name}`,
+            type: file.type.split("/")[1] || "unknown",
+            isNew: true,
+          });
+          setCoverLetterFile(file); // Store the selected file in state
+        }
       };
       fileInput.click(); // Simulate a click event to open the file picker
     } else {
-      setSelectedCoverLetter(value); // Set selected resume to the URL
-      setCoverLetterFile(null); // Set resumeFile to null when selecting an existing resume
+      const selected = coverLetters.find(
+        (letter) => letter.url === selectedValue
+      );
+      setSelectedCoverLetter(selected || {});
     }
   };
 
@@ -322,13 +415,13 @@ export default function AddApplicationDialog() {
         <ScrollArea className="h-[70vh] w-full px-3 rounded-md border">
           <div className="grid gap-4 py-3 mx-1">
             <div className="flex gap-4">
-              <div className="flex-grow">
+              <div className="w-1/2">
                 <Label htmlFor="resume" className="text-right">
                   Resume
                 </Label>
                 <Select
                   id="resume"
-                  value={selectedResume}
+                  value={selectedResume.url} // Ensure the value reflects the selected object's URL
                   onValueChange={handleResumeChange}
                 >
                   <SelectTrigger>
@@ -344,20 +437,25 @@ export default function AddApplicationDialog() {
                           onChange={(e) => handleFileChange(e, setResumeFile)}
                         />
                       </SelectItem>
-                      {resumes.map((resume) => (
-                        <SelectItem key={resume.path} value={resume.url}>
+                      {resumes.map((resume, index) => (
+                        <SelectItem key={index} value={resume.url}>
                           <div className="flex justify-center items-center">
-                            <AiOutlineFilePdf className="text-red-700 mr-1" />
-                            {resume.name}
+                            {resume.type === "pdf" ? (
+                              <AiOutlineFilePdf className="text-red-700 mr-1" />
+                            ) : (
+                              <AiOutlineFileText className="text-blue-700 mr-1" />
+                            )}
+                            {resume.title}
                           </div>
                         </SelectItem>
                       ))}
                       {selectedResume &&
-                        selectedResume.startsWith("New File:") && (
-                          <SelectItem value={selectedResume}>
+                        selectedResume.url &&
+                        selectedResume.url.startsWith("New File:") && (
+                          <SelectItem value={selectedResume.url}>
                             <div className="flex justify-center items-center">
                               <AiOutlineFilePdf className="text-red-700 mr-1" />
-                              {selectedResume.slice(10)}
+                              {selectedResume.url.slice(10)}
                             </div>
                           </SelectItem>
                         )}
@@ -365,13 +463,13 @@ export default function AddApplicationDialog() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="flex-grow">
+              <div className="w-1/2">
                 <Label htmlFor="cover-letter" className="text-right">
                   Cover Letter
                 </Label>
                 <Select
                   id="cover-letter"
-                  value={selectedCoverLetter}
+                  value={selectedCoverLetter.url} // Ensure the value reflects the selected object's URL
                   onValueChange={handleCoverLetterChange}
                 >
                   <SelectTrigger>
@@ -389,20 +487,25 @@ export default function AddApplicationDialog() {
                           }
                         />
                       </SelectItem>
-                      {coverLetters.map((letter) => (
-                        <SelectItem key={letter.path} value={letter.url}>
+                      {coverLetters.map((letter, index) => (
+                        <SelectItem key={index} value={letter.url}>
                           <div className="flex justify-center items-center">
-                            <AiOutlineFilePdf className="text-red-700 mr-1" />
-                            {letter.name}
+                            {letter.type === "pdf" ? (
+                              <AiOutlineFilePdf className="text-red-700 mr-1" />
+                            ) : (
+                              <AiOutlineFileText className="text-blue-700 mr-1" />
+                            )}
+                            {letter.title}
                           </div>
                         </SelectItem>
                       ))}
                       {selectedCoverLetter &&
-                        selectedCoverLetter.startsWith("New File:") && (
-                          <SelectItem value={selectedCoverLetter}>
+                        selectedCoverLetter.url &&
+                        selectedCoverLetter.url.startsWith("New File:") && (
+                          <SelectItem value={selectedCoverLetter.url}>
                             <div className="flex justify-center items-center">
                               <AiOutlineFilePdf className="text-red-700 mr-1" />
-                              {selectedCoverLetter.slice(10)}
+                              {selectedCoverLetter.url.slice(10)}
                             </div>
                           </SelectItem>
                         )}
