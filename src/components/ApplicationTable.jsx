@@ -1,6 +1,5 @@
 "use client";
 
-
 import React, { useState, useEffect } from "react";
 import { auth, db } from "@/lib/firebase/config";
 import { onAuthStateChanged } from "firebase/auth";
@@ -17,7 +16,7 @@ import {
   limit,
   where,
 } from "firebase/firestore";
-import { AiOutlineFilePdf,AiOutlineFileText } from "react-icons/ai";
+import { AiOutlineFilePdf, AiOutlineFileText } from "react-icons/ai";
 import {
   flexRender,
   getCoreRowModel,
@@ -48,8 +47,8 @@ import {
 } from "@/components/ui/table";
 import { toast } from "sonner";
 
-import StatusCell from '@/components/StatusCell';
-import CommentsCell from '@/components/CommentsCell';
+import StatusCell from "@/components/StatusCell";
+import CommentsCell from "@/components/CommentsCell";
 
 function ApplicationTable() {
   const [user, setUser] = useState(null);
@@ -121,8 +120,6 @@ function ApplicationTable() {
           const totalCountQuery = query(applicationsRef);
           const totalCountSnapshot = await getDocs(totalCountQuery);
           setTotalApplications(totalCountSnapshot.size);
-
-          console.log("Applications loaded:", loadedApplications);
         } catch (error) {
           console.error("Error fetching applications:", error);
         } finally {
@@ -184,7 +181,6 @@ function ApplicationTable() {
       ...doc.data(),
       date: doc.data().date.toDate().toISOString().slice(0, 50),
     }));
-    console.log("Loaded applications:", loadedApplications);
 
     setApplications(loadedApplications);
     setCursorHistory(cursorHistory.slice(0, cursorHistory.length - 1));
@@ -209,14 +205,19 @@ function ApplicationTable() {
         <div className="flex justify-start mx-10">
           {row.getValue("resume") && (
             <a
-            href={row.getValue("resume")}
-            target="_blank" // Open in a new tab
-            rel="noopener noreferrer"
-          >
-            {row.original.resumeType === 'pdf' ? 
-              <AiOutlineFilePdf className="mx-auto text-red-700" size={20} /> : 
-              <AiOutlineFileText className="mx-auto text-blue-700" size={20} />}
-          </a>
+              href={row.getValue("resume")}
+              target="_blank" // Open in a new tab
+              rel="noopener noreferrer"
+            >
+              {row.original.resumeType === "pdf" ? (
+                <AiOutlineFilePdf className="mx-auto text-red-700" size={20} />
+              ) : (
+                <AiOutlineFileText
+                  className="mx-auto text-blue-700"
+                  size={20}
+                />
+              )}
+            </a>
           )}
         </div>
       ),
@@ -233,20 +234,29 @@ function ApplicationTable() {
         </Button>
       ),
       cell: ({ row }) => (
-        console.log(row.original),
-        <div className="flex justify-start mx-10">
-          {row.getValue("coverLetter") && (
-            <a
-              href={row.getValue("coverLetter")}
-              target="_blank" // Open in a new tab
-              rel="noopener noreferrer"
-            >
-              {row.original.coverLetterType === 'pdf' ? 
-              <AiOutlineFilePdf className="mx-auto text-red-500" size={20} /> : 
-              <AiOutlineFileText className="mx-auto text-blue-500" size={20} />}
-          </a>
-          )}
-        </div>
+        (
+          <div className="flex justify-start mx-10">
+            {row.getValue("coverLetter") && (
+              <a
+                href={row.getValue("coverLetter")}
+                target="_blank" // Open in a new tab
+                rel="noopener noreferrer"
+              >
+                {row.original.coverLetterType === "pdf" ? (
+                  <AiOutlineFilePdf
+                    className="mx-auto text-red-500"
+                    size={20}
+                  />
+                ) : (
+                  <AiOutlineFileText
+                    className="mx-auto text-blue-500"
+                    size={20}
+                  />
+                )}
+              </a>
+            )}
+          </div>
+        )
       ),
     },
     {
@@ -294,16 +304,16 @@ function ApplicationTable() {
     },
     {
       accessorKey: "status",
-        header: ({ column }) => (
-            <Button
-                variant="ghost"
-                onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            >
-                Status
-                <ArrowUpDown className="ml-2 h-3 w-3" />
-            </Button>
-        ),
-        cell: StatusCell,
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Status
+          <ArrowUpDown className="ml-2 h-3 w-3" />
+        </Button>
+      ),
+      cell: StatusCell,
     },
     {
       accessorKey: "location",
@@ -337,16 +347,16 @@ function ApplicationTable() {
     },
     {
       accessorKey: "comments",
-        header: ({ column }) => (
-            <Button
-                variant="ghost"
-                onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-            >
-                Comments
-                <ArrowUpDown className="ml-2 h-3 w-3" />
-            </Button>
-        ),
-        cell: CommentsCell,
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Comments
+          <ArrowUpDown className="ml-2 h-3 w-3" />
+        </Button>
+      ),
+      cell: CommentsCell,
     },
     {
       id: "actions",
@@ -355,7 +365,6 @@ function ApplicationTable() {
         const application = row.original;
         const handleDelete = async () => {
           try {
-            console.log(user.uid, application.id);
             const docRef = doc(
               db,
               "users",
@@ -387,14 +396,13 @@ function ApplicationTable() {
                   View application details
                 </Link>
               </DropdownMenuItem> */}
-              <DropdownMenuItem>
+              <DropdownMenuItem onClick={handleDelete}>
                 <Button
                   variant="ghost"
-                  className="text-red-700 hover:text-red-500 py-1 px-0 h-5"
-                  onClick={handleDelete}
+                  className="text-red-700 hover:text-red-500 py-1 px-2 h-8 flex items-center justify-center" // Adjusted padding and height
                 >
                   <Trash2 className="mr-1" size={15} />
-                  Delete
+                  <span>Delete</span>
                 </Button>
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -422,32 +430,6 @@ function ApplicationTable() {
       rowSelection,
     },
   });
-
-  const updateStatus = async (id, newStatus) => {
-    console.log(`Changing status for ID ${id} to ${newStatus}`);
-    const applicationRef = doc(db, "users", user.uid, "applications", id);
-    try {
-      await updateDoc(applicationRef, {
-        status: newStatus,
-      });
-      console.log(`Status updated to ${newStatus} for ID ${id}`);
-    } catch (error) {
-      console.error("Failed to update status:", error);
-    }
-  };
-
-  const updateComment = async (id, newComment) => {
-    console.log(`Updating comment for ID ${id} to ${newComment}`);
-    const applicationRef = doc(db, "users", user.uid, "applications", id);
-    try {
-      await updateDoc(applicationRef, {
-        comments: newComment,
-      });
-      console.log(`Comment updated to "${newComment}" for ID ${id}`);
-    } catch (error) {
-      console.error("Failed to update comment:", error);
-    }
-  };
 
   if (loading) {
     return <div>Loading applications...</div>; // Loading state

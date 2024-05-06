@@ -260,12 +260,11 @@ export default function AddApplicationDialog() {
           type: selectedCoverLetter.type,
         };
       }
-
       const applicationData = {
-        resume: resumeInfo ? resumeInfo.url : null,
-        resumeType: resumeInfo ? resumeInfo.type : null,
-        coverLetter: coverLetter ? coverLetter.url : null,
-        coverLetterType: coverLetter ? coverLetter.type : null,
+        resume: resumeInfo?.url ?? "",
+        resumeType: resumeInfo?.type ?? "",
+        coverLetter: coverLetter?.url ?? "",
+        coverLetterType: coverLetter?.type ?? "",        
         companyName,
         portalLink,
         role,

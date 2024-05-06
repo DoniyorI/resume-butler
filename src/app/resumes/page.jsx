@@ -335,12 +335,12 @@ export default function Page() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="text-sm">
-                  <DropdownMenuItem
+                  {/* <DropdownMenuItem
                     className="text-xs cursor-pointer"
                     onClick={() => handleDownloadPDF(resume.id)}
                   >
                     <FiDownload className="mr-2" /> Download PDF
-                  </DropdownMenuItem>
+                  </DropdownMenuItem> */}
                   <DropdownMenuItem
                     className="text-xs cursor-pointer"
                     onClick={() => handleRename(resume.id, resume.title)}
@@ -364,23 +364,24 @@ export default function Page() {
       <div className="flex flex-wrap">
         <Button
           variant="ghost"
-          className="hover:bg-green-50 mx-2 h-[220px] w-[170px] border  border-dashed  rounded-lg shadow p-4 flex justify-center items-center cursor-pointer m-2 "
+          className="hover:bg-green-50 mx-2 h-[220px] w-[170px] border border-dashed rounded-lg shadow p-4 flex justify-center items-center m-2"
         >
           <Label
-            className="space-x-2 flex justify-center items-center font-light"
+            className="space-x-2 flex justify-center items-center font-light w-full h-full cursor-pointer"
             htmlFor="file-upload"
           >
             <CloudUpload strokeWidth={1} />
             <p>Upload</p>
+            <Input
+              id="file-upload"
+              type="file"
+              accept=".pdf,.docx,.txt"
+              style={{ display: "none" }}
+              onChange={(e) => handleFileChange(e)}
+            />
           </Label>
-          <Input
-            id="file-upload"
-            type="file"
-            accept=".pdf,.docx,.txt"
-            style={{ display: "none" }}
-            onChange={(e) => handleFileChange(e)}
-          />
         </Button>
+
         {PDFresumes.map((resume) => (
           <div
             key={resume.path}

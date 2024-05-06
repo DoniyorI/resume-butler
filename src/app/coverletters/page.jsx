@@ -329,7 +329,7 @@ const fetchLetters = async (user) => {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="text-sm">
-                  <DropdownMenuItem
+                  {/* <DropdownMenuItem
                     className="text-xs cursor-pointer"
                     onClick={() => handleDownloadPDF(letter.id)}
                   >
@@ -340,7 +340,7 @@ const fetchLetters = async (user) => {
                     onClick={() => handleDownloadDOCX(letter.id)}
                   >
                     <FiDownload className="mr-2" /> Download DOCX
-                  </DropdownMenuItem>
+                  </DropdownMenuItem> */}
                   <DropdownMenuItem
                     className="text-xs cursor-pointer"
                     onClick={() => handleRename(letter.id)}
