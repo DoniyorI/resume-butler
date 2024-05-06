@@ -209,10 +209,10 @@ export default function EducationForm() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectGroup>
-                    <SelectItem value="Bachelor's">Bachelor's</SelectItem>
-                    <SelectItem value="Master's">Master's</SelectItem>
+                    <SelectItem value="Bachelor">Bachelor</SelectItem>
+                    <SelectItem value="Master">Master</SelectItem>
                     <SelectItem value="PhD">PhD</SelectItem>
-                    <SelectItem value="Associate's">Associate's</SelectItem>
+                    <SelectItem value="Associate">Associate</SelectItem>
                   </SelectGroup>
                 </SelectContent>
               </Select>

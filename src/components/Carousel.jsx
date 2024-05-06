@@ -7,18 +7,21 @@ import Animation2 from "/public/image/web-design-layout.json";
 import Animation3 from "/public/image/email-marketing.json";
 
 const EmblaCarousel = ({ slides, options }) => {
-  if (!slides) {
-    return <div>No slides available</div>;
-  }
-
+  // Define autoplay options outside of the hook setup.
   const autoplayOptions = {
     delay: 5000,
     stopOnInteraction: true,
   };
 
+  // Always call the hook unconditionally at the top of your component.
   const [emblaRef, emblaApi] = useEmblaCarousel(options, [
     Autoplay(autoplayOptions),
   ]);
+
+  // After hook calls, you can handle any conditional rendering.
+  if (!slides || slides.length === 0) {
+    return <div>No slides available</div>;
+  }
 
   return (
     <section className="embla">

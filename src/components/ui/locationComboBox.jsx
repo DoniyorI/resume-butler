@@ -105,7 +105,7 @@ function LocationInput() {
                 className="w-full"
                 onClick={handleCustomLocationSubmit}
               >
-                <PlusCircle className="mr-2 h-4 w-4" /> Add "{customLocation}"
+                <PlusCircle className="mr-2 h-4 w-4" /> Add &quot;{customLocation}&quot;
               </Button>
             </div>
           </Command>

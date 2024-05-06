@@ -98,7 +98,7 @@ export default function CoverLetterDialog() {
         <DialogHeader>
           <DialogTitle>Create a New Cover Letter</DialogTitle>
           <DialogDescription>
-            Let's create a new cover letter to help you land your dream job!
+            Let&apos;s create a new cover letter to help you land your dream job!
           </DialogDescription>
         </DialogHeader>
         <form

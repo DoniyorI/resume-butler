@@ -48,6 +48,9 @@ import {
 } from "@/components/ui/table";
 import { toast } from "sonner";
 
+import StatusCell from '@/components/StatusCell';
+import CommentsCell from '@/components/CommentsCell';
+
 function ApplicationTable() {
   const [user, setUser] = useState(null);
   const [applications, setApplications] = useState([]);
@@ -291,56 +294,16 @@ function ApplicationTable() {
     },
     {
       accessorKey: "status",
-      header: ({ column }) => {
-        return (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          >
-            Status
-            <ArrowUpDown className="ml-2 h-3 w-3" />
-          </Button>
-        );
-      },
-      cell: ({ row }) => {
-        const [value, setValue] = useState(row.getValue("status"));
-        const handleChange = (newStatus) => {
-          updateStatus(row.original.id, newStatus); // Update the status in the database
-          setValue(newStatus);
-        };
-        return (
-          <div className="flex justify-start">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  className="outline-none select-none -ml-3"
-                >
-                  <Badge variant={value.toLowerCase()}>{value}</Badge>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="text-sm">
-                {[
-                  "Applied",
-                  "Interviewed",
-                  "Pending",
-                  "Rejected",
-                  "Offered",
-                  "Withdrew",
-                ].map((status) => (
-                  <DropdownMenuItem
-                    key={status}
-                    onClick={() => handleChange(status)}
-                    className="text-xs cursor-pointer"
-                  >
-                    <Badge variant={status.toLowerCase()}>{status}</Badge>
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        );
-      },
+        header: ({ column }) => (
+            <Button
+                variant="ghost"
+                onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+            >
+                Status
+                <ArrowUpDown className="ml-2 h-3 w-3" />
+            </Button>
+        ),
+        cell: StatusCell,
     },
     {
       accessorKey: "location",
@@ -374,52 +337,16 @@ function ApplicationTable() {
     },
     {
       accessorKey: "comments",
-      header: ({ column }) => {
-        return (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          >
-            Comments
-            <ArrowUpDown className="ml-2 h-3 w-3" />
-          </Button>
-        );
-      },
-      cell: ({ row }) => {
-        const [editing, setEditing] = useState(false);
-        const [value, setValue] = useState(row.getValue("comments") || "");
-      
-        const toggleEdit = () => {
-          setEditing(!editing);
-        };
-      
-        const handleChange = (e) => {
-          setValue(e.target.value);
-        };
-      
-        const handleBlur = () => {
-          updateComment(row.original.id, value.trim()); 
-          setEditing(false);
-        };
-      
-        return (
-          <div onDoubleClick={toggleEdit}>
-            {editing ? (
-              <Textarea
-                type="text"
-                value={value}
-                onChange={handleChange}
-                onBlur={handleBlur}
-                autoFocus
-              />
-            ) : (
-              <span onDoubleClick={toggleEdit}>{value || (
-                <span className="text-gray-300">No Comment</span>
-              )} </span>
-            )}
-          </div>
-        );
-      },
+        header: ({ column }) => (
+            <Button
+                variant="ghost"
+                onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+            >
+                Comments
+                <ArrowUpDown className="ml-2 h-3 w-3" />
+            </Button>
+        ),
+        cell: CommentsCell,
     },
     {
       id: "actions",

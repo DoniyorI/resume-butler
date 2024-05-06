@@ -129,7 +129,7 @@ export default function Page({ params }) {
   // * (scale / 100);
   // const [scale, setScale] = useState(114);
   const width = 850;
-  const height = 1254;
+  const height = 1230;
   const scaledPadding = 30;
   // const handleScaleChange = (value) => {
   //   setScale(value[0]);

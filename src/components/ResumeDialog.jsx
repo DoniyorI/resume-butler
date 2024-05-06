@@ -129,7 +129,7 @@ export default function ResumeDialog() {
         <DialogHeader>
           <DialogTitle>Create a New Resume</DialogTitle>
           <DialogDescription>
-            Let's create a new resume to help you land your dream job!
+            Let&apos;s create a new resume to help you land your dream job!
           </DialogDescription>
         </DialogHeader>
         <form
