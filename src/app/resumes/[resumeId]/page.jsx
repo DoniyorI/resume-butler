@@ -8,12 +8,12 @@ import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd";
 import { toast } from "sonner";
 
 import { Slider } from "@/components/ui/slider";
-import { InputSizer } from "@/app/resumes/[resumeId]/_components/InputSizer";
 import { ZoomIn, ZoomOut } from "lucide-react";
 
 import { EducationForm } from "./_components/educationForm";
 import { ExperienceForm } from "./_components/experienceForm";
 import { ProjectsForm } from "./_components/projectForm";
+import { SkillsForm } from "./_components/skillsForm";
 import { ResumeHeader } from "./_components/resumeHeader";
 
 import { Trash2 } from "lucide-react";
@@ -57,14 +57,10 @@ export default function Page({ params }) {
   useEffect(() => {
     if (user && params.resumeId) {
       const resumeRef = doc(db, `users/${user.uid}/resumes`, params.resumeId);
-      console.log("Fetching resume data...");
-      console.log("Resume ref:", resumeRef);
-
       getDoc(resumeRef)
         .then((docSnap) => {
           if (docSnap.exists()) {
             const resumeData = docSnap.data();
-            console.log("Resume data:", resumeData);
             setResumeTitle(resumeData.title);
             setEducation(resumeData.education || []);
             setExperience(resumeData.experience || []);
@@ -169,6 +165,40 @@ export default function Page({ params }) {
       });
     }
   };
+  const renderItem = (item, sectionId, index) => {
+    switch (sectionId) {
+      case "education":
+        return (
+          <EducationForm
+            item={item}
+            onChange={(data) => handleEducationChange(index, data)}
+          />
+        );
+      case "experience":
+        return (
+          <ExperienceForm
+            item={item}
+            onChange={(data) => handleExperienceChange(index, data)}
+          />
+        );
+      case "projects":
+        return (
+          <ProjectsForm
+            item={item}
+            onChange={(data) => handleProjectChange(index, data)}
+          />
+        );
+      case "skills":
+        return (
+          <SkillsForm
+            item={item}
+            onChange={(data) => handleSkillChange(index, data)}
+          />
+        );
+      default:
+        return null;
+    }
+  };
 
   const handleEducationChange = async (index, newEducationData) => {
     await setEducation((prev) =>
@@ -180,7 +210,6 @@ export default function Page({ params }) {
   };
 
   const handleExperienceChange = async (index, newExperience) => {
-    console.log("Experience data:", newExperience);
     await setExperience((prev) =>
       prev.map((item, idx) =>
         idx === index ? { ...item, ...newExperience } : item
@@ -197,11 +226,20 @@ export default function Page({ params }) {
     );
     saveSectionsToFirestore();
   };
+  const handleSkillChange = async (index, newSkillSet) => {
+    console.log("Handling skill change");
+    console.log(newSkillSet);
+    await setSkills((prev) =>
+      prev.map((item, idx) =>
+        idx === index ? { ...item, ...newSkillSet } : item
+      )
+    );
+    saveSectionsToFirestore(); 
+  };
 
   const handleAdd = (section) => {
     switch (section) {
       case "Education":
-        console.log("Adding education");
         addEducation();
         break;
       case "Experience":
@@ -219,7 +257,6 @@ export default function Page({ params }) {
   };
 
   const addEducation = () => {
-    console.log("Adding education in function");
     const newEducation = {
       degreeType: "",
       endDate: "",
@@ -230,7 +267,6 @@ export default function Page({ params }) {
       startDate: "",
     };
     setEducation((prev) => [...prev, newEducation]);
-
     saveSectionsToFirestore();
   };
 
@@ -260,7 +296,11 @@ export default function Page({ params }) {
     saveSectionsToFirestore();
   };
 
-  const addSkills = () => {};
+  const addSkills = () => {
+    console.log("Adding skills");
+    setSkills((prev) => [...prev, { header: "", skills: [] }]);
+    saveSectionsToFirestore();
+  };
 
   const handleDelete = (section, index) => {
     switch (section) {
@@ -295,42 +335,14 @@ export default function Page({ params }) {
     setProjects((prev) => prev.filter((_, i) => i !== index));
     saveSectionsToFirestore();
   };
-
-  const deleteSkills = (index) => {};
+  const deleteSkills = async (index) => {
+    await setSkills((prev) => prev.filter((_, idx) => idx !== index));
+    saveSectionsToFirestore();
+  };
 
   if (loading || !user) {
     return <p>Loading...</p>;
   }
-
-  const renderItem = (item, sectionId, index) => {
-    switch (sectionId) {
-      case "education":
-        return (
-          <EducationForm
-            item={item}
-            onChange={(data) => handleEducationChange(index, data)}
-          />
-        );
-      case "experience":
-        return (
-          <ExperienceForm
-            item={item}
-            onChange={(data) => handleExperienceChange(index, data)}
-          />
-        );
-      case "projects":
-        return (
-          <ProjectsForm
-            item={item}
-            onChange={(data) => handleProjectChange(index, data)}
-          />
-        );
-      case "skills":
-        return item.name;
-      default:
-        return null;
-    }
-  };
 
   return (
     <div className="flex flex-col w-full p-10 font-sans my-10">
