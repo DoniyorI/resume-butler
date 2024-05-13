@@ -16,7 +16,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 
-// Define the form validation schema using Zod
 const formSchema = z.object({
   firstName: z.string().min(1, "Please enter your first name."),
   lastName: z.string().min(1, "Please enter your last name."),
@@ -45,7 +44,6 @@ export default function Contact() {
         "wUjMvvLPRp-kZOhsv"
       );
       toast("Message sent successfully!");
-      console.log(result.text);
       form.reset(); // Reset the form fields after successful submission
     } catch (error) {
       console.error("Failed to send message:", error);
