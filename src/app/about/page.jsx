@@ -33,7 +33,7 @@ export default function About() {
       </div>
 
       <p className="text-center max-w-2xl">
-      As students stepping into the professional world, we found ourselves constantly struggling with the job application process. Crafting a new resume for each application was exhausting and seemingly endless. Frustrated with mass applying and getting minimal responses, we sought a better way. That's how "Resume Butler" was born—a platform designed from our own need to manage job applications efficiently, create personalized resumes and cover letters, and leverage AI to customize resumes perfectly suited for each job based on our unique projects and experiences. With Resume Butler, you no longer just apply; you apply smartly and stand out.
+      As students stepping into the professional world, we found ourselves constantly struggling with the job application process. Crafting a new resume for each application was exhausting and seemingly endless. Frustrated with mass applying and getting minimal responses, we sought a better way. That&apos;s how &quot;Resume Butler&quot; was born—a platform designed from our own need to manage job applications efficiently, create personalized resumes and cover letters, and leverage AI to customize resumes perfectly suited for each job based on our unique projects and experiences. With Resume Butler, you no longer just apply; you apply smartly and stand out.
       </p>
     </div>
     );
