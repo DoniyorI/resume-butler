@@ -3,11 +3,11 @@
 import React, { useState, useEffect } from "react";
 import { auth, db } from "@/lib/firebase/config";
 import { onAuthStateChanged } from "firebase/auth";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   doc,
   collection,
   getDocs,
-  updateDoc,
   deleteDoc,
   query,
   startAt,
@@ -234,29 +234,24 @@ function ApplicationTable() {
         </Button>
       ),
       cell: ({ row }) => (
-        (
-          <div className="flex justify-start mx-10">
-            {row.getValue("coverLetter") && (
-              <a
-                href={row.getValue("coverLetter")}
-                target="_blank" // Open in a new tab
-                rel="noopener noreferrer"
-              >
-                {row.original.coverLetterType === "pdf" ? (
-                  <AiOutlineFilePdf
-                    className="mx-auto text-red-500"
-                    size={20}
-                  />
-                ) : (
-                  <AiOutlineFileText
-                    className="mx-auto text-blue-500"
-                    size={20}
-                  />
-                )}
-              </a>
-            )}
-          </div>
-        )
+        <div className="flex justify-start mx-10">
+          {row.getValue("coverLetter") && (
+            <a
+              href={row.getValue("coverLetter")}
+              target="_blank" // Open in a new tab
+              rel="noopener noreferrer"
+            >
+              {row.original.coverLetterType === "pdf" ? (
+                <AiOutlineFilePdf className="mx-auto text-red-500" size={20} />
+              ) : (
+                <AiOutlineFileText
+                  className="mx-auto text-blue-500"
+                  size={20}
+                />
+              )}
+            </a>
+          )}
+        </div>
       ),
     },
     {
@@ -432,7 +427,22 @@ function ApplicationTable() {
   });
 
   if (loading) {
-    return <div>Loading applications...</div>; // Loading state
+    return (
+      <div className="mx-4">
+        <div className="flex justify-between">
+        <Skeleton className="mt-4 w-1/4 h-[40px]" />
+        <Skeleton className="mt-4 w-[90px] h-[40px]" />
+        </div>
+        <Skeleton className="mt-4 w-full h-[400px]" />
+        <div className="flex justify-between items-center">
+        <Skeleton className="mt-4 w-2/12 h-[15px]" />
+        <div className="flex space-x-2">
+        <Skeleton className="mt-4 w-[80px] h-[35px]" />
+        <Skeleton className="mt-4 w-[60px] h-[35px]" />
+        </div>
+        </div>
+      </div>
+    );
   }
 
   return (
