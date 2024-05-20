@@ -53,7 +53,7 @@ export default function AddApplicationDialog() {
   const [companyName, setCompanyName] = useState("");
   const [portalLink, setPortalLink] = useState("");
   const [role, setRole] = useState("");
-  const [status, setStatus] = useState("applied");
+  const [status, setStatus] = useState("Applied");
   const [location, setLocation] = useState("");
   const [date, setDate] = useState(new Date());
   const [comments, setComments] = useState("");
@@ -385,12 +385,12 @@ export default function AddApplicationDialog() {
   };
 
   const statuses = [
-    { label: "Applied", value: "applied" },
-    { label: "Interviewed", value: "interviewed" },
-    { label: "Pending", value: "pending" },
-    { label: "Offered", value: "offered" },
-    { label: "Rejected", value: "rejected" },
-    { label: "Withdrew", value: "withdrew" },
+    { label: "Applied", value: "Applied" },
+    { label: "Interviewed", value: "Interviewed" },
+    { label: "Pending", value: "Pending" },
+    { label: "Offered", value: "Offered" },
+    { label: "Rejected", value: "Rejected" },
+    { label: "Withdrew", value: "Withdrew" },
   ];
 
   return (
