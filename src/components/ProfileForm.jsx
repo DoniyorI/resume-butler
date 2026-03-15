@@ -22,7 +22,6 @@ import { useAuth } from "@/hooks/useAuth";
 const profileSchema = z.object({
   first_name: z.string().min(1, "First Name is required"),
   last_name: z.string().min(1, "Last Name is required"),
-  username: z.string().min(2, "Username must be at least 2 characters"),
   email: z.string().email("Invalid email address").optional(),
   phone: z.string().min(1, "Phone Number is required"),
   location: z.string().optional(),
@@ -41,7 +40,6 @@ export default function ProfileForm() {
     defaultValues: {
       first_name: "",
       last_name: "",
-      username: "",
       email: "",
       phone: "",
       location: "",
@@ -65,7 +63,6 @@ export default function ProfileForm() {
         form.reset({
           first_name: data.first_name || "",
           last_name: data.last_name || "",
-          username: data.username || "",
           email: data.email || user.email || "",
           phone: data.phone || "",
           location: data.location || "",
@@ -138,7 +135,6 @@ export default function ProfileForm() {
           />
         </div>
         {[
-          { name: "username", label: "Username", type: "text" },
           { name: "email", label: "Email", type: "email", disabled: true },
           { name: "phone", label: "Phone Number", type: "tel" },
           { name: "location", label: "Location", type: "text" },

@@ -1,5 +1,5 @@
 import { X } from "lucide-react";
-export const ExperienceForm = ({ item, onChange }) => {
+export const ExperienceForm = ({ item, onChange, bulletSeverities = {} }) => {
   const handleInputChange = (field, e) => {
     const value = e.target.textContent.trim();
     onChange({ [field]: value });
@@ -148,15 +148,22 @@ export const ExperienceForm = ({ item, onChange }) => {
       <div className="pl-[22px] mt-1">
         <ul className="list-inside">
           {item.description && item.description.length > 0 ? (
-            item.description.map((point, index) => (
-              <li key={index} className="text-md flex items-center">
+            item.description.map((point, index) => {
+              const feedback = bulletSeverities[index];
+              const bulletColor = feedback?.severity === "error"
+                ? "text-red-500"
+                : feedback?.severity === "warning"
+                ? "text-orange-400"
+                : "";
+              return (
+              <li key={index} className={`text-md flex items-center group/bullet`} title={feedback?.issues?.map(i => i.message).join("\n") || ""}>
                 <span
-                  className="bullet-toggle mr-2"
+                  className={`bullet-toggle mr-2 ${bulletColor}`}
                   onClick={() => addDescriptionPointBelow(index)}
                 ></span>
                 <div
                   contentEditable
-                  className={`input w-full text-sm ${
+                  className={`input w-full text-sm ${bulletColor} ${
                     !point ? "contentEditablePlaceholder" : ""
                   }`}
                   role="textbox"
@@ -176,7 +183,8 @@ export const ExperienceForm = ({ item, onChange }) => {
                   <X size={16} />
                 </button>
               </li>
-            ))
+              );
+            })
           ) : (
             <li className="text-sm flex items-center">
               <span

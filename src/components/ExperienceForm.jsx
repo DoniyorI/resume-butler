@@ -389,6 +389,7 @@ export default function ExperienceForm() {
                 onChange={(date) =>
                   updateExperienceEntry(index, "endDate", date)
                 }
+                allowPresent
               />
             </div>
           </div>

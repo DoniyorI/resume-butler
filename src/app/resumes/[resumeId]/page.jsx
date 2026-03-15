@@ -14,7 +14,9 @@ import { ProjectsForm } from "./_components/projectForm";
 import { SkillsForm } from "./_components/skillsForm";
 import { ResumeHeader } from "./_components/resumeHeader";
 
-import { Trash2, GripVertical, Download, FileDown, Loader2 } from "lucide-react";
+import { Trash2, GripVertical, Download, FileDown, Loader2, ScanSearch, X, Check, AlertTriangle } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,8 +40,10 @@ export default function Page({ params }) {
   const [isLoading, setIsLoading] = useState(true);
   const [resumeData, setResumeData] = useState(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [atsOpen, setAtsOpen] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const [initialized, setInitialized] = useState(false);
+  const [bulletFeedback, setBulletFeedback] = useState([]);
 
   const saveToSupabase = async (updates) => {
     if (!user || !params.resumeId) return;
@@ -157,14 +161,23 @@ export default function Page({ params }) {
     });
   };
 
+  const getBulletSeverities = (sectionId, itemIndex) => {
+    return bulletFeedback
+      .filter((fb) => fb.section === sectionId && fb.itemIndex === itemIndex)
+      .reduce((acc, fb) => {
+        acc[fb.bulletIndex] = fb;
+        return acc;
+      }, {});
+  };
+
   const renderItem = (item, sectionId, index) => {
     switch (sectionId) {
       case "education":
         return <EducationForm item={item} onChange={(data) => handleEducationChange(index, data)} />;
       case "experience":
-        return <ExperienceForm item={item} onChange={(data) => handleExperienceChange(index, data)} />;
+        return <ExperienceForm item={item} onChange={(data) => handleExperienceChange(index, data)} bulletSeverities={getBulletSeverities("experience", index)} />;
       case "projects":
-        return <ProjectsForm item={item} onChange={(data) => handleProjectChange(index, data)} />;
+        return <ProjectsForm item={item} onChange={(data) => handleProjectChange(index, data)} bulletSeverities={getBulletSeverities("projects", index)} />;
       case "skills":
         return <SkillsForm item={item} onChange={(data) => handleSkillChange(index, data)} />;
       default: return null;
@@ -311,7 +324,7 @@ export default function Page({ params }) {
   return (
     <div className="flex w-full font-sans my-10">
       {/* Main content — shrinks when drawer opens */}
-      <div className={`flex-grow transition-all duration-300 p-10 ${drawerOpen ? "mr-[420px]" : ""}`}>
+      <div className={`flex-grow transition-all duration-300 p-10 ${drawerOpen || atsOpen ? "mr-[420px]" : ""}`}>
         <div className="flex items-center justify-between mb-4">
           <Header
             resumeTitle={resumeTitle}
@@ -344,7 +357,15 @@ export default function Page({ params }) {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <CvDrawer {...addFromCV} open={drawerOpen} onToggle={() => setDrawerOpen(!drawerOpen)} />
+            <Button
+              variant="outline"
+              className="border-[#559F87] text-[#559F87] hover:bg-green-50"
+              onClick={() => { setAtsOpen(!atsOpen); if (!atsOpen) setDrawerOpen(false); }}
+            >
+              <ScanSearch size={16} className="mr-2" />
+              {atsOpen ? "Close ATS" : "ATS Score"}
+            </Button>
+            <CvDrawer {...addFromCV} open={drawerOpen} onToggle={() => { setDrawerOpen(!drawerOpen); if (!drawerOpen) setAtsOpen(false); }} />
           </div>
         </div>
         <div className="flex-grow flex flex-col">
@@ -403,6 +424,286 @@ export default function Page({ params }) {
         </div>
         </div>
       </div>
+
+      {/* ATS Scanner slide-out panel */}
+      <AtsPanel
+        open={atsOpen}
+        onClose={() => setAtsOpen(false)}
+        resumeContent={{
+          header: resumeData?.content?.header || {},
+          education,
+          experience,
+          projects,
+          skills,
+        }}
+        onScanComplete={(feedback) => setBulletFeedback(feedback)}
+        onAcceptSuggestion={(section, itemIndex, bulletIndex, newText) => {
+          if (section === "experience") {
+            setExperience((prev) => prev.map((item, idx) => {
+              if (idx !== itemIndex) return item;
+              const desc = Array.isArray(item.description) ? [...item.description] : [];
+              desc[bulletIndex] = newText;
+              return { ...item, description: desc };
+            }));
+          } else if (section === "projects") {
+            setProjects((prev) => prev.map((item, idx) => {
+              if (idx !== itemIndex) return item;
+              const desc = Array.isArray(item.description) ? [...item.description] : [];
+              desc[bulletIndex] = newText;
+              return { ...item, description: desc };
+            }));
+          }
+        }}
+      />
+    </div>
+  );
+}
+
+function AtsPanel({ open, onClose, resumeContent, onScanComplete, onAcceptSuggestion }) {
+  const [jobDescription, setJobDescription] = useState("");
+  const [result, setResult] = useState(null);
+  const [scanning, setScanning] = useState(false);
+  const [suggestions, setSuggestions] = useState([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState(false);
+  const [acceptedIds, setAcceptedIds] = useState(new Set());
+  const [dismissedIds, setDismissedIds] = useState(new Set());
+
+  const handleScan = async () => {
+    if (!jobDescription.trim()) return;
+    setScanning(true);
+    setResult(null);
+    setSuggestions([]);
+    setAcceptedIds(new Set());
+    setDismissedIds(new Set());
+    try {
+      const response = await fetch("/api/ats-score", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobDescription, resumeContent }),
+      });
+      if (!response.ok) throw new Error("Scan failed");
+      const data = await response.json();
+      setResult(data);
+      if (onScanComplete) onScanComplete(data.bulletFeedback || []);
+    } catch (error) {
+      console.error("ATS scan error:", error);
+    } finally {
+      setScanning(false);
+    }
+  };
+
+  const handleGetSuggestions = async () => {
+    setLoadingSuggestions(true);
+    try {
+      const response = await fetch("/api/suggest-bullets", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ jobDescription, resumeContent }),
+      });
+      if (!response.ok) throw new Error("Failed to get suggestions");
+      const data = await response.json();
+      setSuggestions(data.suggestions || []);
+    } catch (error) {
+      console.error("Suggestion error:", error);
+    } finally {
+      setLoadingSuggestions(false);
+    }
+  };
+
+  const handleAccept = (suggestion, idx) => {
+    onAcceptSuggestion(suggestion.section, suggestion.itemIndex, suggestion.bulletIndex, suggestion.suggested);
+    setAcceptedIds((prev) => new Set([...prev, idx]));
+  };
+
+  const handleDismiss = (idx) => {
+    setDismissedIds((prev) => new Set([...prev, idx]));
+  };
+
+  const ScoreRing = ({ score, size = 70, strokeWidth = 5 }) => {
+    const radius = (size - strokeWidth) / 2;
+    const circumference = radius * 2 * Math.PI;
+    const offset = circumference - (score / 100) * circumference;
+    let color = "#ef4444";
+    if (score >= 80) color = "#22c55e";
+    else if (score >= 60) color = "#eab308";
+    else if (score >= 40) color = "#f97316";
+    return (
+      <div className="relative inline-flex items-center justify-center">
+        <svg width={size} height={size} className="-rotate-90">
+          <circle cx={size/2} cy={size/2} r={radius} fill="none" stroke="#e5e7eb" strokeWidth={strokeWidth} />
+          <circle cx={size/2} cy={size/2} r={radius} fill="none" stroke={color} strokeWidth={strokeWidth} strokeLinecap="round" strokeDasharray={circumference} strokeDashoffset={offset} className="transition-all duration-700 ease-out" />
+        </svg>
+        <span className="absolute text-sm font-bold" style={{ color }}>{score}</span>
+      </div>
+    );
+  };
+
+  return (
+    <div className={`fixed top-16 right-0 h-[calc(100vh-64px)] w-[420px] bg-white border-l shadow-lg z-30 transform transition-transform duration-300 ease-in-out ${open ? "translate-x-0" : "translate-x-full"}`}>
+      <div className="flex items-center justify-between p-4 border-b">
+        <div>
+          <h2 className="font-semibold text-[#559F87] text-lg flex items-center gap-2">
+            <ScanSearch size={18} /> ATS Scanner
+          </h2>
+          <p className="text-xs text-gray-400">Check how your resume matches a job posting</p>
+        </div>
+        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={onClose}>
+          <X size={16} />
+        </Button>
+      </div>
+
+      <ScrollArea className="h-[calc(100vh-145px)]">
+        <div className="p-4 space-y-4">
+          <div>
+            <Textarea
+              value={jobDescription}
+              onChange={(e) => setJobDescription(e.target.value)}
+              placeholder="Paste the job description here..."
+              className="min-h-[150px] text-sm"
+            />
+          </div>
+          <Button onClick={handleScan} disabled={scanning || !jobDescription.trim()} className="w-full" variant="outline">
+            {scanning ? (<><Loader2 size={14} className="mr-2 animate-spin" /> Scanning...</>) : (<><ScanSearch size={14} className="mr-2" /> Scan Resume</>)}
+          </Button>
+
+          {result && (
+            <div className="space-y-5 pt-2">
+              {/* Scores */}
+              <div className="flex items-center justify-around py-4 bg-gray-50 rounded-lg">
+                <div className="text-center">
+                  <ScoreRing score={result.overallScore} />
+                  <p className="text-xs text-gray-500 mt-1">Overall</p>
+                </div>
+                <div className="text-center">
+                  <ScoreRing score={result.keywordScore} size={50} strokeWidth={4} />
+                  <p className="text-xs text-gray-500 mt-1">Keywords</p>
+                </div>
+                <div className="text-center">
+                  <ScoreRing score={result.sectionScore} size={50} strokeWidth={4} />
+                  <p className="text-xs text-gray-500 mt-1">Sections</p>
+                </div>
+                <div className="text-center">
+                  <ScoreRing score={result.qualityScore} size={50} strokeWidth={4} />
+                  <p className="text-xs text-gray-500 mt-1">Quality</p>
+                </div>
+              </div>
+
+              {/* Matched */}
+              {result.matched.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">
+                    Matched ({result.matched.length}/{result.totalKeywords})
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {result.matched.map((kw) => (
+                      <span key={kw} className="inline-flex items-center text-xs bg-green-50 text-green-700 border border-green-200 px-2 py-0.5 rounded-full">
+                        <Check size={10} className="mr-1" />{kw}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Missing */}
+              {result.missing.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">
+                    Missing ({result.missing.length})
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {result.missing.map((kw) => (
+                      <span key={kw} className="inline-flex items-center text-xs bg-red-50 text-red-700 border border-red-200 px-2 py-0.5 rounded-full">
+                        <X size={10} className="mr-1" />{kw}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Grouped Checklist */}
+              {[
+                { key: "header", title: "Header" },
+                { key: "sections", title: "Sections" },
+                { key: "quality", title: "Bullet Point Quality" },
+              ].map(({ key, title }) => {
+                const items = result.sectionChecks.filter((c) => c.category === key);
+                if (items.length === 0) return null;
+                return (
+                  <div key={key}>
+                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">{title}</p>
+                    <div className="space-y-1.5">
+                      {items.map((check) => (
+                        <div key={check.label} className="flex items-center gap-2 text-sm">
+                          {check.present ? <Check size={14} className="text-green-500" /> : <AlertTriangle size={14} className="text-amber-500" />}
+                          <span className={check.present ? "text-gray-600" : "text-amber-700"}>
+                            {check.label}
+                          </span>
+                          {check.detail && (
+                            <span className="text-xs text-gray-400">({check.detail})</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* AI Suggestions */}
+              <div className="border-t pt-4">
+                <Button
+                  onClick={handleGetSuggestions}
+                  disabled={loadingSuggestions}
+                  className="w-full"
+                  variant="default"
+                  size="sm"
+                >
+                  {loadingSuggestions ? (
+                    <><Loader2 size={14} className="mr-2 animate-spin" /> Generating suggestions...</>
+                  ) : suggestions.length > 0 ? (
+                    <><ScanSearch size={14} className="mr-2" /> Refresh Suggestions</>
+                  ) : (
+                    <><ScanSearch size={14} className="mr-2" /> Get AI Suggestions</>
+                  )}
+                </Button>
+              </div>
+
+              {/* Suggestion cards */}
+              {suggestions.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">
+                    Suggestions ({suggestions.length - acceptedIds.size - dismissedIds.size} remaining)
+                  </p>
+                  <div className="space-y-3">
+                    {suggestions.map((s, idx) => {
+                      if (acceptedIds.has(idx) || dismissedIds.has(idx)) return null;
+                      return (
+                        <div key={idx} className="border rounded-lg p-3 space-y-2 bg-gray-50">
+                          <p className="text-xs text-gray-400">{s.section} — bullet {s.bulletIndex + 1}</p>
+                          <div className="text-xs space-y-1">
+                            <p className="text-red-600 line-through">{s.original}</p>
+                            <p className="text-green-700">{s.suggested}</p>
+                          </div>
+                          {s.reason && (
+                            <p className="text-xs text-gray-500 italic">{s.reason}</p>
+                          )}
+                          <div className="flex gap-2">
+                            <Button size="sm" variant="outline" className="h-7 text-xs text-green-700 border-green-200 hover:bg-green-50" onClick={() => handleAccept(s, idx)}>
+                              <Check size={12} className="mr-1" /> Accept
+                            </Button>
+                            <Button size="sm" variant="outline" className="h-7 text-xs text-gray-500 hover:bg-gray-100" onClick={() => handleDismiss(idx)}>
+                              <X size={12} className="mr-1" /> Dismiss
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </ScrollArea>
     </div>
   );
 }

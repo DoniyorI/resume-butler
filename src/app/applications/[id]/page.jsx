@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import Link from "next/link";
+import AtsScanner from "@/components/AtsScanner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -65,6 +66,7 @@ export default function ApplicationDetailPage({ params }) {
   const [comments, setComments] = useState("");
   const [jobDescription, setJobDescription] = useState("");
   const [appliedDate, setAppliedDate] = useState("");
+  const [resumeContent, setResumeContent] = useState(null);
 
   useEffect(() => {
     if (!user || !params.id) return;
@@ -101,6 +103,17 @@ export default function ApplicationDetailPage({ params }) {
         .order("changed_at", { ascending: true });
 
       setStatusHistory(history || []);
+
+      // Fetch linked resume content for ATS scanner
+      if (data.resume_id) {
+        const { data: resume } = await supabase
+          .from("resumes")
+          .select("content")
+          .eq("id", data.resume_id)
+          .single();
+        if (resume?.content) setResumeContent(resume.content);
+      }
+
       setIsLoading(false);
     };
 
@@ -332,6 +345,10 @@ export default function ApplicationDetailPage({ params }) {
               />
             </CardContent>
           </Card>
+          {/* ATS Scanner */}
+          {resumeContent && jobDescription && (
+            <AtsScanner resumeContent={resumeContent} initialJobDescription={jobDescription} />
+          )}
         </div>
 
         {/* Right column — status + timeline */}

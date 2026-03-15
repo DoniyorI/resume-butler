@@ -266,6 +266,7 @@ export default function EducationForm() {
                 onChange={(date) =>
                   updateEducationEntry(index, "endDate", date)
                 }
+                allowPresent
               />
             </div>
           </div>

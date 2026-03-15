@@ -349,6 +349,7 @@ export default function ProjectForm() {
                 onChange={(date) =>
                   updateProjectEntry(index, "endDate", date)
                 }
+                allowPresent
               />
             </div>
           </div>
