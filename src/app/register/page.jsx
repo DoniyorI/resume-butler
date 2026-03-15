@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-import EmblaCarousel from "@/components/Carousel";
+import dynamic from "next/dynamic";
+const EmblaCarousel = dynamic(() => import("@/components/Carousel"), { ssr: false });
 
 import { createClient } from "@/lib/supabase/client";
 import GoogleAuthButton from "@/components/GoogleAuth";
