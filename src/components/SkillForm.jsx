@@ -1,52 +1,99 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { db, auth } from "@/lib/firebase/config";
-import {
-  collection,
-  doc,
-  setDoc,
-  getDocs,
-  deleteDoc,
-} from "firebase/firestore";
-import { onAuthStateChanged } from "firebase/auth";
+import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { RiDeleteBack2Line } from "react-icons/ri";
+import { Label } from "@/components/ui/label";
+import { toast } from "sonner";
+import { X, Plus } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+const SKILL_CATEGORIES = [
+  "Languages",
+  "Frameworks",
+  "Tools",
+  "Platforms",
+  "Databases",
+  "Other",
+];
 
 export default function SkillForm() {
   const [skills, setSkills] = useState([]);
   const [newSkill, setNewSkill] = useState("");
-  const [user, setUser] = useState(null);
+  const [newCategory, setNewCategory] = useState("Languages");
+  const { user, loading, supabase } = useAuth({ redirect: true });
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
-      if (authUser) {
-        setUser(authUser);
-        const skillsRef = collection(db, "users", authUser.uid, "skills");
-        const snapshot = await getDocs(skillsRef);
-        const loadedSkills = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        setSkills(loadedSkills);
+    if (!user) return;
+    const fetchSkills = async () => {
+      const { data, error } = await supabase
+        .from("cv_skills")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("sort_order", { ascending: true });
+
+      if (error) {
+        console.error("Error fetching skills:", error);
+        return;
       }
-    });
-    return () => unsubscribe();
-  }, []);
+
+      setSkills(
+        (data || []).map((row) => ({
+          id: row.id,
+          name: row.name || "",
+          category: row.category || "Other",
+        }))
+      );
+    };
+    fetchSkills();
+  }, [user, supabase]);
 
   const handleAddSkill = async () => {
-    if (newSkill.trim() !== "") {
-      const skillRef = doc(collection(db, "users", user.uid, "skills"));
-      await setDoc(skillRef, { name: newSkill.trim() });
-      setSkills([...skills, { id: skillRef.id, name: newSkill.trim() }]);
-      setNewSkill("");
+    if (newSkill.trim() === "" || !user) return;
+
+    const { data, error } = await supabase
+      .from("cv_skills")
+      .insert({
+        user_id: user.id,
+        name: newSkill.trim(),
+        category: newCategory,
+        sort_order: skills.length,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error adding skill:", error);
+      return;
     }
+
+    setSkills([...skills, { id: data.id, name: data.name, category: data.category }]);
+    setNewSkill("");
   };
 
   const handleDeleteSkill = async (skillId) => {
-    await deleteDoc(doc(db, "users", user.uid, "skills", skillId));
-    setSkills(skills.filter((skill) => skill.id !== skillId));
+    const { error } = await supabase.from("cv_skills").delete().eq("id", skillId);
+    if (error) {
+      console.error("Error deleting skill:", error);
+      return;
+    }
+    setSkills(skills.filter((s) => s.id !== skillId));
   };
+
+  // Group skills by category
+  const grouped = skills.reduce((acc, skill) => {
+    const cat = skill.category || "Other";
+    if (!acc[cat]) acc[cat] = [];
+    acc[cat].push(skill);
+    return acc;
+  }, {});
 
   return (
     <div>
@@ -55,15 +102,30 @@ export default function SkillForm() {
           Technical Skills
         </h1>
       </div>
-      <div className="flex items-center space-x-2 mt-2">
+
+      {/* Add skill input */}
+      <div className="flex items-center gap-2 mt-2">
+        <Select value={newCategory} onValueChange={setNewCategory}>
+          <SelectTrigger className="w-[150px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              {SKILL_CATEGORIES.map((cat) => (
+                <SelectItem key={cat} value={cat}>
+                  {cat}
+                </SelectItem>
+              ))}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
         <Input
           value={newSkill}
           onChange={(e) => setNewSkill(e.target.value)}
-          placeholder="Add a new skill"
+          placeholder="Add a skill (e.g. React, Python, AWS)"
+          className="flex-grow"
           onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              handleAddSkill();
-            }
+            if (e.key === "Enter") handleAddSkill();
           }}
         />
         <Button
@@ -71,32 +133,41 @@ export default function SkillForm() {
           variant="ghost"
           onClick={handleAddSkill}
         >
-          + Add
+          <Plus size={16} className="mr-1" /> Add
         </Button>
       </div>
-      <div className="flex justify-center flex-wrap gap-2 mt-6 p-2 max-w-[750px]">
-        {skills.map((skill, index) => {
-          const rotation = index % 2 === 0 ? 2 : -2;
-          const zIndex = skills.length - index;
-          return (
-            <div
-              key={skill.id} // Changed from index to skill.id
-              style={{
-                transform: `rotate(${rotation}deg)`,
-                zIndex,
-              }}
-              className="bg-green-100 hover:bg-green-200 py-1 pl-4 pr-2 space-x-2 rounded-md flex items-center shadow-lg"
-            >
-              <div className="font-light text-sm">{skill.name}</div>
-              <div className="text-red-500 hover:bg-emerald-100 rounded-md p-2">
-                <RiDeleteBack2Line
-                  onClick={() => handleDeleteSkill(skill.id)} // Changed from skill to skill.id
-                  className=""
-                />
-              </div>
+
+      {/* Grouped skills display */}
+      <div className="mt-6 space-y-4">
+        {Object.entries(grouped).map(([category, categorySkills]) => (
+          <div key={category}>
+            <Label className="text-xs font-medium text-gray-500 uppercase tracking-wider">
+              {category}
+            </Label>
+            <div className="flex flex-wrap gap-2 mt-1.5">
+              {categorySkills.map((skill) => (
+                <div
+                  key={skill.id}
+                  className="bg-green-50 border border-green-200 py-1 pl-3 pr-1.5 rounded-full flex items-center gap-1.5 text-sm"
+                >
+                  <span>{skill.name}</span>
+                  <button
+                    onClick={() => handleDeleteSkill(skill.id)}
+                    className="text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full p-0.5 transition-colors"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              ))}
             </div>
-          );
-        })}
+          </div>
+        ))}
+
+        {skills.length === 0 && (
+          <p className="text-center text-sm text-gray-400 py-8">
+            No skills added yet. Start typing above to add your first skill.
+          </p>
+        )}
       </div>
     </div>
   );

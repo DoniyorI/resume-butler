@@ -9,7 +9,7 @@ export const InputSizer = ({ placeholder, value, onChange }) => {
     <label className="input-sizer">
       <input
         type="text"
-        className="text-center underline underline-offset-3"
+        className="text-center underline underline-offset-3 cursor-text"
         value={value}
         onChange={handleInputChange}
         size={inputSize}

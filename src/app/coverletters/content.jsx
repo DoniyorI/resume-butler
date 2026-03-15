@@ -1,11 +1,8 @@
 "use client";
-// CoverLetterEditor.jsx
 import React, { useState, useEffect } from "react";
 import { Editor, EditorState, convertToRaw, convertFromRaw } from "draft-js";
 import "draft-js/dist/Draft.css";
-import { auth, db } from "@/lib/firebase/config";
-import { doc, getDoc, setDoc } from "firebase/firestore";
-import { useAuthState } from "react-firebase-hooks/auth";
+import { useAuth } from "@/hooks/useAuth";
 
 function CoverLetterEditor({
   coverLetterId,
@@ -16,40 +13,38 @@ function CoverLetterEditor({
   setHeader,
   setContent,
 }) {
-  const [user, loading, error] = useAuthState(auth);
+  const { user, supabase } = useAuth();
   const [editorState, setEditorState] = useState(() => {
     try {
-      // Convert from raw content if available
       return content
         ? EditorState.createWithContent(convertFromRaw(content))
         : EditorState.createEmpty();
     } catch (error) {
       console.error("Error initializing editor state:", error);
-      return EditorState.createEmpty(); // Fallback to an empty state
+      return EditorState.createEmpty();
     }
   });
 
   const handleSave = async () => {
+    if (!user) return;
+
     const contentState = editorState.getCurrentContent();
     const rawContent = convertToRaw(contentState);
 
-    const coverLetterRef = doc(
-      db,
-      `users/${user.uid}/coverletters`,
-      coverLetterId
-    );
-
-    await setDoc(
-      coverLetterRef,
-      {
+    const { error } = await supabase
+      .from("cover_letters")
+      .update({
         title: coverLetterTitle,
-        content: rawContent,
-        header: header,
-      },
-      { merge: true }
-    );
+        content: {
+          body: rawContent,
+          header: header,
+        },
+      })
+      .eq("id", coverLetterId);
 
-    console.log("Cover letter saved");
+    if (error) {
+      console.error("Error saving cover letter:", error);
+    }
   };
 
   return (

@@ -10,9 +10,7 @@ import { Label } from "@/components/ui/label";
 
 import EmblaCarousel from "@/components/Carousel";
 
-import { auth, db } from "@/lib/firebase/config";
-import { doc, setDoc } from "firebase/firestore";
-import { createUserWithEmailAndPassword } from "firebase/auth";
+import { createClient } from "@/lib/supabase/client";
 import GoogleAuthButton from "@/components/GoogleAuth";
 
 export default function Register() {
@@ -20,6 +18,7 @@ export default function Register() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const router = useRouter();
+  const supabase = createClient();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -28,19 +27,16 @@ export default function Register() {
       return;
     }
     try {
-      const userCredential = await createUserWithEmailAndPassword(
-        auth,
+      const { error } = await supabase.auth.signUp({
         email,
-        password
-      );
-      const user = userCredential.user;
-      await setDoc(doc(db, "users", user.uid), {
-        email: user.email,
+        password,
       });
+      if (error) throw error;
+      // Profile is auto-created by the database trigger
       router.push("/profile");
     } catch (error) {
       console.error("Error creating new user: ", error);
-      if (error.code === "auth/email-already-in-use") {
+      if (error.message?.includes("already registered")) {
         alert("This email is already in use by another account.");
       } else {
         alert("Failed to create account. Please try again later.");

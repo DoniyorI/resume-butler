@@ -2,13 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAuthState } from "react-firebase-hooks/auth";
-import { auth, db } from "@/lib/firebase/config";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { useAuth } from "@/hooks/useAuth";
 import { InputSizer } from "./InputSizer";
 
 export const ResumeHeader = ({ params }) => {
-  const [user, loading, error] = useAuthState(auth);
+  const { user, loading, supabase } = useAuth();
   const router = useRouter();
 
   const [email, setEmail] = useState("");
@@ -18,56 +16,95 @@ export const ResumeHeader = ({ params }) => {
   const [name, setName] = useState("");
 
   useEffect(() => {
-    if (user && params.resumeId) {
-      const resumeRef = doc(db, `users/${user.uid}/resumes`, params.resumeId);
-      getDoc(resumeRef)
-        .then((docSnap) => {
-          if (docSnap.exists()) {
-            const resumeData = docSnap.data();
-            setEmail(resumeData.email || "");
-            setPhone(resumeData.phone || "");
-            setLinkedin(resumeData.linkedin || "");
-            setGithub(resumeData.github || "");
-            setName(resumeData.name || "");
-          } else {
-            console.error(
-              "Resume not found or you're not authorized to view it"
-            );
-            router.push("/404");
-          }
-        })
-        .catch((error) => {
-          console.error("Error fetching resume:", error);
-          router.push("/404");
-        });
-    }
-  }, [user, params.resumeId, router]);
+    if (!user || !params.resumeId) return;
 
-  const saveToFirestore = (field, value) => {
-    if (user && params.resumeId) {
-      const resumeRef = doc(db, `users/${user.uid}/resumes`, params.resumeId);
+    const fetchHeader = async () => {
+      // Fetch resume content and profile in parallel
+      const [resumeRes, profileRes] = await Promise.all([
+        supabase
+          .from("resumes")
+          .select("content")
+          .eq("id", params.resumeId)
+          .eq("user_id", user.id)
+          .single(),
+        supabase
+          .from("profiles")
+          .select("first_name, last_name, email, phone, linkedin, github")
+          .eq("id", user.id)
+          .single(),
+      ]);
 
-      setDoc(resumeRef, { [field]: value }, { merge: true })
-        .then(() => console.log(`Saved ${field} to Firestore`))
-        .catch((error) => console.error(`Error saving ${field}:`, error));
-    }
+      if (resumeRes.error || !resumeRes.data) {
+        console.error("Resume not found:", resumeRes.error);
+        return;
+      }
+
+      const header = resumeRes.data.content?.header || {};
+      const profile = profileRes.data || {};
+
+      // Use resume header values, falling back to profile for empty fields
+      const resolvedName = header.name || [profile.first_name, profile.last_name].filter(Boolean).join(" ");
+      const resolvedEmail = header.email || profile.email || "";
+      const resolvedPhone = header.phone || profile.phone || "";
+      const resolvedLinkedin = header.linkedin || profile.linkedin || "";
+      const resolvedGithub = header.github || profile.github || "";
+
+      setName(resolvedName);
+      setEmail(resolvedEmail);
+      setPhone(resolvedPhone);
+      setLinkedin(resolvedLinkedin);
+      setGithub(resolvedGithub);
+
+      // If we auto-filled from profile, save it to the resume so it persists
+      if (!header.name || !header.email || !header.phone || !header.linkedin || !header.github) {
+        const content = resumeRes.data.content || {};
+        content.header = {
+          name: resolvedName,
+          email: resolvedEmail,
+          phone: resolvedPhone,
+          linkedin: resolvedLinkedin,
+          github: resolvedGithub,
+        };
+        await supabase
+          .from("resumes")
+          .update({ content })
+          .eq("id", params.resumeId);
+      }
+    };
+
+    fetchHeader();
+  }, [user, params.resumeId, supabase]);
+
+  const saveField = async (field, value) => {
+    if (!user || !params.resumeId) return;
+
+    // First get current content
+    const { data } = await supabase
+      .from("resumes")
+      .select("content")
+      .eq("id", params.resumeId)
+      .single();
+
+    const content = data?.content || {};
+    const header = content.header || {};
+    header[field] = value;
+    content.header = header;
+
+    await supabase
+      .from("resumes")
+      .update({ content })
+      .eq("id", params.resumeId);
   };
 
   const handleChange = (setter, field) => (value) => {
     setter(value);
-    saveToFirestore(field, value);
+    saveField(field, value);
   };
 
-  const handleSaveName = async (event) => {
+  const handleSaveName = (event) => {
     const newName = event.target.value;
     setName(newName);
-
-    if (user && params.resumeId) {
-      const resumeRef = doc(db, `users/${user.uid}/resumes`, params.resumeId);
-      await setDoc(resumeRef, { name: newName }, { merge: true })
-        .then(() => console.log("Name saved to Firestore"))
-        .catch((error) => console.error("Error saving name:", error));
-    }
+    saveField("name", newName);
   };
 
   return (

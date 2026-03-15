@@ -1,30 +1,13 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { auth, db } from "@/lib/firebase/config";
-import {
-  collection,
-  doc,
-  getDocs,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  Timestamp,
-} from "firebase/firestore";
-import { onAuthStateChanged } from "firebase/auth";
 import { format } from "date-fns";
 import { Trash2 } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -33,38 +16,41 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Calendar as CalendarIcon } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { MonthYearPicker } from "@/components/ui/month-year-picker";
 
 export default function EducationForm() {
   const [educationEntries, setEducationEntries] = useState([]);
-  const [user, setUser] = useState(null);
-  const router = useRouter();
+  const { user, loading, supabase } = useAuth({ redirect: true });
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
-      if (authUser) {
-        setUser(authUser);
-        const educationCollectionRef = collection(
-          db,
-          "users",
-          authUser.uid,
-          "education"
-        );
-        const snapshot = await getDocs(educationCollectionRef);
-        const educationData = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-          startDate: doc.data().startDate?.toDate() || "",
-          endDate: doc.data().endDate?.toDate() || "",
-        }));
-        setEducationEntries(educationData);
-      } else {
-        router.push("/login");
+    if (!user) return;
+    const fetchEducation = async () => {
+      const { data, error } = await supabase
+        .from("cv_education")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("sort_order", { ascending: true });
+
+      if (error) {
+        console.error("Error fetching education:", error);
+        return;
       }
-    });
-    return () => unsubscribe();
-  }, [router]);
+
+      const educationData = (data || []).map((row) => ({
+        id: row.id,
+        school: row.school || "",
+        location: row.location || "",
+        major: row.major || "",
+        minor: row.minor || "",
+        degreeType: row.degree_type || "",
+        gpa: row.gpa || "",
+        startDate: row.start_date ? new Date(row.start_date) : "",
+        endDate: row.end_date ? new Date(row.end_date) : "",
+      }));
+      setEducationEntries(educationData);
+    };
+    fetchEducation();
+  }, [user, supabase]);
 
   const addEducationEntry = () => {
     setEducationEntries([
@@ -97,43 +83,76 @@ export default function EducationForm() {
     if (entryToDelete.isNew) {
       setEducationEntries(educationEntries.filter((_, idx) => idx !== index));
     } else {
-      await deleteDoc(
-        doc(db, "users", user.uid, "education", entryToDelete.id)
-      );
+      const { error } = await supabase
+        .from("cv_education")
+        .delete()
+        .eq("id", entryToDelete.id);
+
+      if (error) {
+        console.error("Error deleting education entry:", error);
+        return;
+      }
       setEducationEntries(educationEntries.filter((_, idx) => idx !== index));
     }
   };
 
   const handleSave = async () => {
     if (user) {
-      const educationCollectionRef = collection(
-        db,
-        "users",
-        user.uid,
-        "education"
-      );
       try {
         await Promise.all(
-          educationEntries.map((entry) => {
+          educationEntries.map((entry, index) => {
             const { id, isNew, ...data } = entry;
-            const entryWithTimestamps = {
-              ...data,
-              startDate: data.startDate
-                ? Timestamp.fromDate(new Date(data.startDate))
+            const row = {
+              user_id: user.id,
+              school: data.school,
+              location: data.location,
+              degree_type: data.degreeType,
+              major: data.major,
+              gpa: data.gpa,
+              start_date: data.startDate
+                ? format(new Date(data.startDate), "yyyy-MM-dd")
                 : null,
-              endDate: data.endDate
-                ? Timestamp.fromDate(new Date(data.endDate))
+              end_date: data.endDate
+                ? format(new Date(data.endDate), "yyyy-MM-dd")
                 : null,
+              sort_order: index,
             };
-            return isNew
-              ? addDoc(educationCollectionRef, entryWithTimestamps)
-              : updateDoc(
-                  doc(db, "users", user.uid, "education", id),
-                  entryWithTimestamps
-                );
+            if (isNew) {
+              return supabase
+                .from("cv_education")
+                .insert(row)
+                .select()
+                .single();
+            } else {
+              return supabase
+                .from("cv_education")
+                .update(row)
+                .eq("id", id);
+            }
           })
         );
         toast("Education entries saved successfully!");
+        // Re-fetch to get IDs for newly created entries
+        const { data } = await supabase
+          .from("cv_education")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("sort_order", { ascending: true });
+
+        if (data) {
+          const educationData = data.map((row) => ({
+            id: row.id,
+            school: row.school || "",
+            location: row.location || "",
+            major: row.major || "",
+            minor: row.minor || "",
+            degreeType: row.degree_type || "",
+            gpa: row.gpa || "",
+            startDate: row.start_date ? new Date(row.start_date) : "",
+            endDate: row.end_date ? new Date(row.end_date) : "",
+          }));
+          setEducationEntries(educationData);
+        }
       } catch (error) {
         console.error("Error saving education entries: ", error);
         toast("Education entires FAILED to save!");
@@ -232,74 +251,22 @@ export default function EducationForm() {
           </div>
           <div className="flex space-x-6">
             <div>
-              <Label htmlFor="date-picker" className="text-right">
-                Start Date
-              </Label>
-              <div className="col-span-3">
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant={"outline"}
-                      className={cn(
-                        "w-[240px] justify-start text-left font-normal",
-                        !entry.startDate && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {entry.startDate
-                        ? format(new Date(entry.startDate), "PPP")
-                        : "Select End Date"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent align="start" className=" w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      captionLayout="dropdown-buttons"
-                      selected={entry.startDate}
-                      onSelect={(date) =>
-                        updateEducationEntry(index, "startDate", date)
-                      }
-                      fromYear={1960}
-                      toYear={2030}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
+              <Label>Start Date</Label>
+              <MonthYearPicker
+                value={entry.startDate}
+                onChange={(date) =>
+                  updateEducationEntry(index, "startDate", date)
+                }
+              />
             </div>
             <div>
-              <Label htmlFor="date-picker" className=" text-right">
-                End Date
-              </Label>
-              <div className="col-span-3">
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant={"outline"}
-                      className={cn(
-                        "w-[240px] justify-start text-left font-normal",
-                        !entry.endDate && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {entry.endDate
-                        ? format(new Date(entry.endDate), "PPP")
-                        : "Select End Date"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent align="start" className=" w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      captionLayout="dropdown-buttons"
-                      selected={entry.endDate}
-                      onSelect={(date) =>
-                        updateEducationEntry(index, "endDate", date)
-                      }
-                      fromYear={1960}
-                      toYear={2030}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
+              <Label>End Date</Label>
+              <MonthYearPicker
+                value={entry.endDate}
+                onChange={(date) =>
+                  updateEducationEntry(index, "endDate", date)
+                }
+              />
             </div>
           </div>
         </div>

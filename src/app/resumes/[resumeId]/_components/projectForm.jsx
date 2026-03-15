@@ -43,7 +43,7 @@ export const ProjectsForm = ({ item, onChange }) => {
 
   const formattedStartDate = formatDate(item.startDate);
   const formattedEndDate = item.currentlyWorking
-    ? "Current"
+    ? "Present"
     : formatDate(item.endDate);
 
   const handleDescriptionChange = (index, value) => {
@@ -96,37 +96,7 @@ export const ProjectsForm = ({ item, onChange }) => {
           onKeyDown={handleKeyDown}
           data-placeholder="Enter End Date"
           data-field="endDate"
-          dangerouslySetInnerHTML={{ __html: item.endDate || "" }}
-        />
-      </div>
-      <div className="text-sm flex justify-between">
-        <span
-          contentEditable
-          className={`input text-sm ${
-            !item.position ? "contentEditablePlaceholder" : ""
-          }`}
-          role="textbox"
-          onFocus={handleFocus}
-          onBlur={handleBlur}
-          onPaste={handlePaste}
-          onKeyDown={handleKeyDown}
-          data-placeholder="Enter Position"
-          data-field="position"
-          dangerouslySetInnerHTML={{ __html: item.position || "" }}
-        />
-        <span
-          contentEditable
-          className={`input italic text-sm ${
-            !item.location ? "contentEditablePlaceholder" : ""
-          }`}
-          role="textbox"
-          onFocus={handleFocus}
-          onBlur={handleBlur}
-          onPaste={handlePaste}
-          onKeyDown={handleKeyDown}
-          data-placeholder="Enter Location"
-          data-field="location"
-          dangerouslySetInnerHTML={{ __html: item.location || "" }}
+          dangerouslySetInnerHTML={{ __html: formattedEndDate || "" }}
         />
       </div>
       <div className="pl-[22px] mt-1">

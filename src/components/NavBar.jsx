@@ -1,9 +1,7 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { auth } from "@/lib/firebase/config";
-import { onAuthStateChanged } from "firebase/auth";
-import { signOut } from "firebase/auth";
+import { createClient } from "@/lib/supabase/client";
 
 import Link from "next/link";
 import Image from "next/image";
@@ -13,9 +11,9 @@ import { Button } from "@/components/ui/button";
 import AddApplicationDialog from "@/components/AddApplication";
 
 export default function Navbar() {
-  const [currentUser, setCurrentUser] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const toggleMenu = () => setMenuOpen(!menuOpen);
+  const supabase = createClient();
 
   const router = useRouter();
   const pathname = usePathname();
@@ -29,7 +27,7 @@ export default function Navbar() {
   }
   const handleLogout = async () => {
     try {
-      await signOut(auth);
+      await supabase.auth.signOut();
       router.push("/login");
     } catch (error) {
       console.error("Logout error", error);
@@ -135,7 +133,7 @@ export default function Navbar() {
                 href="/cv"
                 className="block py-2 px-3 text-gray-900 rounded hover:bg-gray-100 md:hover:bg-transparent  md:hover:text-green-800 md:p-0 md:dark:hover:text-green-400 dark:text-white dark:hover:bg-gray-700 dark:hover=text-white md:dark:hover:bg-transparent dark:border-gray-700"
               >
-                CV
+                Master CV
               </Link>
             </li>
           </ul>

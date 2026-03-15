@@ -158,6 +158,12 @@
   font-family: inherit;
   font-size: inherit;
   padding: 1px 6px;
+  cursor: text;
+}
+
+.input:hover,
+.textarea:hover {
+  border-color: #999;
 }
 
 .input.placeholder {

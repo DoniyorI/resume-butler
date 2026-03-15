@@ -11,8 +11,7 @@ import { Label } from "@/components/ui/label";
 
 import EmblaCarousel from "@/components/Carousel";
 
-import { auth } from "@/lib/firebase/config";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { createClient } from "@/lib/supabase/client";
 
 import GoogleAuthButton from "@/components/GoogleAuth";
 
@@ -20,14 +19,19 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const router = useRouter();
+  const supabase = createClient();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      router.push("/"); // Redirect the user after successful login, adjust as necessary
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (error) throw error;
+      router.push("/");
     } catch (error) {
-      alert(error.message); // Inform the user in case of an error
+      alert(error.message);
     }
   };
   return (

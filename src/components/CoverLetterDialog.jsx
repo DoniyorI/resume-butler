@@ -1,12 +1,9 @@
 "use client";
-import { onAuthStateChanged } from "firebase/auth";
-import { doc, setDoc, collection, addDoc } from "firebase/firestore";
-import { db, auth } from "@/lib/firebase/config";
-
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/hooks/useAuth";
 import { useForm } from "react-hook-form";
-import { z, ZodError } from "zod";
+import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 
 import { Input } from "@/components/ui/input";
@@ -42,7 +39,7 @@ const formSchema = z
 export default function CoverLetterDialog() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [useAI, setUseAI] = useState(false);
-  const [user, setUser] = useState(null);
+  const { user, supabase } = useAuth();
   const router = useRouter();
   const form = useForm({
     resolver: zodResolver(formSchema),
@@ -53,26 +50,28 @@ export default function CoverLetterDialog() {
     },
   });
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-    });
-    return () => unsubscribe();
-  }, []);
-
   const handleNextStep = async (formData) => {
-    if (user) {
-      const coverLettersRef = collection(db, `users/${user.uid}/coverletters`);
-      const coverLetterRef = await addDoc(coverLettersRef, {
-        title: formData.coverLetterName,
-        dateCreated: new Date(),
-        lastUpdated: new Date(),
-      });
-      router.push(`/coverletters/${coverLetterRef.id}`);
-      setIsDialogOpen(false);
-    } else {
+    if (!user) {
       alert("You must be logged in to create a cover letter.");
+      return;
     }
+
+    const { data, error } = await supabase
+      .from("cover_letters")
+      .insert({
+        user_id: user.id,
+        title: formData.coverLetterName,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error creating cover letter:", error);
+      return;
+    }
+
+    router.push(`/coverletters/${data.id}`);
+    setIsDialogOpen(false);
   };
 
   const handleOpenDialog = () => {

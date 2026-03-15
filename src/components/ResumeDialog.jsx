@@ -1,13 +1,10 @@
 "use client";
 
-import { onAuthStateChanged } from "firebase/auth";
-import { doc, setDoc, collection, addDoc } from "firebase/firestore";
-import { db, auth } from "@/lib/firebase/config";
-
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/hooks/useAuth";
 import { useForm } from "react-hook-form";
-import { z, ZodError } from "zod";
+import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 
 import { Input } from "@/components/ui/input";
@@ -43,7 +40,7 @@ const formSchema = z
 export default function ResumeDialog() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [useAI, setUseAI] = useState(false);
-  const [user, setUser] = useState(null);
+  const { user, supabase } = useAuth();
   const router = useRouter();
   const form = useForm({
     resolver: zodResolver(formSchema),
@@ -54,36 +51,28 @@ export default function ResumeDialog() {
     },
   });
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser);
-    });
-    return () => unsubscribe(); 
-  }, []);
-
   const handleNextStep = async (formData) => {
-    if (user) {
-      const resumesRef = collection(db, `users/${user.uid}/resumes`);
-      const resumeRef = await addDoc(resumesRef, {
-        title: formData.resumeName,
-        dateCreated: new Date(),
-        lastUpdated: new Date(),
-        education: [], // list of dict with school, major, degree, graduation, gpa
-        experience: [], // list of dict with company, position, dates, description
-        projects: [], // list of dict with name, dates, description
-        skills: [], // list of skills
-      });
-      router.push(`/resumes/${resumeRef.id}`);
-      //close dialog
-
-      setIsDialogOpen(false);
-    } else {
+    if (!user) {
       alert("You must be logged in to create a resume.");
+      return;
     }
-  };
 
-  const handleOpenDialog = () => {
-    setIsDialogOpen(true);
+    const { data, error } = await supabase
+      .from("resumes")
+      .insert({
+        user_id: user.id,
+        title: formData.resumeName,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error("Error creating resume:", error);
+      return;
+    }
+
+    router.push(`/resumes/${data.id}`);
+    setIsDialogOpen(false);
   };
 
   const toggleUseAI = () => {
@@ -91,35 +80,11 @@ export default function ResumeDialog() {
     form.setValue("useAI", !useAI);
   };
 
-  //create a new resume in database user/{userid}/resumes/{resumeid}
-  //resume structure
-  //subcollections for each section
-  //Education
-  //School
-  //Major, Type of Degree
-  //Expected Graduation
-  //GPA
-  //Experience
-  //Company
-  //Position
-  //Dates
-  //Description
-  //dictionary for each bullet points
-  //Projects
-  //Name
-  //Dates
-  //Description
-  //dictionary for each bullet points
-  //Skills
-  //List of skills
-  // calls backend to generate a resume based on the job description fills in the resume structure with the generated resume
-  //navigate to the new resume page
-
   return (
     <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
       <DialogTrigger asChild>
         <div
-          onClick={handleOpenDialog}
+          onClick={() => setIsDialogOpen(true)}
           className="h-[220px] w-[170px] border rounded-lg shadow p-4 flex justify-center items-center cursor-pointer m-2"
         >
           <div className="font-bold text-slate-400">New</div>

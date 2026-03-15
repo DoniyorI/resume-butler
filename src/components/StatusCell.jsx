@@ -1,42 +1,28 @@
 "use client";
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem} from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { doc, updateDoc } from "firebase/firestore";
-import { db, user } from "@/lib/firebase/config";
-import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "@/lib/firebase/config";
-function StatusCell({ row }) {
-    const [user, setUser] = useState(null); 
-    const [value, setValue] = useState(row.getValue("status"));
-    useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (user) => {
-          if (user) {
-            setUser(user);
-          } else {
-            router.push("/login");
-          }
-        });
-        return () => unsubscribe();
-      }, []);
-    const handleChange = (newStatus) => {
-        updateStatus(row.original.id, newStatus); 
-        setValue(newStatus);
-    };
+import { useAuth } from "@/hooks/useAuth";
 
-    const updateStatus = async (id, newStatus) => {
-        console.log(`Changing status for ID ${id} to ${newStatus}`);
-        const applicationRef = doc(db, "users", user.uid, "applications", id);
+function StatusCell({ row }) {
+    const { supabase } = useAuth();
+    const [value, setValue] = useState(row.getValue("status"));
+
+    const handleChange = async (newStatus) => {
+        setValue(newStatus);
         try {
-          await updateDoc(applicationRef, {
-            status: newStatus,
-          });
-          console.log(`Status updated to ${newStatus} for ID ${id}`);
+          const { error } = await supabase
+            .from("applications")
+            .update({ status: newStatus })
+            .eq("id", row.original.id);
+          if (error) throw error;
         } catch (error) {
           console.error("Failed to update status:", error);
+          setValue(value); // revert on error
         }
-      };
+    };
+
     return (
         <div className="flex justify-start">
             <DropdownMenu>

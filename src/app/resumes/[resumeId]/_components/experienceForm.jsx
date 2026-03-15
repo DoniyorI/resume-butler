@@ -38,7 +38,7 @@ export const ExperienceForm = ({ item, onChange }) => {
 
   const formattedStartDate = formatDate(item.startDate);
   const formattedEndDate = item.currentlyWorking
-    ? "Current"
+    ? "Present"
     : formatDate(item.endDate);
 
   const handleDescriptionChange = (index, value) => {
@@ -111,7 +111,7 @@ export const ExperienceForm = ({ item, onChange }) => {
             onKeyDown={handleKeyDown}
             data-placeholder="Enter End Date"
             data-field="endDate"
-            dangerouslySetInnerHTML={{ __html: item.endDate || "" }}
+            dangerouslySetInnerHTML={{ __html: formattedEndDate || "" }}
           />
         </div>
       </div>

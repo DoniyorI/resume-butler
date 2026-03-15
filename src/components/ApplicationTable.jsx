@@ -1,21 +1,9 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { auth, db } from "@/lib/firebase/config";
-import { onAuthStateChanged } from "firebase/auth";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/hooks/useAuth";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  doc,
-  collection,
-  getDocs,
-  deleteDoc,
-  query,
-  startAt,
-  orderBy,
-  startAfter,
-  limit,
-  where,
-} from "firebase/firestore";
 import { AiOutlineFilePdf, AiOutlineFileText } from "react-icons/ai";
 import {
   flexRender,
@@ -27,7 +15,6 @@ import {
 } from "@tanstack/react-table";
 import { ArrowUpDown, MoreHorizontal, ListFilter, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
@@ -50,223 +37,93 @@ import { toast } from "sonner";
 import StatusCell from "@/components/StatusCell";
 import CommentsCell from "@/components/CommentsCell";
 
+const PAGE_SIZE = 50;
+
 function ApplicationTable() {
-  const [user, setUser] = useState(null);
+  const { user, supabase } = useAuth({ redirect: true });
+  const router = useRouter();
   const [applications, setApplications] = useState([]);
   const [sorting, setSorting] = useState([]);
   const [columnFilters, setColumnFilters] = useState([]);
   const [columnVisibility, setColumnVisibility] = useState({});
   const [rowSelection, setRowSelection] = useState({});
   const [loading, setLoading] = useState(true);
-  const [lastVisible, setLastVisible] = useState(null);
-  const [firstVisible, setFirstVisible] = useState(null);
-  const [cursorHistory, setCursorHistory] = useState([]);
   const [totalApplications, setTotalApplications] = useState(0);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [page, setPage] = useState(0);
 
   useEffect(() => {
     const handleNewApplication = (event) => {
       const newApp = event.detail;
-      setApplications((prevApplications) => [...prevApplications, newApp]);
+      setApplications((prev) => [...prev, newApp]);
     };
 
     window.addEventListener("newApplication", handleNewApplication);
-
-    // Clean up the event listener
-    return () => {
-      window.removeEventListener("newApplication", handleNewApplication);
-    };
+    return () => window.removeEventListener("newApplication", handleNewApplication);
   }, []);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        setLoading(true);
-        setUser(user);
-        try {
-          const applicationsRef = collection(
-            db,
-            "users",
-            user.uid,
-            "applications"
-          );
-          let queryConfig = query(applicationsRef, orderBy("date"), limit(50));
-          if (searchTerm) {
-            queryConfig = query(
-              applicationsRef,
-              orderBy("companyName"),
-              where("companyName", ">=", searchTerm),
-              where("companyName", "<=", searchTerm + "\uf8ff")
-            );
-          }
+    if (!user) return;
 
-          const querySnapshot = await getDocs(queryConfig);
-          const loadedApplications = querySnapshot.docs.map((doc) => {
-            const rawData = doc.data();
-            const date = new Date(rawData.date); // Parse the date from the Firestore data
-            const formattedDate = date.toLocaleDateString("en-US"); // Format the date as MM/DD/YYYY
+    const fetchApplications = async () => {
+      setLoading(true);
+      try {
+        // Get total count
+        const { count } = await supabase
+          .from("applications")
+          .select("*", { count: "exact", head: true })
+          .eq("user_id", user.id);
+        setTotalApplications(count || 0);
 
-            return {
-              id: doc.id,
-              ...rawData,
-              date: formattedDate,
-            };
-          });
+        // Get page of applications
+        const from = page * PAGE_SIZE;
+        const to = from + PAGE_SIZE - 1;
 
-          setApplications(loadedApplications);
-          setLastVisible(querySnapshot.docs[querySnapshot.docs.length - 1]); // Save the last document for next page navigation
-          setFirstVisible(querySnapshot.docs[0]); // Save the first document for previous page navigation
-          setCursorHistory([querySnapshot.docs[0]]); // Initialize cursor history
-          const totalCountQuery = query(applicationsRef);
-          const totalCountSnapshot = await getDocs(totalCountQuery);
-          setTotalApplications(totalCountSnapshot.size);
-        } catch (error) {
-          console.error("Error fetching applications:", error);
-        } finally {
-          setLoading(false);
-        }
+        const { data, error } = await supabase
+          .from("applications")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("applied_date", { ascending: false })
+          .range(from, to);
+
+        if (error) throw error;
+
+        const formatted = (data || []).map((app) => ({
+          id: app.id,
+          resume: app.resume_id,
+          coverLetter: app.cover_letter_id,
+          companyName: app.company,
+          role: app.role,
+          status: app.status,
+          location: app.location,
+          date: app.applied_date
+            ? new Date(app.applied_date).toLocaleDateString("en-US")
+            : "",
+          comments: app.comments,
+          portalLink: app.portal_link,
+        }));
+
+        setApplications(formatted);
+      } catch (error) {
+        console.error("Error fetching applications:", error);
+      } finally {
+        setLoading(false);
       }
-    });
-    return () => {
-      unsubscribe();
     };
-  }, [searchTerm]);
-
-  const nextPage = async () => {
-    if (!lastVisible) return;
-
-    setLoading(true);
-
-    const applicationsRef = collection(db, "users", user.uid, "applications");
-    const queryConfig = query(
-      applicationsRef,
-      orderBy("date"),
-      startAfter(lastVisible),
-      limit(50)
-    );
-
-    const querySnapshot = await getDocs(queryConfig);
-
-    const loadedApplications = querySnapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-      date: doc.data().date.toDate().toISOString().slice(0, 50),
-    }));
-
-    setApplications(loadedApplications);
-    setCursorHistory([...cursorHistory, querySnapshot.docs[0]]); // Add new cursor to history
-    setFirstVisible(querySnapshot.docs[0]); // Update first visible cursor
-    setLastVisible(querySnapshot.docs[querySnapshot.docs.length - 1]); // Update last visible cursor
-
-    setLoading(false);
-  };
-  const previousPage = async () => {
-    if (cursorHistory.length < 2) return; // No previous page
-
-    setLoading(true);
-
-    const prevCursor = cursorHistory[cursorHistory.length - 2];
-    const applicationsRef = collection(db, "users", user.uid, "applications");
-    const queryConfig = query(
-      applicationsRef,
-      orderBy("date"),
-      startAt(prevCursor),
-      limit(50)
-    );
-
-    const querySnapshot = await getDocs(queryConfig);
-
-    const loadedApplications = querySnapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-      date: doc.data().date.toDate().toISOString().slice(0, 50),
-    }));
-
-    setApplications(loadedApplications);
-    setCursorHistory(cursorHistory.slice(0, cursorHistory.length - 1));
-    setFirstVisible(querySnapshot.docs[0]); // First visible cursor
-    setLastVisible(querySnapshot.docs[querySnapshot.docs.length - 1]); // Last visible cursor
-    setLoading(false);
-  };
+    fetchApplications();
+  }, [user, supabase, page]);
 
   const columns = [
     {
-      accessorKey: "resume",
-      header: ({ column }) => (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          Resume
-          <ArrowUpDown className="ml-2 h-3 w-3" />
-        </Button>
-      ),
-      cell: ({ row }) => (
-        <div className="flex justify-start mx-10">
-          {row.getValue("resume") && (
-            <a
-              href={row.getValue("resume")}
-              target="_blank" // Open in a new tab
-              rel="noopener noreferrer"
-            >
-              {row.original.resumeType === "pdf" ? (
-                <AiOutlineFilePdf className="mx-auto text-red-700" size={20} />
-              ) : (
-                <AiOutlineFileText
-                  className="mx-auto text-blue-700"
-                  size={20}
-                />
-              )}
-            </a>
-          )}
-        </div>
-      ),
-    },
-    {
-      accessorKey: "coverLetter",
-      header: ({ column }) => (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
-          Cover Letter
-          <ArrowUpDown className="ml-2 h-3 w-3" />
-        </Button>
-      ),
-      cell: ({ row }) => (
-        <div className="flex justify-start mx-10">
-          {row.getValue("coverLetter") && (
-            <a
-              href={row.getValue("coverLetter")}
-              target="_blank" // Open in a new tab
-              rel="noopener noreferrer"
-            >
-              {row.original.coverLetterType === "pdf" ? (
-                <AiOutlineFilePdf className="mx-auto text-red-500" size={20} />
-              ) : (
-                <AiOutlineFileText
-                  className="mx-auto text-blue-500"
-                  size={20}
-                />
-              )}
-            </a>
-          )}
-        </div>
-      ),
-    },
-    {
       accessorKey: "companyName",
-      header: ({ column }) => {
-        return (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          >
-            Company Name
-            <ArrowUpDown className="ml-2 h-3 w-3" />
-          </Button>
-        );
-      },
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Company Name
+          <ArrowUpDown className="ml-2 h-3 w-3" />
+        </Button>
+      ),
       cell: ({ row }) =>
         row.original.portalLink ? (
           <a
@@ -280,22 +137,20 @@ function ApplicationTable() {
           </a>
         ) : (
           <span>{row.getValue("companyName")}</span>
-        ), // Using <span> for consistent HTML element usage
+        ),
     },
     {
       accessorKey: "role",
-      header: ({ column }) => {
-        return (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          >
-            Role
-            <ArrowUpDown className="ml-2 h-3 w-3" />
-          </Button>
-        );
-      },
-      cell: ({ row }) => <div className="">{row.getValue("role")}</div>,
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Role
+          <ArrowUpDown className="ml-2 h-3 w-3" />
+        </Button>
+      ),
+      cell: ({ row }) => <div>{row.getValue("role")}</div>,
     },
     {
       accessorKey: "status",
@@ -312,33 +167,29 @@ function ApplicationTable() {
     },
     {
       accessorKey: "location",
-      header: ({ column }) => {
-        return (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          >
-            Location
-            <ArrowUpDown className="ml-2 h-3 w-3" />
-          </Button>
-        );
-      },
-      cell: ({ row }) => <div className="">{row.getValue("location")}</div>,
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Location
+          <ArrowUpDown className="ml-2 h-3 w-3" />
+        </Button>
+      ),
+      cell: ({ row }) => <div>{row.getValue("location")}</div>,
     },
     {
       accessorKey: "date",
-      header: ({ column }) => {
-        return (
-          <Button
-            variant="ghost"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-          >
-            Date
-            <ArrowUpDown className="ml-2 h-3 w-3" />
-          </Button>
-        );
-      },
-      cell: ({ row }) => <div className="">{row.getValue("date")}</div>,
+      header: ({ column }) => (
+        <Button
+          variant="ghost"
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+        >
+          Date
+          <ArrowUpDown className="ml-2 h-3 w-3" />
+        </Button>
+      ),
+      cell: ({ row }) => <div>{row.getValue("date")}</div>,
     },
     {
       accessorKey: "comments",
@@ -360,17 +211,15 @@ function ApplicationTable() {
         const application = row.original;
         const handleDelete = async () => {
           try {
-            const docRef = doc(
-              db,
-              "users",
-              user.uid,
-              "applications",
-              application.id
+            const { error } = await supabase
+              .from("applications")
+              .delete()
+              .eq("id", application.id);
+            if (error) throw error;
+            setApplications((current) =>
+              current.filter((app) => app.id !== application.id)
             );
-            await deleteDoc(docRef);
-            setApplications((currentApplications) =>
-              currentApplications.filter((app) => app.id !== application.id)
-            );
+            setTotalApplications((prev) => prev - 1);
             toast("Application deleted successfully!");
           } catch (error) {
             console.error("Error deleting application:", error);
@@ -386,15 +235,10 @@ function ApplicationTable() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              {/* <DropdownMenuItem>
-                <Link href={`/${application.id}`}>
-                  View application details
-                </Link>
-              </DropdownMenuItem> */}
               <DropdownMenuItem onClick={handleDelete}>
                 <Button
                   variant="ghost"
-                  className="text-red-700 hover:text-red-500 py-1 px-2 h-8 flex items-center justify-center" // Adjusted padding and height
+                  className="text-red-700 hover:text-red-500 py-1 px-2 h-8 flex items-center justify-center"
                 >
                   <Trash2 className="mr-1" size={15} />
                   <span>Delete</span>
@@ -430,16 +274,16 @@ function ApplicationTable() {
     return (
       <div className="mx-4">
         <div className="flex justify-between">
-        <Skeleton className="mt-4 w-1/4 h-[40px]" />
-        <Skeleton className="mt-4 w-[90px] h-[40px]" />
+          <Skeleton className="mt-4 w-1/4 h-[40px]" />
+          <Skeleton className="mt-4 w-[90px] h-[40px]" />
         </div>
         <Skeleton className="mt-4 w-full h-[400px]" />
         <div className="flex justify-between items-center">
-        <Skeleton className="mt-4 w-2/12 h-[15px]" />
-        <div className="flex space-x-2">
-        <Skeleton className="mt-4 w-[80px] h-[35px]" />
-        <Skeleton className="mt-4 w-[60px] h-[35px]" />
-        </div>
+          <Skeleton className="mt-4 w-2/12 h-[15px]" />
+          <div className="flex space-x-2">
+            <Skeleton className="mt-4 w-[80px] h-[35px]" />
+            <Skeleton className="mt-4 w-[60px] h-[35px]" />
+          </div>
         </div>
       </div>
     );
@@ -500,9 +344,21 @@ function ApplicationTable() {
           <TableBody>
             {table.getRowModel().rows?.length ? (
               table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id}>
+                <TableRow
+                  key={row.id}
+                  className="cursor-pointer hover:bg-gray-50"
+                  onClick={() => router.push(`/applications/${row.original.id}`)}
+                >
                   {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
+                    <TableCell
+                      key={cell.id}
+                      onClick={(e) => {
+                        // Don't navigate when clicking interactive cells
+                        if (["status", "comments", "actions"].includes(cell.column.id)) {
+                          e.stopPropagation();
+                        }
+                      }}
+                    >
                       {flexRender(
                         cell.column.columnDef.cell,
                         cell.getContext()
@@ -529,7 +385,9 @@ function ApplicationTable() {
         <div className="text-xs text-muted-foreground">
           Showing{" "}
           <strong>
-            {applications.length ? `${1}-${applications.length}` : "No"}
+            {applications.length
+              ? `${page * PAGE_SIZE + 1}-${page * PAGE_SIZE + applications.length}`
+              : "No"}
           </strong>{" "}
           of <strong>{totalApplications}</strong> applications
         </div>
@@ -538,8 +396,8 @@ function ApplicationTable() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => previousPage()}
-            disabled={cursorHistory.length < 2}
+            onClick={() => setPage((p) => p - 1)}
+            disabled={page === 0}
           >
             Previous
           </Button>
@@ -547,8 +405,8 @@ function ApplicationTable() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => nextPage()}
-            disabled={applications.length < 50}
+            onClick={() => setPage((p) => p + 1)}
+            disabled={applications.length < PAGE_SIZE}
           >
             Next
           </Button>

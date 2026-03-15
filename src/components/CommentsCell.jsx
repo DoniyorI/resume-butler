@@ -1,25 +1,13 @@
 "use client";
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Textarea } from '@/components/ui/textarea';
-import { doc, updateDoc } from "firebase/firestore";
-import { db } from "@/lib/firebase/config";
-import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "@/lib/firebase/config";
+import { useAuth } from "@/hooks/useAuth";
 
 function CommentsCell({ row }) {
-    const [user, setUser] = useState(null);
+    const { supabase } = useAuth();
     const [editing, setEditing] = useState(false);
     const [value, setValue] = useState(row.getValue("comments") || "");
-    useEffect(() => {
-        const unsubscribe = onAuthStateChanged(auth, (user) => {
-          if (user) {
-            setUser(user);
-          } else {
-            router.push("/login");
-          }
-        });
-        return () => unsubscribe();
-      }, []);
+
     const toggleEdit = () => {
         setEditing(!editing);
     };
@@ -28,23 +16,19 @@ function CommentsCell({ row }) {
         setValue(e.target.value);
     };
 
-    const handleBlur = () => {
-        updateComment(row.original.id, value.trim()); // Update the comment in the database
+    const handleBlur = async () => {
         setEditing(false);
-    };
-
-    const updateComment = async (id, newComment) => {
-        console.log(`Updating comment for ID ${id} to ${newComment}`);
-        const applicationRef = doc(db, "users", user.uid, "applications", id);
+        const newComment = value.trim();
         try {
-          await updateDoc(applicationRef, {
-            comments: newComment,
-          });
-          console.log(`Comment updated to "${newComment}" for ID ${id}`);
+          const { error } = await supabase
+            .from("applications")
+            .update({ comments: newComment })
+            .eq("id", row.original.id);
+          if (error) throw error;
         } catch (error) {
           console.error("Failed to update comment:", error);
         }
-      };
+    };
 
     return (
         <div onDoubleClick={toggleEdit}>

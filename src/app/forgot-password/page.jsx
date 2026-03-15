@@ -14,8 +14,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { auth } from "@/lib/firebase/config"; // Adjust the path as needed
-import { sendPasswordResetEmail } from "firebase/auth";
+import { createClient } from "@/lib/supabase/client";
 
 // Define the form schema
 const formSchema = z.object({
@@ -29,9 +28,12 @@ export default function ForgotPasswordForm() {
     resolver: zodResolver(formSchema),
   });
 
+  const supabase = createClient();
+
   const onSubmit = async (data) => {
     try {
-      await sendPasswordResetEmail(auth, data.email);
+      const { error } = await supabase.auth.resetPasswordForEmail(data.email);
+      if (error) throw error;
       form.setError("formMessage", {
         message: "A reset link has been sent to your email.",
       });

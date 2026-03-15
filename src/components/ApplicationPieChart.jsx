@@ -3,18 +3,8 @@
 import { useEffect, useState } from "react";
 import { PieChart } from "@mui/x-charts/PieChart";
 import { LineChart } from "@mui/x-charts/LineChart";
-import { useAuthState } from "react-firebase-hooks/auth";
-import { auth, db } from "@/lib/firebase/config";
-import { useRouter } from "next/navigation";
+import { useAuth } from "@/hooks/useAuth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { collection, getDocs } from "firebase/firestore";
-
-const fetchApplicationData = async (userId) => {
-  const applicationsCollection = collection(db, `users/${userId}/applications`);
-  const applicationsSnapshot = await getDocs(applicationsCollection);
-  const applicationsList = applicationsSnapshot.docs.map((doc) => doc.data());
-  return applicationsList;
-};
 
 const getStatusCounts = (applications) => {
   const statusCounts = {
@@ -80,21 +70,29 @@ const statusColors = {
 };
 
 const ApplicationPieChart = () => {
-  const [user, loading, error] = useAuthState(auth);
+  const { user, loading, supabase } = useAuth({ redirect: true });
   const [statusData, setStatusData] = useState([]);
   const [dateData, setDateData] = useState([]);
-  const router = useRouter();
 
   useEffect(() => {
-    if (loading) return;
-    if (error) console.error("Auth error:", error); // Handle possible auth errors
-    if (!user) {
-      router.push("/login");
-      return;
-    }
+    if (loading || !user) return;
 
     const fetchData = async () => {
-      const applications = await fetchApplicationData(user.uid);
+      const { data, error } = await supabase
+        .from("applications")
+        .select("status, applied_date")
+        .eq("user_id", user.id);
+
+      if (error) {
+        console.error("Error fetching applications:", error);
+        return;
+      }
+
+      const applications = (data || []).map((app) => ({
+        status: app.status,
+        date: app.applied_date,
+      }));
+
       const statusCounts = getStatusCounts(applications);
       const dateCounts = getDateCounts(applications);
       setStatusData(statusCounts);
@@ -102,7 +100,7 @@ const ApplicationPieChart = () => {
     };
 
     fetchData();
-  }, [user, loading, error, router]);
+  }, [user, loading, supabase]);
 
   // Ensure dateData and statusData are valid
   const validDateData = dateData.filter(item => item.date && !isNaN(item.date));

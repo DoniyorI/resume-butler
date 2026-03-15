@@ -1,28 +1,24 @@
+"use client";
 import { useRouter } from "next/navigation";
-import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
-import { auth } from "../lib/firebase/config";
+import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 
 const GoogleAuthButton = ({ redirectPath = "/" }) => {
   const router = useRouter();
+  const supabase = createClient();
 
   const handleGoogleSignIn = async () => {
-    const provider = new GoogleAuthProvider();
     try {
-      const result = await signInWithPopup(auth, provider);
-      // Optional: Use the token, user, or credential as needed
-      // const token = credential.accessToken;
-      // const user = result.user;
-      router.push(redirectPath);
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}${redirectPath}`,
+        },
+      });
+      if (error) throw error;
     } catch (error) {
-      // Handle Errors here.
-      const errorCode = error.code;
-      const errorMessage = error.message;
-      // Optional: Handle the email, credential errors
-      // const email = error.email;
-      // const credential = GoogleAuthProvider.credentialFromError(error);
-      console.error("Google sign in error", errorCode, errorMessage);
+      console.error("Google sign in error", error.message);
     }
   };
 

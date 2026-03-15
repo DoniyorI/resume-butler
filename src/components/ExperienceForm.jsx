@@ -1,28 +1,11 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { auth, db } from "@/lib/firebase/config";
-import {
-  collection,
-  doc,
-  getDocs,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  Timestamp,
-} from "firebase/firestore";
-import { onAuthStateChanged } from "firebase/auth";
+import { useAuth } from "@/hooks/useAuth";
 
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import {
   Select,
   SelectContent,
@@ -31,41 +14,72 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Calendar as CalendarIcon, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 
 import { Checkbox } from "@/components/ui/checkbox";
 import { format } from "date-fns";
-import { cn } from "@/lib/utils";
+import { MonthYearPicker } from "@/components/ui/month-year-picker";
 
 export default function ExperienceForm() {
   const [experienceEntries, setExperienceEntries] = useState([]);
-  const [user, setUser] = useState(null);
-  const router = useRouter();
+  const { user, loading, supabase } = useAuth({ redirect: true });
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
-      if (authUser) {
-        setUser(authUser);
-        const experienceCollectionRef = collection(
-          db,
-          "users",
-          authUser.uid,
-          "experience"
-        );
-        const snapshot = await getDocs(experienceCollectionRef);
-        const experienceData = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-          startDate: doc.data().startDate?.toDate() || "",
-          endDate: doc.data().endDate?.toDate() || "",
-        }));
-        setExperienceEntries(experienceData);
-      } else {
-        router.push("/login");
+    if (!user) return;
+    const fetchExperience = async () => {
+      // Fetch experiences
+      const { data: experiences, error } = await supabase
+        .from("cv_experience")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("sort_order", { ascending: true });
+
+      if (error) {
+        console.error("Error fetching experience:", error);
+        return;
       }
-    });
-    return () => unsubscribe();
-  }, [router]);
+
+      // Fetch bullets for all experiences
+      const experienceIds = (experiences || []).map((exp) => exp.id);
+      let bulletsMap = {};
+      if (experienceIds.length > 0) {
+        const { data: bullets, error: bulletsError } = await supabase
+          .from("cv_experience_bullets")
+          .select("*")
+          .in("experience_id", experienceIds)
+          .order("sort_order", { ascending: true });
+
+        if (!bulletsError && bullets) {
+          bullets.forEach((bullet) => {
+            if (!bulletsMap[bullet.experience_id]) {
+              bulletsMap[bullet.experience_id] = [];
+            }
+            bulletsMap[bullet.experience_id].push(bullet);
+          });
+        }
+      }
+
+      const experienceData = (experiences || []).map((row) => {
+        const rowBullets = bulletsMap[row.id] || [];
+        return {
+          id: row.id,
+          companyName: row.company || "",
+          location: row.location || "",
+          position: row.position || "",
+          experienceType: row.type || "",
+          currentlyWorking: row.currently_working || false,
+          startDate: row.start_date ? new Date(row.start_date) : "",
+          endDate: row.end_date ? new Date(row.end_date) : "",
+          description: rowBullets.length > 0
+            ? rowBullets.map((b) => b.content)
+            : [""],
+          bulletIds: rowBullets.map((b) => b.id),
+        };
+      });
+      setExperienceEntries(experienceData);
+    };
+    fetchExperience();
+  }, [user, supabase]);
 
   const addExperienceEntry = () => {
     setExperienceEntries([
@@ -78,7 +92,8 @@ export default function ExperienceForm() {
         currentlyWorking: false,
         startDate: "",
         endDate: "",
-        description: [""], // Initialize with one empty string for the first bullet point
+        description: [""],
+        bulletIds: [],
         isNew: true,
       },
     ]);
@@ -89,9 +104,21 @@ export default function ExperienceForm() {
     if (entryToDelete.isNew) {
       setExperienceEntries(experienceEntries.filter((_, idx) => idx !== index));
     } else {
-      await deleteDoc(
-        doc(db, "users", user.uid, "experience", entryToDelete.id)
-      );
+      // Delete bullets first, then the experience
+      await supabase
+        .from("cv_experience_bullets")
+        .delete()
+        .eq("experience_id", entryToDelete.id);
+
+      const { error } = await supabase
+        .from("cv_experience")
+        .delete()
+        .eq("id", entryToDelete.id);
+
+      if (error) {
+        console.error("Error deleting experience entry:", error);
+        return;
+      }
       setExperienceEntries(experienceEntries.filter((_, idx) => idx !== index));
     }
   };
@@ -130,7 +157,10 @@ export default function ExperienceForm() {
         const updatedDescription = entry.description.filter(
           (_, dIdx) => dIdx !== bulletIndex
         );
-        return { ...entry, description: updatedDescription };
+        const updatedBulletIds = (entry.bulletIds || []).filter(
+          (_, dIdx) => dIdx !== bulletIndex
+        );
+        return { ...entry, description: updatedDescription, bulletIds: updatedBulletIds };
       }
       return entry;
     });
@@ -155,34 +185,115 @@ export default function ExperienceForm() {
 
   const handleSave = async () => {
     if (user) {
-      const experienceCollectionRef = collection(
-        db,
-        "users",
-        user.uid,
-        "experience"
-      );
       try {
-        await Promise.all(
-          experienceEntries.map((entry) => {
-            const { id, isNew, ...data } = entry;
-            const entryWithTimestamps = {
-              ...data,
-              startDate: data.startDate
-                ? Timestamp.fromDate(new Date(data.startDate))
-                : null,
-              endDate: data.endDate
-                ? Timestamp.fromDate(new Date(data.endDate))
-                : null,
-            };
-            return isNew
-              ? addDoc(experienceCollectionRef, entryWithTimestamps)
-              : updateDoc(
-                  doc(db, "users", user.uid, "experience", id),
-                  entryWithTimestamps
-                );
-          })
-        );
+        for (let index = 0; index < experienceEntries.length; index++) {
+          const entry = experienceEntries[index];
+          const { id, isNew, description, bulletIds, ...data } = entry;
+          const row = {
+            user_id: user.id,
+            company: data.companyName,
+            position: data.position,
+            location: data.location,
+            type: data.experienceType,
+            currently_working: data.currentlyWorking,
+            start_date: data.startDate
+              ? format(new Date(data.startDate), "yyyy-MM-dd")
+              : null,
+            end_date: data.endDate
+              ? format(new Date(data.endDate), "yyyy-MM-dd")
+              : null,
+            sort_order: index,
+          };
+
+          let experienceId = id;
+
+          if (isNew) {
+            const { data: inserted, error } = await supabase
+              .from("cv_experience")
+              .insert(row)
+              .select()
+              .single();
+
+            if (error) throw error;
+            experienceId = inserted.id;
+          } else {
+            const { error } = await supabase
+              .from("cv_experience")
+              .update(row)
+              .eq("id", id);
+
+            if (error) throw error;
+          }
+
+          // Delete existing bullets for this experience and re-insert
+          await supabase
+            .from("cv_experience_bullets")
+            .delete()
+            .eq("experience_id", experienceId);
+
+          const bulletRows = description
+            .filter((content) => content.trim() !== "" || description.length === 1)
+            .map((content, bIndex) => ({
+              experience_id: experienceId,
+              content: content,
+              sort_order: bIndex,
+            }));
+
+          if (bulletRows.length > 0) {
+            const { error: bulletError } = await supabase
+              .from("cv_experience_bullets")
+              .insert(bulletRows);
+
+            if (bulletError) throw bulletError;
+          }
+        }
+
         toast("Experience entries saved successfully!");
+
+        // Re-fetch to sync state with database
+        const { data: experiences } = await supabase
+          .from("cv_experience")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("sort_order", { ascending: true });
+
+        const experienceIds = (experiences || []).map((exp) => exp.id);
+        let bulletsMap = {};
+        if (experienceIds.length > 0) {
+          const { data: bullets } = await supabase
+            .from("cv_experience_bullets")
+            .select("*")
+            .in("experience_id", experienceIds)
+            .order("sort_order", { ascending: true });
+
+          if (bullets) {
+            bullets.forEach((bullet) => {
+              if (!bulletsMap[bullet.experience_id]) {
+                bulletsMap[bullet.experience_id] = [];
+              }
+              bulletsMap[bullet.experience_id].push(bullet);
+            });
+          }
+        }
+
+        const experienceData = (experiences || []).map((row) => {
+          const rowBullets = bulletsMap[row.id] || [];
+          return {
+            id: row.id,
+            companyName: row.company || "",
+            location: row.location || "",
+            position: row.position || "",
+            experienceType: row.type || "",
+            currentlyWorking: row.currently_working || false,
+            startDate: row.start_date ? new Date(row.start_date) : "",
+            endDate: row.end_date ? new Date(row.end_date) : "",
+            description: rowBullets.length > 0
+              ? rowBullets.map((b) => b.content)
+              : [""],
+            bulletIds: rowBullets.map((b) => b.id),
+          };
+        });
+        setExperienceEntries(experienceData);
       } catch (error) {
         console.error("Error saving experience entries: ", error);
         toast("Failed to save experience entries.");
@@ -263,74 +374,22 @@ export default function ExperienceForm() {
           </div>
           <div className="flex space-x-6">
             <div>
-              <Label htmlFor="date-picker" className="text-right">
-                Start Date
-              </Label>
-              <div className="col-span-3">
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant={"outline"}
-                      className={cn(
-                        "w-[240px] justify-start text-left font-normal",
-                        !entry.startDate && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {entry.startDate
-                        ? format(new Date(entry.startDate), "PPP")
-                        : "Select End Date"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent align="start" className=" w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      captionLayout="dropdown-buttons"
-                      selected={entry.startDate}
-                      onSelect={(date) =>
-                        updateExperienceEntry(index, "startDate", date)
-                      }
-                      fromYear={1960}
-                      toYear={2030}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
+              <Label>Start Date</Label>
+              <MonthYearPicker
+                value={entry.startDate}
+                onChange={(date) =>
+                  updateExperienceEntry(index, "startDate", date)
+                }
+              />
             </div>
             <div>
-              <Label htmlFor="date-picker" className=" text-right">
-                End Date
-              </Label>
-              <div className="col-span-3">
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant={"outline"}
-                      className={cn(
-                        "w-[240px] justify-start text-left font-normal",
-                        !entry.endDate && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {entry.endDate
-                        ? format(new Date(entry.endDate), "PPP")
-                        : "Select End Date"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent align="start" className=" w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      captionLayout="dropdown-buttons"
-                      selected={entry.endDate}
-                      onSelect={(date) =>
-                        updateExperienceEntry(index, "endDate", date)
-                      }
-                      fromYear={1960}
-                      toYear={2030}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
+              <Label>End Date</Label>
+              <MonthYearPicker
+                value={entry.endDate}
+                onChange={(date) =>
+                  updateExperienceEntry(index, "endDate", date)
+                }
+              />
             </div>
           </div>
           <div className="flex items-center space-x-2 pb-4 mt-0">

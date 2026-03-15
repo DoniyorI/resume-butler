@@ -1,74 +1,76 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { auth, db } from "@/lib/firebase/config";
-import {
-  collection,
-  doc,
-  getDocs,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  Timestamp,
-} from "firebase/firestore";
-import { onAuthStateChanged } from "firebase/auth";
+import { useAuth } from "@/hooks/useAuth";
 import { format } from "date-fns";
 
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Calendar as CalendarIcon, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 
-import { cn } from "@/lib/utils";
+import { MonthYearPicker } from "@/components/ui/month-year-picker";
 
 export default function ProjectForm() {
-  const [projectEntries, setProjectEntries] = useState([
-    {
-      projectName: "",
-      position: "",
-      location: "",
-      currentlyWorking: false,
-      startDate: "",
-      endDate: "",
-      description: [""], // Initialize with one empty string for the first bullet point
-    },
-  ]);
-
-  const [user, setUser] = useState(null);
-  const router = useRouter();
+  const [projectEntries, setProjectEntries] = useState([]);
+  const { user, loading, supabase } = useAuth({ redirect: true });
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (authUser) => {
-      if (authUser) {
-        setUser(authUser);
-        const projectsCollectionRef = collection(
-          db,
-          "users",
-          authUser.uid,
-          "projects"
-        );
-        const snapshot = await getDocs(projectsCollectionRef);
-        const projectData = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-          startDate: doc.data().startDate?.toDate() || "",
-          endDate: doc.data().endDate?.toDate() || "",
-        }));
-        setProjectEntries(projectData);
-      } else {
-        router.push("/login");
+    if (!user) return;
+    const fetchProjects = async () => {
+      // Fetch projects
+      const { data: projects, error } = await supabase
+        .from("cv_projects")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("sort_order", { ascending: true });
+
+      if (error) {
+        console.error("Error fetching projects:", error);
+        return;
       }
-    });
-    return () => unsubscribe();
-  }, [router]);
+
+      // Fetch bullets for all projects
+      const projectIds = (projects || []).map((p) => p.id);
+      let bulletsMap = {};
+      if (projectIds.length > 0) {
+        const { data: bullets, error: bulletsError } = await supabase
+          .from("cv_project_bullets")
+          .select("*")
+          .in("project_id", projectIds)
+          .order("sort_order", { ascending: true });
+
+        if (!bulletsError && bullets) {
+          bullets.forEach((bullet) => {
+            if (!bulletsMap[bullet.project_id]) {
+              bulletsMap[bullet.project_id] = [];
+            }
+            bulletsMap[bullet.project_id].push(bullet);
+          });
+        }
+      }
+
+      const projectData = (projects || []).map((row) => {
+        const rowBullets = bulletsMap[row.id] || [];
+        return {
+          id: row.id,
+          projectName: row.name || "",
+          position: row.description || "",
+          location: row.url || "",
+          currentlyWorking: row.currently_working || false,
+          startDate: row.start_date ? new Date(row.start_date) : "",
+          endDate: row.end_date ? new Date(row.end_date) : "",
+          description: rowBullets.length > 0
+            ? rowBullets.map((b) => b.content)
+            : [""],
+          bulletIds: rowBullets.map((b) => b.id),
+        };
+      });
+      setProjectEntries(projectData);
+    };
+    fetchProjects();
+  }, [user, supabase]);
 
   const addProjectEntry = () => {
     setProjectEntries([
@@ -80,7 +82,8 @@ export default function ProjectForm() {
         currentlyWorking: false,
         startDate: "",
         endDate: "",
-        description: [""], // Initialize with one empty string for the first bullet point
+        description: [""],
+        bulletIds: [],
         isNew: true,
       },
     ]);
@@ -91,7 +94,21 @@ export default function ProjectForm() {
     if (entryToDelete.isNew) {
       setProjectEntries(projectEntries.filter((_, idx) => idx !== index));
     } else {
-      await deleteDoc(doc(db, "users", user.uid, "projects", entryToDelete.id));
+      // Delete bullets first, then the project
+      await supabase
+        .from("cv_project_bullets")
+        .delete()
+        .eq("project_id", entryToDelete.id);
+
+      const { error } = await supabase
+        .from("cv_projects")
+        .delete()
+        .eq("id", entryToDelete.id);
+
+      if (error) {
+        console.error("Error deleting project entry:", error);
+        return;
+      }
       setProjectEntries(projectEntries.filter((_, idx) => idx !== index));
     }
   };
@@ -108,34 +125,113 @@ export default function ProjectForm() {
 
   const handleSave = async () => {
     if (user) {
-      const projectsCollectionRef = collection(
-        db,
-        "users",
-        user.uid,
-        "projects"
-      );
       try {
-        await Promise.all(
-          projectEntries.map((entry) => {
-            const { id, isNew, ...data } = entry;
-            const entryWithTimestamps = {
-              ...data,
-              startDate: data.startDate
-                ? Timestamp.fromDate(new Date(data.startDate))
-                : null,
-              endDate: data.endDate
-                ? Timestamp.fromDate(new Date(data.endDate))
-                : null,
-            };
-            return isNew
-              ? addDoc(projectsCollectionRef, entryWithTimestamps)
-              : updateDoc(
-                  doc(db, "users", user.uid, "projects", id),
-                  entryWithTimestamps
-                );
-          })
-        );
+        for (let index = 0; index < projectEntries.length; index++) {
+          const entry = projectEntries[index];
+          const { id, isNew, description, bulletIds, ...data } = entry;
+          const row = {
+            user_id: user.id,
+            name: data.projectName,
+            description: data.position,
+            url: data.location,
+            currently_working: data.currentlyWorking,
+            start_date: data.startDate
+              ? format(new Date(data.startDate), "yyyy-MM-dd")
+              : null,
+            end_date: data.endDate
+              ? format(new Date(data.endDate), "yyyy-MM-dd")
+              : null,
+            sort_order: index,
+          };
+
+          let projectId = id;
+
+          if (isNew) {
+            const { data: inserted, error } = await supabase
+              .from("cv_projects")
+              .insert(row)
+              .select()
+              .single();
+
+            if (error) throw error;
+            projectId = inserted.id;
+          } else {
+            const { error } = await supabase
+              .from("cv_projects")
+              .update(row)
+              .eq("id", id);
+
+            if (error) throw error;
+          }
+
+          // Delete existing bullets for this project and re-insert
+          await supabase
+            .from("cv_project_bullets")
+            .delete()
+            .eq("project_id", projectId);
+
+          const bulletRows = description
+            .filter((content) => content.trim() !== "" || description.length === 1)
+            .map((content, bIndex) => ({
+              project_id: projectId,
+              content: content,
+              sort_order: bIndex,
+            }));
+
+          if (bulletRows.length > 0) {
+            const { error: bulletError } = await supabase
+              .from("cv_project_bullets")
+              .insert(bulletRows);
+
+            if (bulletError) throw bulletError;
+          }
+        }
+
         toast("Project entries saved successfully!");
+
+        // Re-fetch to sync state with database
+        const { data: projects } = await supabase
+          .from("cv_projects")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("sort_order", { ascending: true });
+
+        const projectIds = (projects || []).map((p) => p.id);
+        let bulletsMap = {};
+        if (projectIds.length > 0) {
+          const { data: bullets } = await supabase
+            .from("cv_project_bullets")
+            .select("*")
+            .in("project_id", projectIds)
+            .order("sort_order", { ascending: true });
+
+          if (bullets) {
+            bullets.forEach((bullet) => {
+              if (!bulletsMap[bullet.project_id]) {
+                bulletsMap[bullet.project_id] = [];
+              }
+              bulletsMap[bullet.project_id].push(bullet);
+            });
+          }
+        }
+
+        const projectData = (projects || []).map((row) => {
+          const rowBullets = bulletsMap[row.id] || [];
+          return {
+            id: row.id,
+            projectName: row.name || "",
+            position: row.description || "",
+            location: row.url || "",
+            currentlyWorking: row.currently_working || false,
+            startDate: row.start_date ? new Date(row.start_date) : "",
+            endDate: row.end_date ? new Date(row.end_date) : "",
+            description: rowBullets.length > 0
+              ? rowBullets.map((b) => b.content)
+              : [""],
+            bulletIds: rowBullets.map((b) => b.id),
+          };
+        });
+        setProjectEntries(projectData);
       } catch (error) {
         console.error("Error saving project entries: ", error);
         toast("Failed to save project entries.");
@@ -166,7 +262,10 @@ export default function ProjectForm() {
         const updatedDescription = entry.description.filter(
           (_, dIdx) => dIdx !== bulletIndex
         );
-        return { ...entry, description: updatedDescription };
+        const updatedBulletIds = (entry.bulletIds || []).filter(
+          (_, dIdx) => dIdx !== bulletIndex
+        );
+        return { ...entry, description: updatedDescription, bulletIds: updatedBulletIds };
       }
       return entry;
     });
@@ -223,18 +322,10 @@ export default function ProjectForm() {
           </div>
           <div className="flex space-x-6">
             <div className="flex-grow">
-              <Label>Position</Label>
-              <Input
-                value={entry.position}
-                onChange={(e) =>
-                  updateProjectEntry(index, "position", e.target.value)
-                }
-              />
-            </div>
-            <div className="flex-grow">
-              <Label>Location</Label>
+              <Label>Project URL</Label>
               <Input
                 value={entry.location}
+                placeholder="https://github.com/..."
                 onChange={(e) =>
                   updateProjectEntry(index, "location", e.target.value)
                 }
@@ -243,74 +334,22 @@ export default function ProjectForm() {
           </div>
           <div className="flex space-x-6">
             <div>
-              <Label htmlFor="date-picker" className="text-right">
-                Start Date
-              </Label>
-              <div className="col-span-3">
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant={"outline"}
-                      className={cn(
-                        "w-[240px] justify-start text-left font-normal",
-                        !entry.startDate && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {entry.startDate
-                        ? format(new Date(entry.startDate), "PPP")
-                        : "Select End Date"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent align="start" className=" w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      captionLayout="dropdown-buttons"
-                      selected={entry.startDate}
-                      onSelect={(date) =>
-                        updateProjectEntry(index, "startDate", date)
-                      }
-                      fromYear={1960}
-                      toYear={2030}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
+              <Label>Start Date</Label>
+              <MonthYearPicker
+                value={entry.startDate}
+                onChange={(date) =>
+                  updateProjectEntry(index, "startDate", date)
+                }
+              />
             </div>
             <div>
-              <Label htmlFor="date-picker" className=" text-right">
-                End Date
-              </Label>
-              <div className="col-span-3">
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant={"outline"}
-                      className={cn(
-                        "w-[240px] justify-start text-left font-normal",
-                        !entry.endDate && "text-muted-foreground"
-                      )}
-                    >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
-                      {entry.endDate
-                        ? format(new Date(entry.endDate), "PPP")
-                        : "Select End Date"}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent align="start" className=" w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      captionLayout="dropdown-buttons"
-                      selected={entry.endDate}
-                      onSelect={(date) =>
-                        updateProjectEntry(index, "endDate", date)
-                      }
-                      fromYear={1960}
-                      toYear={2030}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </div>
+              <Label>End Date</Label>
+              <MonthYearPicker
+                value={entry.endDate}
+                onChange={(date) =>
+                  updateProjectEntry(index, "endDate", date)
+                }
+              />
             </div>
           </div>
           <div className="flex items-center space-x-2 pb-4">
