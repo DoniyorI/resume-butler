@@ -4,7 +4,6 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AiOutlineFilePdf, AiOutlineFileText } from "react-icons/ai";
 import {
   flexRender,
   getCoreRowModel,
@@ -13,16 +12,26 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { ArrowUpDown, MoreHorizontal, ListFilter, Trash2 } from "lucide-react";
+import { ArrowUpDown, MoreHorizontal, ListFilter, Trash2, Copy, FileDown, CheckSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import {
   Table,
@@ -38,6 +47,7 @@ import StatusCell from "@/components/StatusCell";
 import CommentsCell from "@/components/CommentsCell";
 
 const PAGE_SIZE = 50;
+const STATUSES = ["Applied", "Interviewed", "Pending", "Offered", "Rejected", "Withdrew"];
 
 function ApplicationTable() {
   const { user, supabase } = useAuth({ redirect: true });
@@ -67,14 +77,12 @@ function ApplicationTable() {
     const fetchApplications = async () => {
       setLoading(true);
       try {
-        // Get total count
         const { count } = await supabase
           .from("applications")
           .select("*", { count: "exact", head: true })
           .eq("user_id", user.id);
         setTotalApplications(count || 0);
 
-        // Get page of applications
         const from = page * PAGE_SIZE;
         const to = from + PAGE_SIZE - 1;
 
@@ -89,8 +97,6 @@ function ApplicationTable() {
 
         const formatted = (data || []).map((app) => ({
           id: app.id,
-          resume: app.resume_id,
-          coverLetter: app.cover_letter_id,
           companyName: app.company,
           role: app.role,
           status: app.status,
@@ -112,7 +118,148 @@ function ApplicationTable() {
     fetchApplications();
   }, [user, supabase, page]);
 
+  // --- Bulk actions ---
+  const selectedRows = Object.keys(rowSelection)
+    .filter((key) => rowSelection[key])
+    .map((key) => {
+      const row = table?.getRowModel()?.rows?.[parseInt(key)];
+      return row?.original;
+    })
+    .filter(Boolean);
+
+  const handleBulkStatusUpdate = async (newStatus) => {
+    const ids = selectedRows.map((r) => r.id);
+    if (ids.length === 0) return;
+
+    try {
+      const { error } = await supabase
+        .from("applications")
+        .update({ status: newStatus })
+        .in("id", ids);
+      if (error) throw error;
+
+      setApplications((prev) =>
+        prev.map((app) =>
+          ids.includes(app.id) ? { ...app, status: newStatus } : app
+        )
+      );
+      setRowSelection({});
+      toast(`Updated ${ids.length} applications to ${newStatus}`);
+    } catch (error) {
+      console.error("Bulk update error:", error);
+      toast("Failed to update applications");
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    const ids = selectedRows.map((r) => r.id);
+    if (ids.length === 0) return;
+    if (!confirm(`Delete ${ids.length} applications?`)) return;
+
+    try {
+      const { error } = await supabase
+        .from("applications")
+        .delete()
+        .in("id", ids);
+      if (error) throw error;
+
+      setApplications((prev) => prev.filter((app) => !ids.includes(app.id)));
+      setTotalApplications((prev) => prev - ids.length);
+      setRowSelection({});
+      toast(`Deleted ${ids.length} applications`);
+    } catch (error) {
+      console.error("Bulk delete error:", error);
+      toast("Failed to delete applications");
+    }
+  };
+
+  // --- Duplicate ---
+  const handleDuplicate = async (application) => {
+    try {
+      const { data, error } = await supabase
+        .from("applications")
+        .insert({
+          user_id: user.id,
+          company: application.companyName,
+          role: application.role,
+          status: "Applied",
+          location: application.location,
+          portal_link: application.portalLink,
+          comments: application.comments,
+          applied_date: new Date().toISOString().split("T")[0],
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setApplications((prev) => [
+        {
+          id: data.id,
+          companyName: data.company,
+          role: data.role,
+          status: data.status,
+          location: data.location,
+          date: new Date(data.applied_date).toLocaleDateString("en-US"),
+          comments: data.comments,
+          portalLink: data.portal_link,
+        },
+        ...prev,
+      ]);
+      setTotalApplications((prev) => prev + 1);
+      toast("Application duplicated");
+    } catch (error) {
+      console.error("Duplicate error:", error);
+      toast("Failed to duplicate application");
+    }
+  };
+
+  // --- Export CSV ---
+  const handleExportCSV = () => {
+    const headers = ["Company", "Role", "Status", "Location", "Date", "Comments", "Portal Link"];
+    const rows = applications.map((app) => [
+      app.companyName,
+      app.role,
+      app.status,
+      app.location,
+      app.date,
+      (app.comments || "").replace(/,/g, ";").replace(/\n/g, " "),
+      app.portalLink,
+    ]);
+
+    const csv = [headers, ...rows].map((r) => r.map((v) => `"${v || ""}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `applications_${new Date().toISOString().split("T")[0]}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    toast("Exported to CSV");
+  };
+
   const columns = [
+    {
+      id: "select",
+      header: ({ table }) => (
+        <Checkbox
+          checked={table.getIsAllPageRowsSelected()}
+          onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+          aria-label="Select all"
+        />
+      ),
+      cell: ({ row }) => (
+        <Checkbox
+          checked={row.getIsSelected()}
+          onCheckedChange={(value) => row.toggleSelected(!!value)}
+          aria-label="Select row"
+        />
+      ),
+      enableSorting: false,
+      enableHiding: false,
+    },
     {
       accessorKey: "companyName",
       header: ({ column }) => (
@@ -126,11 +273,7 @@ function ApplicationTable() {
       ),
       cell: ({ row }) =>
         row.original.portalLink ? (
-          <a
-            href={row.original.portalLink}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
+          <a href={row.original.portalLink} target="_blank" rel="noopener noreferrer">
             <Button className="p-0 m-0 font-normal" variant="link">
               {row.getValue("companyName")}
             </Button>
@@ -142,10 +285,7 @@ function ApplicationTable() {
     {
       accessorKey: "role",
       header: ({ column }) => (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
+        <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
           Role
           <ArrowUpDown className="ml-2 h-3 w-3" />
         </Button>
@@ -155,10 +295,7 @@ function ApplicationTable() {
     {
       accessorKey: "status",
       header: ({ column }) => (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
+        <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
           Status
           <ArrowUpDown className="ml-2 h-3 w-3" />
         </Button>
@@ -168,10 +305,7 @@ function ApplicationTable() {
     {
       accessorKey: "location",
       header: ({ column }) => (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
+        <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
           Location
           <ArrowUpDown className="ml-2 h-3 w-3" />
         </Button>
@@ -181,10 +315,7 @@ function ApplicationTable() {
     {
       accessorKey: "date",
       header: ({ column }) => (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
+        <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
           Date
           <ArrowUpDown className="ml-2 h-3 w-3" />
         </Button>
@@ -194,10 +325,7 @@ function ApplicationTable() {
     {
       accessorKey: "comments",
       header: ({ column }) => (
-        <Button
-          variant="ghost"
-          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        >
+        <Button variant="ghost" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>
           Comments
           <ArrowUpDown className="ml-2 h-3 w-3" />
         </Button>
@@ -220,10 +348,10 @@ function ApplicationTable() {
               current.filter((app) => app.id !== application.id)
             );
             setTotalApplications((prev) => prev - 1);
-            toast("Application deleted successfully!");
+            toast("Application deleted");
           } catch (error) {
             console.error("Error deleting application:", error);
-            toast("Failed to delete application.");
+            toast("Failed to delete application");
           }
         };
         return (
@@ -235,14 +363,12 @@ function ApplicationTable() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={handleDelete}>
-                <Button
-                  variant="ghost"
-                  className="text-red-700 hover:text-red-500 py-1 px-2 h-8 flex items-center justify-center"
-                >
-                  <Trash2 className="mr-1" size={15} />
-                  <span>Delete</span>
-                </Button>
+              <DropdownMenuItem onClick={() => handleDuplicate(application)}>
+                <Copy size={14} className="mr-2" /> Duplicate
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleDelete} className="text-red-600">
+                <Trash2 size={14} className="mr-2" /> Delete
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -291,7 +417,8 @@ function ApplicationTable() {
 
   return (
     <div className="">
-      <div className="flex items-center py-4 mx-4">
+      {/* Toolbar */}
+      <div className="flex items-center justify-between py-4 mx-4 gap-2">
         <Input
           placeholder="Filter by company name"
           value={table.getColumn("companyName")?.getFilterValue() || ""}
@@ -300,29 +427,63 @@ function ApplicationTable() {
           }
           className="max-w-sm"
         />
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="ml-auto ">
-              <ListFilter className="mr-2 h-4 w-4" /> Filter
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {table
-              .getAllColumns()
-              .filter((column) => column.getCanHide())
-              .map((column) => (
-                <DropdownMenuCheckboxItem
-                  key={column.id}
-                  className="capitalize"
-                  checked={column.getIsVisible()}
-                  onCheckedChange={(value) => column.toggleVisibility(!!value)}
-                >
-                  {column.id}
-                </DropdownMenuCheckboxItem>
-              ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="flex items-center gap-2">
+          {/* Bulk actions — visible when rows selected */}
+          {selectedRows.length > 0 && (
+            <>
+              <span className="text-xs text-gray-500">{selectedRows.length} selected</span>
+              <Select onValueChange={handleBulkStatusUpdate}>
+                <SelectTrigger className="w-[140px] h-9 text-xs">
+                  <SelectValue placeholder="Set status..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {STATUSES.map((s) => (
+                      <SelectItem key={s} value={s}>
+                        <Badge variant={s.toLowerCase()}>{s}</Badge>
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+              <Button variant="outline" size="sm" className="text-red-600 h-9" onClick={handleBulkDelete}>
+                <Trash2 size={14} className="mr-1" /> Delete
+              </Button>
+            </>
+          )}
+
+          {/* Export CSV */}
+          <Button variant="outline" size="sm" className="h-9" onClick={handleExportCSV}>
+            <FileDown size={14} className="mr-1" /> CSV
+          </Button>
+
+          {/* Column filter */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="h-9">
+                <ListFilter className="mr-1 h-4 w-4" /> Filter
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {table
+                .getAllColumns()
+                .filter((column) => column.getCanHide())
+                .map((column) => (
+                  <DropdownMenuCheckboxItem
+                    key={column.id}
+                    className="capitalize"
+                    checked={column.getIsVisible()}
+                    onCheckedChange={(value) => column.toggleVisibility(!!value)}
+                  >
+                    {column.id}
+                  </DropdownMenuCheckboxItem>
+                ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
+
+      {/* Table */}
       <div className="rounded-md border mx-4">
         <Table>
           <TableHeader>
@@ -332,10 +493,7 @@ function ApplicationTable() {
                   <TableHead key={header.id}>
                     {header.isPlaceholder
                       ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
+                      : flexRender(header.column.columnDef.header, header.getContext())}
                   </TableHead>
                 ))}
               </TableRow>
@@ -347,32 +505,26 @@ function ApplicationTable() {
                 <TableRow
                   key={row.id}
                   className="cursor-pointer hover:bg-gray-50"
+                  data-state={row.getIsSelected() && "selected"}
                   onClick={() => router.push(`/applications/${row.original.id}`)}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell
                       key={cell.id}
                       onClick={(e) => {
-                        // Don't navigate when clicking interactive cells
-                        if (["status", "comments", "actions"].includes(cell.column.id)) {
+                        if (["select", "status", "comments", "actions"].includes(cell.column.id)) {
                           e.stopPropagation();
                         }
                       }}
                     >
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext()
-                      )}
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-24 text-center"
-                >
+                <TableCell colSpan={columns.length} className="h-24 text-center">
                   No results.
                 </TableCell>
               </TableRow>
@@ -381,6 +533,7 @@ function ApplicationTable() {
         </Table>
       </div>
 
+      {/* Footer */}
       <div className="flex items-center justify-between space-x-2 py-4 mx-4">
         <div className="text-xs text-muted-foreground">
           Showing{" "}
@@ -401,7 +554,6 @@ function ApplicationTable() {
           >
             Previous
           </Button>
-
           <Button
             variant="outline"
             size="sm"
