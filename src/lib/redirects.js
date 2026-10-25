@@ -14,11 +14,21 @@ function matches(pathname, paths) {
 export const isPublicPath = (pathname) => matches(pathname, PUBLIC_PATHS);
 export const isAuthPath = (pathname) => matches(pathname, AUTH_PATHS);
 
-// Only allow same-site relative paths after sign-in ("//evil.com" and
-// "/\evil.com" are treated as other origins by browsers).
+// Only allow same-site paths after sign-in. Prefix checks alone aren't enough:
+// browsers treat "//evil.com", "/\evil.com" and "/\t/evil.com" (tabs and
+// newlines are stripped) as other origins. So reject control characters and
+// backslashes, then resolve against a dummy origin and require it to match.
+const DUMMY_ORIGIN = "http://same-site.invalid";
+
 export function safeNextPath(value, fallback = HOME_PATH) {
-  if (typeof value !== "string" || !value.startsWith("/") || value.startsWith("//") || value.startsWith("/\\")) {
+  if (typeof value !== "string" || !value.startsWith("/") || /[\x00-\x1f\x7f\\]/.test(value)) {
     return fallback;
   }
-  return value;
+  try {
+    const url = new URL(value, DUMMY_ORIGIN);
+    if (url.origin !== DUMMY_ORIGIN) return fallback;
+    return url.pathname + url.search + url.hash;
+  } catch {
+    return fallback;
+  }
 }
