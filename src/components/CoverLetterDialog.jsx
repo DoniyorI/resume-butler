@@ -1,4 +1,5 @@
 "use client";
+import { toast } from "sonner";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
@@ -52,7 +53,7 @@ export default function CoverLetterDialog() {
 
   const handleNextStep = async (formData) => {
     if (!user) {
-      alert("You must be logged in to create a cover letter.");
+      toast.error("You must be logged in to create a cover letter.");
       return;
     }
 

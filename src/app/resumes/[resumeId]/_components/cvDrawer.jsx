@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
+import { formatMonthYear } from "@/lib/dates";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -73,12 +74,6 @@ export function CvDrawer({ onAddEducation, onAddExperience, onAddProject, onAddS
     fetchCvData();
   }, [user, supabase, open]);
 
-  const formatDate = (dateStr) => {
-    if (!dateStr) return "";
-    const d = new Date(dateStr);
-    return d.toLocaleDateString("en-US", { month: "short", year: "numeric" });
-  };
-
   const handleAddEducation = (edu) => {
     onAddEducation({
       school: edu.school || "",
@@ -136,7 +131,7 @@ export function CvDrawer({ onAddEducation, onAddExperience, onAddProject, onAddS
     <>
       <Button
         variant="outline"
-        className="border-[#559F87] text-[#559F87] hover:bg-green-50"
+        className="border-brand text-brand hover:bg-green-50"
         onClick={onToggle}
       >
         <PanelRightOpen size={16} className="mr-2" />
@@ -152,7 +147,7 @@ export function CvDrawer({ onAddEducation, onAddExperience, onAddProject, onAddS
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b">
           <div>
-            <h2 className="font-semibold text-[#559F87] text-lg">Master CV</h2>
+            <h2 className="font-semibold text-brand text-lg">Master CV</h2>
             <p className="text-xs text-gray-400">
               Click + to add items to this resume
             </p>
@@ -190,7 +185,7 @@ export function CvDrawer({ onAddEducation, onAddExperience, onAddProject, onAddS
                     </p>
                     {(edu.start_date || edu.end_date) && (
                       <p className="text-xs text-gray-400">
-                        {formatDate(edu.start_date)} - {formatDate(edu.end_date)}
+                        {formatMonthYear(edu.start_date, { month: "short" })} - {formatMonthYear(edu.end_date, { month: "short" })}
                       </p>
                     )}
                     {edu.gpa && (
@@ -214,8 +209,8 @@ export function CvDrawer({ onAddEducation, onAddExperience, onAddProject, onAddS
                     <p className="font-medium text-sm">{exp.company}</p>
                     <p className="text-xs text-gray-500">{exp.position}</p>
                     <p className="text-xs text-gray-400">
-                      {formatDate(exp.start_date)} -{" "}
-                      {exp.currently_working ? "Present" : formatDate(exp.end_date)}
+                      {formatMonthYear(exp.start_date, { month: "short" })} -{" "}
+                      {exp.currently_working ? "Present" : formatMonthYear(exp.end_date, { month: "short" })}
                     </p>
                     {exp.bullets?.length > 0 && (
                       <ul className="mt-1.5 space-y-0.5">
@@ -248,7 +243,7 @@ export function CvDrawer({ onAddEducation, onAddExperience, onAddProject, onAddS
                     )}
                     {(proj.start_date || proj.end_date) && (
                       <p className="text-xs text-gray-400">
-                        {formatDate(proj.start_date)} - {formatDate(proj.end_date)}
+                        {formatMonthYear(proj.start_date, { month: "short" })} - {formatMonthYear(proj.end_date, { month: "short" })}
                       </p>
                     )}
                     {proj.bullets?.length > 0 && (
@@ -269,7 +264,7 @@ export function CvDrawer({ onAddEducation, onAddExperience, onAddProject, onAddS
               <section>
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <Wrench size={16} className="text-[#559F87]" />
+                    <Wrench size={16} className="text-brand" />
                     <h3 className="font-semibold text-sm">Skills</h3>
                     <Badge variant="secondary" className="text-xs">
                       {cvData.skills.length}
@@ -279,7 +274,7 @@ export function CvDrawer({ onAddEducation, onAddExperience, onAddProject, onAddS
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="text-xs text-[#559F87] hover:bg-green-50 h-7"
+                      className="text-xs text-brand hover:bg-green-50 h-7"
                       onClick={handleAddAllSkills}
                     >
                       <Plus size={12} className="mr-1" /> Add All
@@ -320,7 +315,7 @@ function Section({ icon: Icon, title, count, children }) {
   return (
     <section>
       <div className="flex items-center gap-2 mb-3">
-        <Icon size={16} className="text-[#559F87]" />
+        <Icon size={16} className="text-brand" />
         <h3 className="font-semibold text-sm">{title}</h3>
         <Badge variant="secondary" className="text-xs">{count}</Badge>
       </div>
@@ -335,13 +330,13 @@ function Section({ icon: Icon, title, count, children }) {
 
 function ItemCard({ children, onAdd }) {
   return (
-    <div className="border rounded-md p-3 hover:border-[#559F87] transition-colors">
+    <div className="border rounded-md p-3 hover:border-brand transition-colors">
       <div className="flex gap-2">
         <div className="flex-grow min-w-0">{children}</div>
         <Button
           size="icon"
           variant="outline"
-          className="h-8 w-8 flex-shrink-0 border-[#559F87] text-[#559F87] hover:bg-green-50 self-start"
+          className="h-8 w-8 flex-shrink-0 border-brand text-brand hover:bg-green-50 self-start"
           onClick={onAdd}
         >
           <Plus size={14} />

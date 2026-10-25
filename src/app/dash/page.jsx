@@ -21,16 +21,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import SankeyDiagram from "@/components/SankeyDiagram";
-
-const STATUS_COLORS = {
-  applied: "#B5DCF2",
-  interviewed: "#F3F5A3",
-  pending: "#FFFACD",
-  rejected: "#F2B5B5",
-  offered: "#D8F1AE",
-  withdrew: "#D0B5F2",
-  "reached out": "#B5F2E0",
-};
+import { BRAND_COLOR, STATUS_COLORS } from "@/lib/constants";
 
 export default function DashboardPage() {
   const { user, loading, supabase } = useAuth({ redirect: true });
@@ -66,7 +57,7 @@ export default function DashboardPage() {
   if (dataLoading || loading) {
     return (
       <div className="flex flex-col w-full min-h-screen pt-32 px-5 md:pt-24 md:pb-10 md:px-10">
-        <h1 className="text-2xl font-semibold text-[#559F87]">Dashboard</h1>
+        <h1 className="text-2xl font-semibold text-brand">Dashboard</h1>
         <p className="text-gray-400 mt-4">Loading...</p>
       </div>
     );
@@ -119,7 +110,7 @@ export default function DashboardPage() {
     .map(([label, value]) => ({
       label,
       value,
-      color: STATUS_COLORS[label.toLowerCase()],
+      color: STATUS_COLORS[label],
     }));
 
   // --- Applications over time (daily) ---
@@ -133,15 +124,15 @@ export default function DashboardPage() {
 
   // --- Funnel data ---
   const funnelStages = [
-    { label: "Applied", count: total, color: "#B5DCF2" },
-    { label: "Reached Out", count: statusCounts["Reached Out"], color: "#B5F2E0" },
-    { label: "Interviewed", count: statusCounts.Interviewed + statusCounts.Offered, color: "#F3F5A3" },
-    { label: "Offered", count: statusCounts.Offered, color: "#D8F1AE" },
+    { label: "Applied", count: total, color: STATUS_COLORS.Applied },
+    { label: "Reached Out", count: statusCounts["Reached Out"], color: STATUS_COLORS["Reached Out"] },
+    { label: "Interviewed", count: statusCounts.Interviewed + statusCounts.Offered, color: STATUS_COLORS.Interviewed },
+    { label: "Offered", count: statusCounts.Offered, color: STATUS_COLORS.Offered },
   ];
 
   return (
     <div className="flex flex-col w-full min-h-screen pt-24 px-5 md:px-10 pb-10">
-      <h1 className="text-2xl font-semibold text-[#559F87] mb-6">Dashboard</h1>
+      <h1 className="text-2xl font-semibold text-brand mb-6">Dashboard</h1>
 
       {/* Stat cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
@@ -177,7 +168,7 @@ export default function DashboardPage() {
             <CardTitle className="text-base">This Week</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-4xl font-bold text-[#559F87]">{thisWeek}</div>
+            <div className="text-4xl font-bold text-brand">{thisWeek}</div>
             <p className="text-sm text-gray-500 mt-1">applications submitted</p>
           </CardContent>
         </Card>
@@ -264,7 +255,7 @@ export default function DashboardPage() {
                       scaleType: "band",
                     },
                   ]}
-                  series={[{ data: barYData, color: "#559F87" }]}
+                  series={[{ data: barYData, color: BRAND_COLOR }]}
                   width={450}
                   height={220}
                 />
@@ -318,7 +309,7 @@ function StatCard({ icon: Icon, label, value, sub }) {
       <CardContent className="pt-6">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-lg bg-green-50">
-            <Icon size={18} className="text-[#559F87]" />
+            <Icon size={18} className="text-brand" />
           </div>
           <div>
             <p className="text-xs text-gray-500">{label}</p>

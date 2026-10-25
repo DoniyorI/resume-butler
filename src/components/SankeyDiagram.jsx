@@ -2,15 +2,7 @@
 import { useRef, useEffect } from "react";
 import { sankey, sankeyLinkHorizontal, sankeyCenter } from "d3-sankey";
 
-const STATUS_COLORS = {
-  "Applied": "#B5DCF2",
-  "Interviewed": "#93C5FD",
-  "Pending": "#FDE68A",
-  "Offered": "#86EFAC",
-  "Rejected": "#FCA5A5",
-  "Withdrew": "#D8B4FE",
-  "Reached Out": "#B5F2E0",
-};
+import { APPLICATION_STATUSES, STATUS_COLORS } from "@/lib/constants";
 
 export default function SankeyDiagram({ applications, statusHistory }) {
   const svgRef = useRef(null);
@@ -46,7 +38,7 @@ export default function SankeyDiagram({ applications, statusHistory }) {
     });
 
     // Build nodes and links
-    const nodeNames = ["Applied", "Reached Out", "Interviewed", "Pending", "Offered", "Rejected", "Withdrew"];
+    const nodeNames = APPLICATION_STATUSES;
     const activeNodes = new Set();
 
     // Add nodes that have applications

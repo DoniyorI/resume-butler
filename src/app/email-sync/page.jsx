@@ -151,7 +151,7 @@ export default function EmailSyncPage() {
   if (loading || loadingConnection) {
     return (
       <div className="flex flex-col w-full min-h-screen pt-32 px-5 md:pt-24 md:px-10">
-        <h1 className="text-2xl font-semibold text-[#559F87]">Email Sync</h1>
+        <h1 className="text-2xl font-semibold text-brand">Email Sync</h1>
         <p className="text-gray-400 mt-4">Loading...</p>
       </div>
     );
@@ -159,7 +159,7 @@ export default function EmailSyncPage() {
 
   return (
     <div className="flex flex-col w-full min-h-screen pt-24 px-5 md:px-10 pb-10">
-      <h1 className="text-2xl font-semibold text-[#559F87] mb-2">Email Sync</h1>
+      <h1 className="text-2xl font-semibold text-brand mb-2">Email Sync</h1>
       <p className="text-sm text-gray-500 mb-6">
         Connect your email to automatically detect job application updates and recruiter outreach.
       </p>

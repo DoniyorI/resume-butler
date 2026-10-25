@@ -25,6 +25,7 @@ import { Badge } from "./ui/badge";
 import { isValid, format } from "date-fns";
 import { Calendar as CalendarIcon, FileText, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { APPLICATION_STATUSES } from "@/lib/constants";
 import { normalizeHttpUrl } from "@/lib/safeUrl";
 import {
   Select,
@@ -149,16 +150,6 @@ export default function AddApplicationDialog() {
     }
   };
 
-  const statuses = [
-    { label: "Applied", value: "Applied" },
-    { label: "Interviewed", value: "Interviewed" },
-    { label: "Pending", value: "Pending" },
-    { label: "Offered", value: "Offered" },
-    { label: "Rejected", value: "Rejected" },
-    { label: "Withdrew", value: "Withdrew" },
-    { label: "Reached Out", value: "Reached Out" },
-  ];
-
   return (
     <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
       <DialogTrigger asChild>
@@ -280,13 +271,10 @@ export default function AddApplicationDialog() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
-                      {statuses.map((statusOption) => (
-                        <SelectItem
-                          key={statusOption.label}
-                          value={statusOption.value}
-                        >
-                          <Badge variant={statusOption.value.toLowerCase()}>
-                            {statusOption.label}
+                      {APPLICATION_STATUSES.map((statusOption) => (
+                        <SelectItem key={statusOption} value={statusOption}>
+                          <Badge variant={statusOption.toLowerCase()}>
+                            {statusOption}
                           </Badge>
                         </SelectItem>
                       ))}

@@ -20,9 +20,9 @@ import {
 function StatBadge({ icon: Icon, label, count }) {
   return (
     <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gray-50 border text-sm">
-      <Icon size={14} className="text-[#559F87]" />
+      <Icon size={14} className="text-brand" />
       <span className="text-gray-600">{label}</span>
-      <span className="font-semibold text-[#559F87]">{count}</span>
+      <span className="font-semibold text-brand">{count}</span>
     </div>
   );
 }
@@ -86,7 +86,7 @@ export default function CV() {
     <div className="flex flex-col w-full min-h-screen py-16 px-6 md:px-10 my-10">
       {/* Header */}
       <div className="text-center mb-6">
-        <h1 className="text-2xl font-semibold text-[#559F87]">
+        <h1 className="text-2xl font-semibold text-brand">
           Master CV
         </h1>
         <p className="pt-1 font-light text-sm text-gray-500 max-w-lg mx-auto">

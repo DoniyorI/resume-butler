@@ -47,7 +47,7 @@ export default function ForgotPasswordForm() {
   return (
     <div className="flex items-center justify-center min-h-screen bg-white">
       <div className="w-full max-w-md p-6 bg-white rounded-lg border border-gray-100 shadow-md">
-        <h2 className="text-2xl font-bold text-[#559F87] text-center mb-6">
+        <h2 className="text-2xl font-bold text-brand text-center mb-6">
           Forgot Password
         </h2>
         <Form {...form}>

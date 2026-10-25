@@ -45,10 +45,10 @@ import { toast } from "sonner";
 
 import StatusCell from "@/components/StatusCell";
 import CommentsCell from "@/components/CommentsCell";
+import { APPLICATION_STATUSES } from "@/lib/constants";
 import { safeHttpUrl } from "@/lib/safeUrl";
 
 const PAGE_SIZE = 50;
-const STATUSES = ["Applied", "Interviewed", "Pending", "Offered", "Rejected", "Withdrew", "Reached Out"];
 
 function ApplicationTable() {
   const { user, supabase } = useAuth({ redirect: true });
@@ -467,7 +467,7 @@ function ApplicationTable() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectGroup>
-                    {STATUSES.map((s) => (
+                    {APPLICATION_STATUSES.map((s) => (
                       <SelectItem key={s} value={s}>
                         <Badge variant={s.toLowerCase()}>{s}</Badge>
                       </SelectItem>
@@ -485,7 +485,7 @@ function ApplicationTable() {
           <Button
             variant="outline"
             size="sm"
-            className="h-9 text-[#559F87] border-[#559F87]/30 hover:bg-green-50"
+            className="h-9 text-brand border-brand/30 hover:bg-green-50"
             onClick={handleEmailScan}
             disabled={scanning}
           >

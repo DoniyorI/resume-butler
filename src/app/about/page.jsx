@@ -6,12 +6,12 @@ import { Instagram, Linkedin, Github } from "lucide-react";
 export default function About() {
     return(
         <div className="flex flex-col items-center  justify-center w-full min-h-screen pb-10 px-10">
-      <h1 className="text-2xl font-semibold text-[#559F87] mb-10">About us</h1>
+      <h1 className="text-2xl font-semibold text-brand mb-10">About us</h1>
 
       <div className="flex gap-20 mb-10">
         {/* Profile for Doniyor Ismatilloev */}
         <div className="text-center">
-          <Image src="/image/doniyor.png" alt="Doniyor Ismatilloev" width={160} height={160} className="rounded-full object-cover mb-4 border-2 border-spacing-2 border-[#559F87] " />
+          <Image src="/image/doniyor.png" alt="Doniyor Ismatilloev" width={160} height={160} className="rounded-full object-cover mb-4 border-2 border-spacing-2 border-brand " />
           <h2 className="font-semibold">Doniyor Ismatilloev</h2>
           <p className="flex justify-center gap-4">
             <Link href="https://www.instagram.com/doniyor134/"><Instagram className="h-5 w-5" /></Link>
@@ -22,7 +22,7 @@ export default function About() {
 
         {/* Profile for Cal Thanga */}
         <div className="text-center">
-          <Image src="/image/cal.png" alt="Cal Thanga" width={160} height={160} className="rounded-full object-cover mb-4 border-2 border-spacing-2 border-[#559F87]"/>
+          <Image src="/image/cal.png" alt="Cal Thanga" width={160} height={160} className="rounded-full object-cover mb-4 border-2 border-spacing-2 border-brand"/>
           <h2 className="font-semibold">Cal Thanga</h2>
           <p className="flex justify-center gap-4">
             <Link href="https://www.instagram.com/zodintch/"><Instagram className="h-5 w-5" /></Link>

@@ -93,7 +93,7 @@ export default function FileUpload({ onComplete }) {
       >
         {uploading ? (
           <div className="flex flex-col items-center space-y-3">
-            <Loader2 className="h-6 w-6 animate-spin text-[#559F87]" />
+            <Loader2 className="h-6 w-6 animate-spin text-brand" />
             <p className="text-sm text-gray-600">
               Parsing <span className="font-medium">{fileName}</span>...
             </p>

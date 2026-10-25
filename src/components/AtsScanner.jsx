@@ -103,7 +103,7 @@ export default function AtsScanner({ resumeContent, initialJobDescription = "" }
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <ScanSearch size={18} className="text-[#559F87]" />
+            <ScanSearch size={18} className="text-brand" />
             <CardTitle className="text-lg">ATS Scanner</CardTitle>
           </div>
           {result && !expanded && (

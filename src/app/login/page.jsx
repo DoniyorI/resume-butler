@@ -1,4 +1,5 @@
 "use client";
+import { toast } from "sonner";
 import Link from "next/link";
 
 import { useState } from "react";
@@ -32,7 +33,7 @@ export default function Login() {
       if (error) throw error;
       router.push("/");
     } catch (error) {
-      alert(error.message);
+      toast.error(error.message);
     }
   };
   return (

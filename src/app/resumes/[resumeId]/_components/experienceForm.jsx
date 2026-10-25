@@ -1,3 +1,4 @@
+import { formatMonthYear } from "@/lib/dates";
 import { EditableText } from "./EditableText";
 import { X } from "lucide-react";
 export const ExperienceForm = ({ item, onChange, bulletSeverities = {} }) => {
@@ -31,16 +32,11 @@ export const ExperienceForm = ({ item, onChange, bulletSeverities = {} }) => {
     handleInputChange(field, { target: { textContent: value } });
   };
 
-  const formatDate = (dateString) => {
-    if (!dateString) return "";
-    const date = new Date(dateString.split(" at ")[0]);
-    return date.toLocaleDateString("en-US", { month: "long", year: "numeric" });
-  };
 
-  const formattedStartDate = formatDate(item.startDate);
+  const formattedStartDate = formatMonthYear(item.startDate);
   const formattedEndDate = item.currentlyWorking
     ? "Present"
-    : formatDate(item.endDate);
+    : formatMonthYear(item.endDate);
 
   const handleDescriptionChange = (index, value) => {
     const newDescription = [...item.description];

@@ -6,6 +6,7 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import Link from "next/link";
 import AtsScanner from "@/components/AtsScanner";
+import { APPLICATION_STATUSES } from "@/lib/constants";
 import { normalizeHttpUrl, safeHttpUrl } from "@/lib/safeUrl";
 
 import { Button } from "@/components/ui/button";
@@ -48,7 +49,6 @@ import {
   Trash2,
 } from "lucide-react";
 
-const STATUSES = ["Applied", "Interviewed", "Pending", "Offered", "Rejected", "Withdrew"];
 
 export default function ApplicationDetailPage({ params }) {
   const { user, loading, supabase } = useAuth({ redirect: true });
@@ -366,7 +366,7 @@ export default function ApplicationDetailPage({ params }) {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectGroup>
-                    {STATUSES.map((s) => (
+                    {APPLICATION_STATUSES.map((s) => (
                       <SelectItem key={s} value={s}>
                         <Badge variant={s.toLowerCase()}>{s}</Badge>
                       </SelectItem>
@@ -398,7 +398,7 @@ export default function ApplicationDetailPage({ params }) {
                         <div
                           className={`w-4 h-4 rounded-full border-2 bg-white z-10 mt-0.5 flex-shrink-0 ${
                             index === statusHistory.length - 1
-                              ? "border-[#559F87]"
+                              ? "border-brand"
                               : "border-gray-300"
                           }`}
                         />

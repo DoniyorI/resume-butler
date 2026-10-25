@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import Imap from "imap";
+import { APPLICATION_STATUSES, STATUS_PROGRESSION } from "@/lib/constants";
 import { requireUser } from "@/server/auth";
 import { decryptSecret, encryptSecret, isEncrypted } from "@/server/crypto";
 import { IMAP_PORT, isAllowedImapHost, normalizeImapHost } from "@/server/email/imapHosts";
@@ -7,7 +8,6 @@ import { errorResponse } from "@/server/http";
 import { chatJSON } from "@/server/openai";
 import { enforceRateLimit } from "@/server/rateLimit";
 
-const STATUSES = ["Applied", "Interviewed", "Pending", "Offered", "Rejected", "Withdrew", "Reached Out"];
 
 // Keywords and sender patterns for filtering job emails
 const JOB_KEYWORDS = [
@@ -327,7 +327,7 @@ export async function POST() {
 
         // Validate status
         let status = classification.status || "Pending";
-        if (!STATUSES.includes(status)) status = "Pending";
+        if (!APPLICATION_STATUSES.includes(status)) status = "Pending";
 
         // Match to an existing application by normalized company name
         const matchedApp = (existingApps || []).find(
@@ -339,9 +339,8 @@ export async function POST() {
 
         if (matchedApp) {
           // Update existing application status if it progressed
-          const statusOrder = ["Applied", "Reached Out", "Pending", "Interviewed", "Offered"];
-          const oldIdx = statusOrder.indexOf(matchedApp.status);
-          const newIdx = statusOrder.indexOf(status);
+          const oldIdx = STATUS_PROGRESSION.indexOf(matchedApp.status);
+          const newIdx = STATUS_PROGRESSION.indexOf(status);
 
           // Allow update if the new status is further along, or a rejection of an
           // application that is still open (never overwrite Offered, Rejected or Withdrew)

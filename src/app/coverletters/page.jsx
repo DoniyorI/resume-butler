@@ -128,7 +128,7 @@ export default function Page() {
 
   return (
     <div className="flex flex-col w-full min-h-screen pt-24 pb-10 px-10">
-      <h1 className="text-2xl font-semibold text-[#559F87]">Cover Letters</h1>
+      <h1 className="text-2xl font-semibold text-brand">Cover Letters</h1>
       <div className="flex justify-between mx-2 my-1 mt-3">
         <Input
           placeholder="Filter by Cover Letter Name"
@@ -151,7 +151,7 @@ export default function Page() {
           </SelectContent>
         </Select>
       </div>
-      <h2 className="text-lg text-[#559F87] font-semibold mt-4">
+      <h2 className="text-lg text-brand font-semibold mt-4">
         Cover Letters
       </h2>
       <div className="flex flex-wrap ">

@@ -1,4 +1,5 @@
 "use client";
+import { toast } from "sonner";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -53,7 +54,7 @@ export default function ResumeDialog() {
 
   const handleNextStep = async (formData) => {
     if (!user) {
-      alert("You must be logged in to create a resume.");
+      toast.error("You must be logged in to create a resume.");
       return;
     }
 

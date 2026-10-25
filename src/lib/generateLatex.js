@@ -1,3 +1,4 @@
+import { formatMonthYear } from "@/lib/dates";
 import { safeHttpUrl } from "@/lib/safeUrl";
 
 // Every user-supplied value must go through esc() or escUrl() before it is
@@ -39,10 +40,7 @@ function link(url, label) {
 }
 
 function formatDate(dateStr) {
-  if (!dateStr) return "";
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return esc(dateStr);
-  return d.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  return esc(formatMonthYear(dateStr));
 }
 
 function buildHeader(header) {

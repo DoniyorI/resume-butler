@@ -1,5 +1,6 @@
 "use client";
 import { useState } from 'react';
+import { APPLICATION_STATUSES } from "@/lib/constants";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem} from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -32,7 +33,7 @@ function StatusCell({ row }) {
                     </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="text-sm">
-                    {["Applied", "Interviewed", "Pending", "Rejected", "Offered", "Withdrew", "Reached Out"].map((status) => (
+                    {APPLICATION_STATUSES.map((status) => (
                         <DropdownMenuItem key={status} onClick={() => handleChange(status)} className="text-xs cursor-pointer">
                             <Badge variant={status.toLowerCase()}>{status}</Badge>
                         </DropdownMenuItem>

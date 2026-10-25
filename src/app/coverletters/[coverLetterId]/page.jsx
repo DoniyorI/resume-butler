@@ -212,7 +212,7 @@ function CoverLetterEditor({ params }) {
             </Button>
             <Button
               variant="outline"
-              className="border-[#559F87] text-[#559F87] hover:bg-green-50"
+              className="border-brand text-brand hover:bg-green-50"
               onClick={() => setAiPanelOpen(!aiPanelOpen)}
             >
               <Sparkles size={16} className="mr-2" />
@@ -329,7 +329,7 @@ function AiCoverLetterPanel({ open, onClose, onApply, userName }) {
     >
       <div className="flex items-center justify-between p-4 border-b">
         <div>
-          <h2 className="font-semibold text-[#559F87] text-lg flex items-center gap-2">
+          <h2 className="font-semibold text-brand text-lg flex items-center gap-2">
             <Sparkles size={18} /> AI Cover Letter
           </h2>
           <p className="text-xs text-gray-400">
@@ -425,7 +425,7 @@ function AiCoverLetterPanel({ open, onClose, onApply, userName }) {
 }
 
 const EditorHeader = ({ title, setCoverLetterTitle, editingTitle, setEditingTitle, autoSave }) => (
-  <h1 className="text-3xl font-medium text-[#559F87]">
+  <h1 className="text-3xl font-medium text-brand">
     Cover Letter:
     {editingTitle ? (
       <input

@@ -52,7 +52,7 @@ export default function Contact() {
 
   return (
     <div className="flex flex-col w-full min-h-screen pt-24 pb-10 px-10">
-      <h1 className="text-2xl font-semibold text-[#559F87]">Contact Us</h1>
+      <h1 className="text-2xl font-semibold text-brand">Contact Us</h1>
       <p className="mt-4 text-lg">
         We would love to hear from you! Please feel free to reach out to us.
       </p>

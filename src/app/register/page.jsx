@@ -1,4 +1,5 @@
 "use client";
+import { toast } from "sonner";
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -24,7 +25,7 @@ export default function Register() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (password !== confirmPassword) {
-      alert("Passwords do not match");
+      toast.error("Passwords do not match");
       return;
     }
     try {
@@ -38,9 +39,9 @@ export default function Register() {
     } catch (error) {
       console.error("Error creating new user: ", error);
       if (error.message?.includes("already registered")) {
-        alert("This email is already in use by another account.");
+        toast.error("This email is already in use by another account.");
       } else {
-        alert("Failed to create account. Please try again later.");
+        toast.error("Failed to create account. Please try again later.");
       }
     }
   };

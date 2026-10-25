@@ -131,7 +131,6 @@ export default function ExperienceForm() {
   };
 
   const updateExperienceEntry = (index, field, value) => {
-    console.log("updateExperienceEntry", index, field, value);
     const updatedEntries = experienceEntries.map((entry, idx) => {
       if (idx === index) {
         return { ...entry, [field]: value };

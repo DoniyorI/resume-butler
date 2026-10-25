@@ -359,7 +359,7 @@ export default function Page({ params }) {
             </DropdownMenu>
             <Button
               variant="outline"
-              className="border-[#559F87] text-[#559F87] hover:bg-green-50"
+              className="border-brand text-brand hover:bg-green-50"
               onClick={() => { setAtsOpen(!atsOpen); if (!atsOpen) setDrawerOpen(false); }}
             >
               <ScanSearch size={16} className="mr-2" />
@@ -542,7 +542,7 @@ function AtsPanel({ open, onClose, resumeContent, onScanComplete, onAcceptSugges
     <div className={`fixed top-16 right-0 h-[calc(100vh-64px)] w-[420px] bg-white border-l shadow-lg z-30 transform transition-transform duration-300 ease-in-out ${open ? "translate-x-0" : "translate-x-full"}`}>
       <div className="flex items-center justify-between p-4 border-b">
         <div>
-          <h2 className="font-semibold text-[#559F87] text-lg flex items-center gap-2">
+          <h2 className="font-semibold text-brand text-lg flex items-center gap-2">
             <ScanSearch size={18} /> ATS Scanner
           </h2>
           <p className="text-xs text-gray-400">Check how your resume matches a job posting</p>
@@ -709,7 +709,7 @@ function AtsPanel({ open, onClose, resumeContent, onScanComplete, onAcceptSugges
 }
 
 const Header = ({ resumeTitle, setResumeTitle, editingTitle, setEditingTitle, autoSave }) => (
-  <h1 className="text-3xl font-medium text-[#559F87] cursor-default">
+  <h1 className="text-3xl font-medium text-brand cursor-default">
     Resume:
     <input
       type="text"
