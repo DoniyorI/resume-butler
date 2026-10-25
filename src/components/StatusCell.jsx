@@ -32,7 +32,7 @@ function StatusCell({ row }) {
                     </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="text-sm">
-                    {["Applied", "Interviewed", "Pending", "Rejected", "Offered", "Withdrew"].map((status) => (
+                    {["Applied", "Interviewed", "Pending", "Rejected", "Offered", "Withdrew", "Reached Out"].map((status) => (
                         <DropdownMenuItem key={status} onClick={() => handleChange(status)} className="text-xs cursor-pointer">
                             <Badge variant={status.toLowerCase()}>{status}</Badge>
                         </DropdownMenuItem>

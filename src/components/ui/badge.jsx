@@ -28,6 +28,8 @@ const badgeVariants = cva(
           "border-transparent bg-[#F2B5B5] hover:bg-[#F2B5B5]/80 font-light",
         withdrew:
           "border-transparent bg-[#D0B5F2] hover:bg-[#D0B5F2]/80 font-light",
+        "reached out":
+          "border-transparent bg-[#B5F2E0] hover:bg-[#B5F2E0]/80 font-light",
       },
     },
     defaultVariants: {

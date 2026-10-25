@@ -9,6 +9,7 @@ const STATUS_COLORS = {
   "Offered": "#86EFAC",
   "Rejected": "#FCA5A5",
   "Withdrew": "#D8B4FE",
+  "Reached Out": "#B5F2E0",
 };
 
 export default function SankeyDiagram({ applications, statusHistory }) {
@@ -45,7 +46,7 @@ export default function SankeyDiagram({ applications, statusHistory }) {
     });
 
     // Build nodes and links
-    const nodeNames = ["Applied", "Interviewed", "Pending", "Offered", "Rejected", "Withdrew"];
+    const nodeNames = ["Applied", "Reached Out", "Interviewed", "Pending", "Offered", "Rejected", "Withdrew"];
     const activeNodes = new Set();
 
     // Add nodes that have applications

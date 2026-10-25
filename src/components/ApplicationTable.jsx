@@ -12,7 +12,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
-import { ArrowUpDown, MoreHorizontal, ListFilter, Trash2, Copy, FileDown, CheckSquare } from "lucide-react";
+import { ArrowUpDown, MoreHorizontal, ListFilter, Trash2, Copy, FileDown, CheckSquare, RefreshCw, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -47,7 +47,7 @@ import StatusCell from "@/components/StatusCell";
 import CommentsCell from "@/components/CommentsCell";
 
 const PAGE_SIZE = 50;
-const STATUSES = ["Applied", "Interviewed", "Pending", "Offered", "Rejected", "Withdrew"];
+const STATUSES = ["Applied", "Interviewed", "Pending", "Offered", "Rejected", "Withdrew", "Reached Out"];
 
 function ApplicationTable() {
   const { user, supabase } = useAuth({ redirect: true });
@@ -60,6 +60,7 @@ function ApplicationTable() {
   const [loading, setLoading] = useState(true);
   const [totalApplications, setTotalApplications] = useState(0);
   const [page, setPage] = useState(0);
+  const [scanning, setScanning] = useState(false);
 
   useEffect(() => {
     const handleNewApplication = (event) => {
@@ -238,6 +239,33 @@ function ApplicationTable() {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     toast("Exported to CSV");
+  };
+
+  // --- Email Scan ---
+  const handleEmailScan = async () => {
+    setScanning(true);
+    try {
+      const res = await fetch("/api/scan-emails", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+
+      if (data.new_applications > 0 || data.status_updates > 0) {
+        toast(`Email scan: ${data.new_applications} new, ${data.status_updates} updated`);
+        // Refresh the table
+        setPage(0);
+        window.location.reload();
+      } else {
+        toast("No new updates found in emails");
+      }
+    } catch (error) {
+      if (error.message.includes("No email connection")) {
+        toast("Connect your email first in Email Sync settings");
+      } else {
+        toast(error.message || "Email scan failed");
+      }
+    } finally {
+      setScanning(false);
+    }
   };
 
   const columns = [
@@ -451,6 +479,21 @@ function ApplicationTable() {
               </Button>
             </>
           )}
+
+          {/* Scan Emails */}
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-9 text-[#559F87] border-[#559F87]/30 hover:bg-green-50"
+            onClick={handleEmailScan}
+            disabled={scanning}
+          >
+            {scanning ? (
+              <><Loader2 size={14} className="mr-1 animate-spin" /> Scanning...</>
+            ) : (
+              <><RefreshCw size={14} className="mr-1" /> Scan Emails</>
+            )}
+          </Button>
 
           {/* Export CSV */}
           <Button variant="outline" size="sm" className="h-9" onClick={handleExportCSV}>

@@ -41,6 +41,7 @@
     "embla-carousel-autoplay": "^8.0.0",
     "embla-carousel-react": "^8.0.0",
     "html2canvas": "^1.4.1",
+    "imap": "^0.8.19",
     "jspdf": "^2.5.1",
     "lottie-react": "^2.4.0",
     "lucide-react": "^0.364.0",

@@ -29,6 +29,7 @@ const STATUS_COLORS = {
   rejected: "#F2B5B5",
   offered: "#D8F1AE",
   withdrew: "#D0B5F2",
+  "reached out": "#B5F2E0",
 };
 
 export default function DashboardPage() {
@@ -74,13 +75,13 @@ export default function DashboardPage() {
   const total = applications.length;
 
   // --- Stats ---
-  const statusCounts = { Applied: 0, Interviewed: 0, Pending: 0, Rejected: 0, Offered: 0, Withdrew: 0 };
+  const statusCounts = { Applied: 0, Interviewed: 0, Pending: 0, Rejected: 0, Offered: 0, Withdrew: 0, "Reached Out": 0 };
   applications.forEach((app) => {
     if (statusCounts[app.status] !== undefined) statusCounts[app.status]++;
   });
 
   const responseRate = total > 0
-    ? Math.round(((statusCounts.Interviewed + statusCounts.Offered) / total) * 100)
+    ? Math.round(((statusCounts.Interviewed + statusCounts.Offered + statusCounts["Reached Out"]) / total) * 100)
     : 0;
 
   const offerRate = total > 0
@@ -133,6 +134,7 @@ export default function DashboardPage() {
   // --- Funnel data ---
   const funnelStages = [
     { label: "Applied", count: total, color: "#B5DCF2" },
+    { label: "Reached Out", count: statusCounts["Reached Out"], color: "#B5F2E0" },
     { label: "Interviewed", count: statusCounts.Interviewed + statusCounts.Offered, color: "#F3F5A3" },
     { label: "Offered", count: statusCounts.Offered, color: "#D8F1AE" },
   ];

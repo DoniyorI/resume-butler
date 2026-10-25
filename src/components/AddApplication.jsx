@@ -156,6 +156,7 @@ export default function AddApplicationDialog() {
     { label: "Offered", value: "Offered" },
     { label: "Rejected", value: "Rejected" },
     { label: "Withdrew", value: "Withdrew" },
+    { label: "Reached Out", value: "Reached Out" },
   ];
 
   return (
