@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { generateLatex } from "@/lib/generateLatex";
+import { generateLatex } from "@/server/latex";
 import { requireUser } from "@/server/auth";
 import { errorResponse, parseJson } from "@/server/http";
 import { enforceRateLimit } from "@/server/rateLimit";

@@ -1,0 +1,11 @@
+import ApplicationTable from "@/features/applications/ApplicationTable";
+export default function Applications() {
+  return (
+    <div className="flex flex-col w-full min-h-screen py-16 px-10 my-10">
+      <h1 className="text-2xl font-semibold text-brand">
+        Your Applications
+      </h1>
+      <ApplicationTable />
+    </div>
+  );
+}
