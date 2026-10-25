@@ -45,6 +45,7 @@ import { toast } from "sonner";
 
 import StatusCell from "@/components/StatusCell";
 import CommentsCell from "@/components/CommentsCell";
+import { safeHttpUrl } from "@/lib/safeUrl";
 
 const PAGE_SIZE = 50;
 const STATUSES = ["Applied", "Interviewed", "Pending", "Offered", "Rejected", "Withdrew", "Reached Out"];
@@ -300,8 +301,8 @@ function ApplicationTable() {
         </Button>
       ),
       cell: ({ row }) =>
-        row.original.portalLink ? (
-          <a href={row.original.portalLink} target="_blank" rel="noopener noreferrer">
+        safeHttpUrl(row.original.portalLink) ? (
+          <a href={safeHttpUrl(row.original.portalLink)} target="_blank" rel="noopener noreferrer">
             <Button className="p-0 m-0 font-normal" variant="link">
               {row.getValue("companyName")}
             </Button>

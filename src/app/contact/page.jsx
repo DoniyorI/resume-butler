@@ -35,9 +35,8 @@ export default function Contact() {
   });
 
   const onSubmit = async (data) => {
-    console.log(data);
     try {
-      const result = await emailjs.send(
+      await emailjs.send(
         "service_2rq05gv",
         "template_dzw2uvk",
         data,

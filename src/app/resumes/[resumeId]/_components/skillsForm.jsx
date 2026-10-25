@@ -1,3 +1,4 @@
+import { EditableText } from "./EditableText";
 export const SkillsForm = ({ item, onChange }) => {
   const handleInputChange = (field, value) => {
     onChange({ ...item, [field]: value.trim() }); // Update the item with the field changed
@@ -32,8 +33,8 @@ export const SkillsForm = ({ item, onChange }) => {
   return (
     <div className="my-1">
       <div className="text-md flex items-center">
-        <span
-          contentEditable
+        <EditableText
+          as="span"
           className={`input text-md font-semibold ${
             !item.header ? "contentEditablePlaceholder" : ""
           }`}
@@ -44,11 +45,11 @@ export const SkillsForm = ({ item, onChange }) => {
           onKeyDown={handleKeyDown}
           data-placeholder="Header"
           data-field="header" // Added for clarity in handleBlur
-          dangerouslySetInnerHTML={{ __html: item.header || "" }}
+          value={item.header || ""}
         />
         :{" "}
-        <span
-          contentEditable
+        <EditableText
+          as="span"
           className={`input text-md font-normal ${
             !item.skills ? "contentEditablePlaceholder" : ""
           }`}
@@ -59,7 +60,7 @@ export const SkillsForm = ({ item, onChange }) => {
           onKeyDown={handleKeyDown}
           data-placeholder="Skill1, Skill2, Skill3..."
           data-field="skills" // Added for clarity in handleBlur
-          dangerouslySetInnerHTML={{ __html: item.skills || "" }}
+          value={item.skills || ""}
         />
       </div>
     </div>

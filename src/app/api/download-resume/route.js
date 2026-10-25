@@ -1,23 +1,36 @@
-import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { generateLatex } from "@/lib/generateLatex";
+import { requireUser } from "@/server/auth";
+import { errorResponse, parseJson } from "@/server/http";
+import { enforceRateLimit } from "@/server/rateLimit";
+
+const bodySchema = z.object({
+  resumeId: z.string().uuid(),
+  format: z.enum(["tex", "pdf"]).optional(),
+});
+
+// Build a Content-Disposition header that a resume title can't break out of
+function attachment(title, extension) {
+  const base = (title || "resume").replace(/[^\w .-]/g, "").trim().slice(0, 100) || "resume";
+  const filename = `${base}.${extension}`;
+  return `attachment; filename="${filename}"; filename*=UTF-8''${encodeURIComponent(filename)}`;
+}
+
+function texResponse(latex, title) {
+  return new NextResponse(latex, {
+    headers: {
+      "Content-Type": "application/x-tex",
+      "Content-Disposition": attachment(title, "tex"),
+    },
+  });
+}
 
 export async function POST(request) {
   try {
-    const supabase = createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { resumeId, format: outputFormat } = await request.json();
-
-    if (!resumeId) {
-      return NextResponse.json({ error: "resumeId is required" }, { status: 400 });
-    }
+    const { supabase, user } = await requireUser();
+    const { resumeId, format: outputFormat } = await parseJson(request, bodySchema);
+    await enforceRateLimit(supabase, "download-resume");
 
     // Fetch the resume
     const { data: resume, error } = await supabase
@@ -31,17 +44,11 @@ export async function POST(request) {
       return NextResponse.json({ error: "Resume not found" }, { status: 404 });
     }
 
-    const content = resume.content || {};
-    const latex = generateLatex(content);
+    const latex = generateLatex(resume.content || {});
 
     // If user just wants .tex file
     if (outputFormat === "tex") {
-      return new NextResponse(latex, {
-        headers: {
-          "Content-Type": "application/x-tex",
-          "Content-Disposition": `attachment; filename="${resume.title || "resume"}.tex"`,
-        },
-      });
+      return texResponse(latex, resume.title);
     }
 
     // Compile to PDF using YtoTech LaTeX-on-HTTP API
@@ -58,18 +65,13 @@ export async function POST(request) {
           },
         ],
       }),
+      signal: AbortSignal.timeout(60_000),
     });
 
     if (!compileResponse.ok) {
-      const errorText = await compileResponse.text();
-      console.error("LaTeX compilation failed:", errorText);
+      console.error("LaTeX compilation failed:", await compileResponse.text());
       // Fallback: return .tex file
-      return new NextResponse(latex, {
-        headers: {
-          "Content-Type": "application/x-tex",
-          "Content-Disposition": `attachment; filename="${resume.title || "resume"}.tex"`,
-        },
-      });
+      return texResponse(latex, resume.title);
     }
 
     const pdfBuffer = await compileResponse.arrayBuffer();
@@ -77,14 +79,10 @@ export async function POST(request) {
     return new NextResponse(pdfBuffer, {
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="${resume.title || "resume"}.pdf"`,
+        "Content-Disposition": attachment(resume.title, "pdf"),
       },
     });
   } catch (error) {
-    console.error("Error generating resume:", error);
-    return NextResponse.json(
-      { error: error.message || "Failed to generate resume" },
-      { status: 500 }
-    );
+    return errorResponse(error, "Error generating resume");
   }
 }

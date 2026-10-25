@@ -1,3 +1,4 @@
+import { EditableText } from "./EditableText";
 import React from "react";
 
 export function EducationForm({ item, onChange }) {
@@ -59,8 +60,8 @@ export function EducationForm({ item, onChange }) {
   return (
     <div>
       <div className="flex justify-between items-end mt-3">
-        <span
-          contentEditable
+        <EditableText
+          as="span"
           className={`input text-md font-semibold ${
             !item.school ? "contentEditablePlaceholder" : ""
           }`}
@@ -71,12 +72,12 @@ export function EducationForm({ item, onChange }) {
           onKeyDown={handleKeyDown}
           data-placeholder="Enter School Name"
           data-field="school"
-          dangerouslySetInnerHTML={{ __html: item.school || "" }}
+          value={item.school || ""}
         />
         <div className="font-semibold">
           Expected{" "}
-          <span
-            contentEditable
+          <EditableText
+            as="span"
             className={`input text-sm${
               !item.endDate ? "contentEditablePlaceholder" : ""
             }`}
@@ -87,14 +88,14 @@ export function EducationForm({ item, onChange }) {
             onKeyDown={handleKeyDown}
             data-placeholder="Enter End Date"
             data-field="endDate"
-            dangerouslySetInnerHTML={{ __html: formattedEndDate || "" }}
+            value={formattedEndDate || ""}
           />
         </div>
       </div>
       <div className="text-sm flex justify-between italic">
         <div className="flex items-center">
-          <span
-            contentEditable
+          <EditableText
+            as="span"
             className={`input ${
               !item.degreeType ? "contentEditablePlaceholder" : ""
             }`}
@@ -105,11 +106,11 @@ export function EducationForm({ item, onChange }) {
             onKeyDown={handleKeyDown}
             data-placeholder="Degree Type"
             data-field="degreeType"
-            dangerouslySetInnerHTML={{ __html: item.degreeType || "" }}
+            value={item.degreeType || ""}
           />
           <span className="label"> ,</span>
-          <span
-            contentEditable
+          <EditableText
+            as="span"
             className={`input ${
               !item.major ? "contentEditablePlaceholder" : ""
             }`}
@@ -119,11 +120,11 @@ export function EducationForm({ item, onChange }) {
             onKeyDown={handleKeyDown}
             data-placeholder="Major"
             data-field="major"
-            dangerouslySetInnerHTML={{ __html: item.major || "" }}
+            value={item.major || ""}
           />
           <span className="label"> ,</span>
-          <span
-            contentEditable
+          <EditableText
+            as="span"
             className={`input ${!item.gpa ? "contentEditablePlaceholder" : ""}`}
             role="textbox"
             onFocus={handleFocus}
@@ -132,13 +133,13 @@ export function EducationForm({ item, onChange }) {
             onKeyDown={handleKeyDown}
             data-placeholder="GPA"
             data-field="gpa"
-            dangerouslySetInnerHTML={{ __html: item.gpa || "" }}
+            value={item.gpa || ""}
           />
           GPA
         </div>
 
-        <span
-          contentEditable
+        <EditableText
+          as="span"
           className={`input italic ${
             !item.location ? "contentEditablePlaceholder" : ""
           }`}
@@ -149,7 +150,7 @@ export function EducationForm({ item, onChange }) {
           onKeyDown={handleKeyDown}
           data-placeholder="Location"
           data-field="location"
-          dangerouslySetInnerHTML={{ __html: item.location || "" }}
+          value={item.location || ""}
         />
       </div>
     </div>

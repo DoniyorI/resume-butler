@@ -1,5 +1,9 @@
-import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { z } from "zod";
+import { requireUser } from "@/server/auth";
+import { errorResponse, parseJson } from "@/server/http";
+import { chatJSON } from "@/server/openai";
+import { enforceRateLimit } from "@/server/rateLimit";
 
 const RESUME_PROMPT = `Resume Aligner is a CV parser designed to analyze job descriptions and parse input dictionaries containing categories such as education, experience, projects, and skills. Its main function is to select and align entries from the input that best match the specified job requirements for a resume. It should NEVER use the same entry more than once. It strictly preserves the content and structure of the input dictionary, neither adding new items nor altering the existing text.
 
@@ -9,58 +13,23 @@ The tool is optimized for API calls, ensuring high responsiveness and adaptabili
 
 const SKILLS_PROMPT = `The GPT takes a list of dictionaries containing skills and categorizes these skills into categories. It outputs the results in a JSON dictionary, mapping each category to a list of skill entries. The category should NOT be "skills"`;
 
-async function callGPT(prompt, jobDescription, cv) {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) throw new Error("OPENAI_API_KEY not configured");
-
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: "gpt-4o-mini",
-      response_format: { type: "json_object" },
-      messages: [
-        { role: "system", content: "Provide output in valid JSON" },
-        {
-          role: "user",
-          content: `${prompt}\n${jobDescription}\n${cv}`,
-        },
-      ],
-    }),
+function callGPT(prompt, jobDescription, cv) {
+  return chatJSON({
+    system: "Provide output in valid JSON",
+    user: `${prompt}\n${jobDescription}\n${cv}`,
   });
-
-  if (!response.ok) {
-    const err = await response.text();
-    throw new Error(`OpenAI API error: ${err}`);
-  }
-
-  const data = await response.json();
-  return JSON.parse(data.choices[0].message.content);
 }
+
+const bodySchema = z.object({
+  title: z.string().trim().min(1).max(200),
+  jobDescription: z.string().min(1).max(20_000),
+});
 
 export async function POST(request) {
   try {
-    const supabase = createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const body = await request.json();
-    const { title, jobDescription } = body;
-
-    if (!title || !jobDescription) {
-      return NextResponse.json(
-        { error: "title and jobDescription are required" },
-        { status: 400 }
-      );
-    }
+    const { supabase, user } = await requireUser();
+    const { title, jobDescription } = await parseJson(request, bodySchema);
+    await enforceRateLimit(supabase, "generate-resume");
 
     // Fetch user profile
     const { data: profile } = await supabase
@@ -141,10 +110,6 @@ export async function POST(request) {
 
     return NextResponse.json({ resumeId: resume.id });
   } catch (error) {
-    console.error("Error generating resume:", error);
-    return NextResponse.json(
-      { error: error.message || "Internal server error" },
-      { status: 500 }
-    );
+    return errorResponse(error, "Error generating resume");
   }
 }

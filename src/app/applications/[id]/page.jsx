@@ -6,6 +6,7 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import Link from "next/link";
 import AtsScanner from "@/components/AtsScanner";
+import { normalizeHttpUrl, safeHttpUrl } from "@/lib/safeUrl";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -129,7 +130,7 @@ export default function ApplicationDetailPage({ params }) {
           company,
           role,
           location,
-          portal_link: portalLink,
+          portal_link: normalizeHttpUrl(portalLink),
           status,
           comments,
           job_description: jobDescription,
@@ -301,8 +302,8 @@ export default function ApplicationDetailPage({ params }) {
                     placeholder="https://..."
                     className="flex-grow"
                   />
-                  {portalLink && (
-                    <a href={portalLink} target="_blank" rel="noopener noreferrer">
+                  {safeHttpUrl(portalLink) && (
+                    <a href={safeHttpUrl(portalLink)} target="_blank" rel="noopener noreferrer">
                       <Button variant="outline" size="icon" className="h-10 w-10 flex-shrink-0">
                         <ExternalLink size={16} />
                       </Button>

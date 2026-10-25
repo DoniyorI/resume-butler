@@ -1,3 +1,4 @@
+import { EditableText } from "./EditableText";
 import { X } from "lucide-react";
 export const ProjectsForm = ({ item, onChange, bulletSeverities = {} }) => {
   const handleInputChange = (field, e) => {
@@ -67,8 +68,8 @@ export const ProjectsForm = ({ item, onChange, bulletSeverities = {} }) => {
   return (
     <div className="Project">
       <div className="flex justify-between items-baseline">
-        <span
-          contentEditable
+        <EditableText
+          as="span"
           className={`input text-sm font-semibold ${
             !item.projectName ? "contentEditablePlaceholder" : ""
           }`}
@@ -79,11 +80,11 @@ export const ProjectsForm = ({ item, onChange, bulletSeverities = {} }) => {
           onKeyDown={handleKeyDown}
           data-placeholder="Enter Project Name"
           data-field="projectName"
-          dangerouslySetInnerHTML={{ __html: item.projectName || "" }}
+          value={item.projectName || ""}
         />
 
-        <span
-          contentEditable
+        <EditableText
+          as="span"
           className={`input text-sm font-semibold ${
             !item.endDate && !item.currentlyWorking
               ? "contentEditablePlaceholder"
@@ -96,7 +97,7 @@ export const ProjectsForm = ({ item, onChange, bulletSeverities = {} }) => {
           onKeyDown={handleKeyDown}
           data-placeholder="Enter End Date"
           data-field="endDate"
-          dangerouslySetInnerHTML={{ __html: formattedEndDate || "" }}
+          value={formattedEndDate || ""}
         />
       </div>
       <div className="pl-[22px] mt-1">
@@ -115,8 +116,8 @@ export const ProjectsForm = ({ item, onChange, bulletSeverities = {} }) => {
                   className={`bullet-toggle mr-2 ${bulletColor}`}
                   onClick={() => addDescriptionPointBelow(index)}
                 ></span>
-                <div
-                  contentEditable
+                <EditableText
+                  as="div"
                   className={`input w-full text-sm ${bulletColor} ${
                     !point ? "contentEditablePlaceholder" : ""
                   }`}
@@ -128,7 +129,7 @@ export const ProjectsForm = ({ item, onChange, bulletSeverities = {} }) => {
                   }
                   onKeyDown={handleKeyDown}
                   data-placeholder="Enter Description Detail"
-                  dangerouslySetInnerHTML={{ __html: point || "" }}
+                  value={point || ""}
                 />
                 <button
                   onClick={() => deleteDescriptionPoint(index)}

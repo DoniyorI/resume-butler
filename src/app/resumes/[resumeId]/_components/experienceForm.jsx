@@ -1,3 +1,4 @@
+import { EditableText } from "./EditableText";
 import { X } from "lucide-react";
 export const ExperienceForm = ({ item, onChange, bulletSeverities = {} }) => {
   const handleInputChange = (field, e) => {
@@ -67,8 +68,8 @@ export const ExperienceForm = ({ item, onChange, bulletSeverities = {} }) => {
   return (
     <div className="Experience">
       <div className="flex justify-between items-baseline">
-        <span
-          contentEditable
+        <EditableText
+          as="span"
           className={`input text-sm font-semibold ${
             !item.companyName ? "contentEditablePlaceholder" : ""
           }`}
@@ -79,11 +80,11 @@ export const ExperienceForm = ({ item, onChange, bulletSeverities = {} }) => {
           onKeyDown={handleKeyDown}
           data-placeholder="Enter Company Name"
           data-field="companyName"
-          dangerouslySetInnerHTML={{ __html: item.companyName || "" }}
+          value={item.companyName || ""}
         />
         <div className="flex">
-          <span
-            contentEditable
+          <EditableText
+            as="span"
             className={`input text-sm font-semibold ${
               !item.startDate ? "contentEditablePlaceholder" : ""
             }`}
@@ -94,11 +95,11 @@ export const ExperienceForm = ({ item, onChange, bulletSeverities = {} }) => {
             onKeyDown={handleKeyDown}
             data-placeholder="Enter Start Date"
             data-field="startDate"
-            dangerouslySetInnerHTML={{ __html: formattedStartDate || "" }}
+            value={formattedStartDate || ""}
           />
           {" -- "}
-          <span
-            contentEditable
+          <EditableText
+            as="span"
             className={`input text-sm font-semibold ${
               !item.endDate && !item.currentlyWorking
                 ? "contentEditablePlaceholder"
@@ -111,13 +112,13 @@ export const ExperienceForm = ({ item, onChange, bulletSeverities = {} }) => {
             onKeyDown={handleKeyDown}
             data-placeholder="Enter End Date"
             data-field="endDate"
-            dangerouslySetInnerHTML={{ __html: formattedEndDate || "" }}
+            value={formattedEndDate || ""}
           />
         </div>
       </div>
       <div className="text-sm flex justify-between">
-        <span
-          contentEditable
+        <EditableText
+          as="span"
           className={`input italic text-sm ${
             !item.position ? "contentEditablePlaceholder" : ""
           }`}
@@ -128,10 +129,10 @@ export const ExperienceForm = ({ item, onChange, bulletSeverities = {} }) => {
           onKeyDown={handleKeyDown}
           data-placeholder="Enter Position"
           data-field="position"
-          dangerouslySetInnerHTML={{ __html: item.position || "" }}
+          value={item.position || ""}
         />
-        <span
-          contentEditable
+        <EditableText
+          as="span"
           className={`input italic text-sm ${
             !item.location ? "contentEditablePlaceholder" : ""
           }`}
@@ -142,7 +143,7 @@ export const ExperienceForm = ({ item, onChange, bulletSeverities = {} }) => {
           onKeyDown={handleKeyDown}
           data-placeholder="Enter Location"
           data-field="location"
-          dangerouslySetInnerHTML={{ __html: item.location || "" }}
+          value={item.location || ""}
         />
       </div>
       <div className="pl-[22px] mt-1">
@@ -161,8 +162,8 @@ export const ExperienceForm = ({ item, onChange, bulletSeverities = {} }) => {
                   className={`bullet-toggle mr-2 ${bulletColor}`}
                   onClick={() => addDescriptionPointBelow(index)}
                 ></span>
-                <div
-                  contentEditable
+                <EditableText
+                  as="div"
                   className={`input w-full text-sm ${bulletColor} ${
                     !point ? "contentEditablePlaceholder" : ""
                   }`}
@@ -174,7 +175,7 @@ export const ExperienceForm = ({ item, onChange, bulletSeverities = {} }) => {
                   }
                   onKeyDown={handleKeyDown}
                   data-placeholder="Enter Description Detail"
-                  dangerouslySetInnerHTML={{ __html: point || "" }}
+                  value={point || ""}
                 />
                 <button
                   onClick={() => deleteDescriptionPoint(index)}

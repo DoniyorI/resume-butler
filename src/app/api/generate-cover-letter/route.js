@@ -1,5 +1,9 @@
-import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { z } from "zod";
+import { requireUser } from "@/server/auth";
+import { errorResponse, parseJson } from "@/server/http";
+import { chatJSON } from "@/server/openai";
+import { enforceRateLimit } from "@/server/rateLimit";
 
 const COVER_LETTER_PROMPT = `You are a cover letter writing assistant. Generate a professional cover letter based on the user's CV data and the job description.
 
@@ -20,23 +24,16 @@ Return a JSON object:
   "highlights": ["key point 1 from CV used", "key point 2 from CV used"]
 }`;
 
+const bodySchema = z.object({
+  jobDescription: z.string().min(1).max(20_000),
+  companyName: z.string().max(200).optional().nullable(),
+});
+
 export async function POST(request) {
   try {
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json({ error: "OPENAI_API_KEY not configured" }, { status: 500 });
-    }
-
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { jobDescription, companyName } = await request.json();
-    if (!jobDescription) {
-      return NextResponse.json({ error: "jobDescription is required" }, { status: 400 });
-    }
+    const { supabase, user } = await requireUser();
+    const { jobDescription, companyName } = await parseJson(request, bodySchema);
+    await enforceRateLimit(supabase, "generate-cover-letter");
 
     // Fetch user's CV data
     const [profileRes, expRes, projRes, eduRes, skillRes] = await Promise.all([
@@ -66,36 +63,13 @@ export async function POST(request) {
       skills: (skillRes.data || []).map((s) => s.name),
     };
 
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        response_format: { type: "json_object" },
-        messages: [
-          { role: "system", content: COVER_LETTER_PROMPT },
-          {
-            role: "user",
-            content: `Company: ${companyName || "the company"}\n\nJob Description:\n${jobDescription}\n\nCandidate CV:\n${JSON.stringify(cvSummary)}`,
-          },
-        ],
-      }),
+    const parsed = await chatJSON({
+      system: COVER_LETTER_PROMPT,
+      user: `Company: ${companyName || "the company"}\n\nJob Description:\n${jobDescription}\n\nCandidate CV:\n${JSON.stringify(cvSummary)}`,
     });
-
-    if (!response.ok) {
-      const err = await response.text();
-      throw new Error(`OpenAI API error: ${err}`);
-    }
-
-    const gptData = await response.json();
-    const parsed = JSON.parse(gptData.choices[0].message.content);
 
     return NextResponse.json(parsed);
   } catch (error) {
-    console.error("Cover letter generation error:", error);
-    return NextResponse.json({ error: error.message || "Failed to generate cover letter" }, { status: 500 });
+    return errorResponse(error, "Cover letter generation error");
   }
 }

@@ -26,6 +26,7 @@ import { Badge } from "./ui/badge";
 import { isValid, format } from "date-fns";
 import { Calendar as CalendarIcon, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { normalizeHttpUrl } from "@/lib/safeUrl";
 import {
   Select,
   SelectContent,
@@ -87,7 +88,7 @@ export default function AddApplicationDialog() {
       const applicationData = {
         user_id: currentUser.id,
         company: companyName,
-        portal_link: portalLink,
+        portal_link: normalizeHttpUrl(portalLink),
         role,
         status,
         location,

@@ -1,4 +1,9 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
+import { requireUser } from "@/server/auth";
+import { errorResponse, parseJson } from "@/server/http";
+import { chatJSON } from "@/server/openai";
+import { enforceRateLimit } from "@/server/rateLimit";
 
 const SUGGEST_PROMPT = `You are a resume writing assistant. You help improve bullet points to better match a job description.
 
@@ -26,24 +31,21 @@ Return a JSON array where each item has:
 
 Only include bullets where changed=true. Skip bullets that are already good.`;
 
+const MAX_BULLETS = 60;
+
+const bodySchema = z.object({
+  jobDescription: z.string().min(1).max(20_000),
+  resumeContent: z.object({
+    experience: z.array(z.any()).max(30).optional(),
+    projects: z.array(z.any()).max(30).optional(),
+  }).passthrough(),
+});
+
 export async function POST(request) {
   try {
-    const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json(
-        { error: "OPENAI_API_KEY not configured" },
-        { status: 500 }
-      );
-    }
-
-    const { jobDescription, resumeContent } = await request.json();
-
-    if (!jobDescription || !resumeContent) {
-      return NextResponse.json(
-        { error: "jobDescription and resumeContent are required" },
-        { status: 400 }
-      );
-    }
+    const { supabase } = await requireUser();
+    const { jobDescription, resumeContent } = await parseJson(request, bodySchema, { maxBytes: 200_000 });
+    await enforceRateLimit(supabase, "suggest-bullets");
 
     // Build the bullet list to send to GPT
     const bullets = [];
@@ -87,38 +89,17 @@ export async function POST(request) {
     if (bullets.length === 0) {
       return NextResponse.json({ suggestions: [] });
     }
+    bullets.splice(MAX_BULLETS);
 
     // Format bullets for GPT
     const bulletList = bullets
       .map((b) => `[${b.section}][item ${b.itemIndex}][bullet ${b.bulletIndex}] (${b.context}): "${b.text}"`)
       .join("\n");
 
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        response_format: { type: "json_object" },
-        messages: [
-          { role: "system", content: SUGGEST_PROMPT },
-          {
-            role: "user",
-            content: `Job Description:\n${jobDescription}\n\nBullet Points:\n${bulletList}\n\nReturn a JSON object with a "suggestions" array.`,
-          },
-        ],
-      }),
+    const parsed = await chatJSON({
+      system: SUGGEST_PROMPT,
+      user: `Job Description:\n${jobDescription}\n\nBullet Points:\n${bulletList}\n\nReturn a JSON object with a "suggestions" array.`,
     });
-
-    if (!response.ok) {
-      const err = await response.text();
-      throw new Error(`OpenAI API error: ${err}`);
-    }
-
-    const gptData = await response.json();
-    const parsed = JSON.parse(gptData.choices[0].message.content);
 
     // Map GPT suggestions back to section/item/bullet indices
     const suggestions = (parsed.suggestions || [])
@@ -143,10 +124,6 @@ export async function POST(request) {
 
     return NextResponse.json({ suggestions });
   } catch (error) {
-    console.error("Suggest bullets error:", error);
-    return NextResponse.json(
-      { error: error.message || "Failed to generate suggestions" },
-      { status: 500 }
-    );
+    return errorResponse(error, "Suggest bullets error");
   }
 }

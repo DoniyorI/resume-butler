@@ -1,4 +1,7 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
+import { requireUser } from "@/server/auth";
+import { errorResponse, parseJson } from "@/server/http";
 
 // Common tech skills and their aliases/related terms
 const SKILL_ALIASES = {
@@ -446,16 +449,15 @@ function analyzeBullets(content) {
   return bulletFeedback;
 }
 
+const bodySchema = z.object({
+  jobDescription: z.string().min(1).max(20_000),
+  resumeContent: z.object({}).passthrough(),
+});
+
 export async function POST(request) {
   try {
-    const { jobDescription, resumeContent } = await request.json();
-
-    if (!jobDescription || !resumeContent) {
-      return NextResponse.json(
-        { error: "jobDescription and resumeContent are required" },
-        { status: 400 }
-      );
-    }
+    await requireUser();
+    const { jobDescription, resumeContent } = await parseJson(request, bodySchema, { maxBytes: 200_000 });
 
     // Extract keywords from job description
     const keywords = extractKeywords(jobDescription);
@@ -512,10 +514,6 @@ export async function POST(request) {
       bulletFeedback,
     });
   } catch (error) {
-    console.error("ATS score error:", error);
-    return NextResponse.json(
-      { error: error.message || "Failed to calculate ATS score" },
-      { status: 500 }
-    );
+    return errorResponse(error, "ATS score error");
   }
 }

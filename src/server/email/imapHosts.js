@@ -1,3 +1,5 @@
+import "server-only";
+
 // IMAP servers the email sync is allowed to connect to. Restricting this keeps
 // users from pointing the server at internal or arbitrary hosts (SSRF).
 export const ALLOWED_IMAP_HOSTS = [

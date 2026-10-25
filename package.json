@@ -48,7 +48,7 @@
     "jspdf": "^2.5.1",
     "lottie-react": "^2.4.0",
     "lucide-react": "^0.364.0",
-    "next": "14.1.4",
+    "next": "^14.2.35",
     "next-themes": "^0.3.0",
     "pdf2json": "^4.0.2",
     "react": "^18.2.0",
@@ -56,6 +56,7 @@
     "react-dom": "^18",
     "react-hook-form": "^7.51.2",
     "react-icons": "^5.0.1",
+    "server-only": "^0.0.1",
     "sonner": "^1.4.41",
     "tailwind-merge": "^2.2.2",
     "tailwindcss-animate": "^1.0.7",
@@ -65,7 +66,7 @@
     "@types/react": "18.2.74",
     "autoprefixer": "^10.0.1",
     "eslint": "^8",
-    "eslint-config-next": "14.1.4",
+    "eslint-config-next": "^14.2.35",
     "postcss": "^8",
     "tailwindcss": "^3.3.0"
   }

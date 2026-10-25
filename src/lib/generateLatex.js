@@ -1,23 +1,47 @@
-// Escape LaTeX special characters
+import { safeHttpUrl } from "@/lib/safeUrl";
+
+// Every user-supplied value must go through esc() or escUrl() before it is
+// placed in the document; otherwise text like "}\input{/etc/passwd}" would run
+// as LaTeX on the compile server.
+const LATEX_ESCAPES = {
+  "\\": "\\textbackslash{}",
+  "&": "\\&",
+  "%": "\\%",
+  "$": "\\$",
+  "#": "\\#",
+  "_": "\\_",
+  "{": "\\{",
+  "}": "\\}",
+  "~": "\\textasciitilde{}",
+  "^": "\\textasciicircum{}",
+};
+
+// Escape LaTeX special characters in one pass, so escapes aren't re-escaped
 function esc(text) {
-  if (!text) return "";
-  return String(text)
-    .replace(/\\/g, "\\textbackslash{}")
-    .replace(/&/g, "\\&")
+  if (text === null || text === undefined || text === "") return "";
+  return String(text).replace(/[\\&%$#_{}~^]/g, (ch) => LATEX_ESCAPES[ch]);
+}
+
+// Make a URL safe for \href{}: http(s) only, with LaTeX-special characters encoded
+function escUrl(value) {
+  const url = safeHttpUrl(value);
+  if (!url) return null;
+  return url
+    .replace(/[\\{}^~]/g, (ch) => encodeURIComponent(ch))
     .replace(/%/g, "\\%")
-    .replace(/\$/g, "\\$")
-    .replace(/#/g, "\\#")
-    .replace(/_/g, "\\_")
-    .replace(/\{/g, "\\{")
-    .replace(/\}/g, "\\}")
-    .replace(/~/g, "\\textasciitilde{}")
-    .replace(/\^/g, "\\textasciicircum{}");
+    .replace(/#/g, "\\#");
+}
+
+const SIMPLE_EMAIL = /^[\w.+-]+@[\w-]+(\.[\w-]+)+$/;
+
+function link(url, label) {
+  return url ? `\\href{${url}}{${label}}` : label;
 }
 
 function formatDate(dateStr) {
   if (!dateStr) return "";
   const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return String(dateStr);
+  if (isNaN(d.getTime())) return esc(dateStr);
   return d.toLocaleDateString("en-US", { month: "long", year: "numeric" });
 }
 
@@ -26,8 +50,9 @@ function buildHeader(header) {
   const parts = [];
 
   if (header.email) {
+    const mailto = SIMPLE_EMAIL.test(header.email) ? `mailto:${header.email}` : null;
     parts.push(
-      `\\href{mailto:${header.email}}{\\raisebox{-0.2\\height}\\faEnvelope\\  \\underline{${esc(header.email)}}}`
+      link(mailto, `\\raisebox{-0.2\\height}\\faEnvelope\\  \\underline{${esc(header.email)}}`)
     );
   }
   if (header.phone) {
@@ -36,15 +61,15 @@ function buildHeader(header) {
     );
   }
   if (header.linkedin) {
-    const display = header.linkedin.replace(/^https?:\/\/(www\.)?/, "");
+    const display = String(header.linkedin).replace(/^https?:\/\/(www\.)?/, "");
     parts.push(
-      `\\href{${header.linkedin}}{\\raisebox{-0.2\\height}\\faLinkedin\\ \\underline{${esc(display)}}}`
+      link(escUrl(header.linkedin), `\\raisebox{-0.2\\height}\\faLinkedin\\ \\underline{${esc(display)}}`)
     );
   }
   if (header.github) {
-    const display = header.github.replace(/^https?:\/\/(www\.)?/, "");
+    const display = String(header.github).replace(/^https?:\/\/(www\.)?/, "");
     parts.push(
-      `\\href{${header.github}}{\\raisebox{-0.2\\height}\\faGithub\\ \\underline{${esc(display)}}}`
+      link(escUrl(header.github), `\\raisebox{-0.2\\height}\\faGithub\\ \\underline{${esc(display)}}`)
     );
   }
 
@@ -99,7 +124,7 @@ function buildEducation(educationList) {
     const degree = [edu.degreeType || edu.degree_type, edu.major]
       .filter(Boolean)
       .join(" in ");
-    const gpa = edu.gpa ? `, GPA: ${edu.gpa}` : "";
+    const gpa = edu.gpa ? `, GPA: ${esc(edu.gpa)}` : "";
     const subtitle = `${esc(degree)}${gpa}`;
     const endDate = formatDate(edu.endDate || edu.end_date);
 
