@@ -1,6 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import { FaInstagram, FaLinkedin, FaGithub } from 'react-icons/fa';
+import { Instagram, Linkedin, Github } from "lucide-react";
 
 
 export default function About() {
@@ -14,9 +14,9 @@ export default function About() {
           <Image src="/image/doniyor.png" alt="Doniyor Ismatilloev" width={160} height={160} className="rounded-full object-cover mb-4 border-2 border-spacing-2 border-[#559F87] " />
           <h2 className="font-semibold">Doniyor Ismatilloev</h2>
           <p className="flex justify-center gap-4">
-            <Link href="https://www.instagram.com/doniyor134/"><FaInstagram className="text-xl" /></Link>
-            <Link href="https://www.linkedin.com/in/doniyor2024/"><FaLinkedin className="text-xl" /></Link>
-            <Link href="https://github.com/DoniyorI"><FaGithub className="text-xl" /></Link>
+            <Link href="https://www.instagram.com/doniyor134/"><Instagram className="h-5 w-5" /></Link>
+            <Link href="https://www.linkedin.com/in/doniyor2024/"><Linkedin className="h-5 w-5" /></Link>
+            <Link href="https://github.com/DoniyorI"><Github className="h-5 w-5" /></Link>
           </p>
         </div>
 
@@ -25,9 +25,9 @@ export default function About() {
           <Image src="/image/cal.png" alt="Cal Thanga" width={160} height={160} className="rounded-full object-cover mb-4 border-2 border-spacing-2 border-[#559F87]"/>
           <h2 className="font-semibold">Cal Thanga</h2>
           <p className="flex justify-center gap-4">
-            <Link href="https://www.instagram.com/zodintch/"><FaInstagram className="text-xl" /></Link>
-            <Link href="https://www.linkedin.com/in/cal-thanga-71199b183/"><FaLinkedin className="text-xl" /></Link>
-            <Link href="https://github.com/ZodinTC"><FaGithub className="text-xl" /></Link>
+            <Link href="https://www.instagram.com/zodintch/"><Instagram className="h-5 w-5" /></Link>
+            <Link href="https://www.linkedin.com/in/cal-thanga-71199b183/"><Linkedin className="h-5 w-5" /></Link>
+            <Link href="https://github.com/ZodinTC"><Github className="h-5 w-5" /></Link>
           </p>
         </div>
       </div>

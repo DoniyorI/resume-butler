@@ -1,9 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { EllipsisVertical, CloudUpload } from "lucide-react";
-import { FiTrash2 } from "react-icons/fi";
-import { MdOutlineEdit } from "react-icons/md";
+import { CloudUpload, EllipsisVertical, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -211,13 +209,13 @@ export default function Page() {
                     className="text-xs cursor-pointer"
                     onClick={() => handleRename(resume.id, resume.title)}
                   >
-                    <MdOutlineEdit className="mr-2" /> Rename
+                    <Pencil className="mr-2 h-4 w-4" /> Rename
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     className="text-xs cursor-pointer text-red-500"
                     onClick={() => handleDelete(resume.id)}
                   >
-                    <FiTrash2 className="mr-2" /> Delete
+                    <Trash2 className="mr-2 h-4 w-4" /> Delete
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

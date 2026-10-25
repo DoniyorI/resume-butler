@@ -1,7 +1,6 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
-import { AiOutlineFilePdf, AiOutlineFileText } from "react-icons/ai";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,7 +23,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "./ui/badge";
 import { isValid, format } from "date-fns";
-import { Calendar as CalendarIcon, Loader2 } from "lucide-react";
+import { Calendar as CalendarIcon, FileText, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { normalizeHttpUrl } from "@/lib/safeUrl";
 import {
@@ -197,7 +196,7 @@ export default function AddApplicationDialog() {
                       {resumes.map((resume) => (
                         <SelectItem key={resume.id} value={resume.id}>
                           <div className="flex justify-center items-center">
-                            <AiOutlineFileText className="text-blue-700 mr-1" />
+                            <FileText className="h-4 w-4 text-blue-700 mr-1" />
                             {resume.title}
                           </div>
                         </SelectItem>
@@ -222,7 +221,7 @@ export default function AddApplicationDialog() {
                       {coverLetters.map((letter) => (
                         <SelectItem key={letter.id} value={letter.id}>
                           <div className="flex justify-center items-center">
-                            <AiOutlineFileText className="text-blue-700 mr-1" />
+                            <FileText className="h-4 w-4 text-blue-700 mr-1" />
                             {letter.title}
                           </div>
                         </SelectItem>

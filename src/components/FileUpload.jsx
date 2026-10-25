@@ -1,8 +1,7 @@
 "use client";
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { FiUpload } from "react-icons/fi";
-import { Loader2 } from "lucide-react";
+import { Loader2, Upload } from "lucide-react";
 import { toast } from "sonner";
 
 export default function FileUpload({ onComplete }) {
@@ -104,7 +103,7 @@ export default function FileUpload({ onComplete }) {
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center space-y-4">
-            <FiUpload className="h-6 w-6 text-gray-400" />
+            <Upload className="h-6 w-6 text-gray-400" />
             <div className="text-center">
               <p className="text-sm font-medium text-gray-700">
                 Upload your existing resume to auto-fill your CV
