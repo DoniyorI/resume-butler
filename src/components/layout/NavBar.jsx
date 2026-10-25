@@ -1,6 +1,6 @@
 "use client";
 import React, { useState } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 import Link from "next/link";
@@ -16,19 +16,12 @@ export default function Navbar() {
   const supabase = createClient();
 
   const router = useRouter();
-  const pathname = usePathname();
 
-  if (
-    pathname === "/login" ||
-    pathname === "/register" ||
-    pathname === "/forgot-password"
-  ) {
-    return null;
-  }
   const handleLogout = async () => {
     try {
       await supabase.auth.signOut();
-      router.push("/login");
+      router.replace("/login");
+      router.refresh();
     } catch (error) {
       console.error("Logout error", error);
     }

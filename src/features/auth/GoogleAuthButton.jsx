@@ -1,11 +1,9 @@
 "use client";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 
 const GoogleAuthButton = ({ redirectPath = "/" }) => {
-  const router = useRouter();
   const supabase = createClient();
 
   const handleGoogleSignIn = async () => {
@@ -13,7 +11,8 @@ const GoogleAuthButton = ({ redirectPath = "/" }) => {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}${redirectPath}`,
+          // The callback route exchanges the OAuth code for a session cookie
+          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectPath)}`,
         },
       });
       if (error) throw error;
