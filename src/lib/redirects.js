@@ -26,7 +26,8 @@ export function safeNextPath(value, fallback = HOME_PATH) {
   }
   try {
     const url = new URL(value, DUMMY_ORIGIN);
-    if (url.origin !== DUMMY_ORIGIN) return fallback;
+    // "/.//evil.com" normalizes to the protocol-relative "//evil.com"
+    if (url.origin !== DUMMY_ORIGIN || url.pathname.startsWith("//")) return fallback;
     return url.pathname + url.search + url.hash;
   } catch {
     return fallback;
