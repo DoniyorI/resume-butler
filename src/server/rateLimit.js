@@ -1,25 +1,13 @@
 import "server-only";
 import { HttpError } from "@/server/http";
 
-// Per-user limits for expensive routes (requests per window)
-export const RATE_LIMITS = {
-  "generate-resume": { limit: 20, windowSeconds: 3600 },
-  "generate-cover-letter": { limit: 20, windowSeconds: 3600 },
-  "suggest-bullets": { limit: 30, windowSeconds: 3600 },
-  "parse-resume": { limit: 10, windowSeconds: 3600 },
-  "scan-emails": { limit: 10, windowSeconds: 3600 },
-  "download-resume": { limit: 60, windowSeconds: 3600 },
-};
-
-// Counts this request against the caller's limit using the consume_rate_limit
-// database function (supabase/migrations/004_security_hardening.sql)
+// Counts this request against the caller's per-user limit for `key`. The limits
+// themselves live in the consume_rate_limit database function
+// (supabase/migrations/004_security_hardening.sql) so callers can't change them.
+// Keys: generate-resume, generate-cover-letter, suggest-bullets, parse-resume,
+// scan-emails, download-resume.
 export async function enforceRateLimit(supabase, key) {
-  const { limit, windowSeconds } = RATE_LIMITS[key];
-  const { data: allowed, error } = await supabase.rpc("consume_rate_limit", {
-    p_key: key,
-    p_limit: limit,
-    p_window_seconds: windowSeconds,
-  });
+  const { data: allowed, error } = await supabase.rpc("consume_rate_limit", { p_key: key });
 
   if (error) {
     // Fail open so the app keeps working if the migration hasn't been applied yet

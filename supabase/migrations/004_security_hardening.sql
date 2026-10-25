@@ -16,8 +16,10 @@ create table if not exists public.api_rate_limits (
 alter table public.api_rate_limits enable row level security;
 
 -- Counts one request for the calling user and returns whether it is within the
--- limit (fixed window). Called by the API routes via supabase.rpc().
-create or replace function public.consume_rate_limit(p_key text, p_limit integer, p_window_seconds integer)
+-- limit (fixed window). Called by the API routes via supabase.rpc(). Limits are
+-- defined here, not passed in, so a user calling the function directly can't
+-- pick a tiny window to reset their own counter.
+create or replace function public.consume_rate_limit(p_key text)
 returns boolean
 language plpgsql
 security definer
@@ -25,32 +27,37 @@ set search_path = ''
 as $$
 declare
   v_user uuid := auth.uid();
-  v_expired boolean;
+  v_limit integer;
+  v_window interval;
   v_count integer;
 begin
   if v_user is null then
     return false;
   end if;
 
+  case p_key
+    when 'generate-resume' then v_limit := 20; v_window := interval '1 hour';
+    when 'generate-cover-letter' then v_limit := 20; v_window := interval '1 hour';
+    when 'suggest-bullets' then v_limit := 30; v_window := interval '1 hour';
+    when 'parse-resume' then v_limit := 10; v_window := interval '1 hour';
+    when 'scan-emails' then v_limit := 10; v_window := interval '1 hour';
+    when 'download-resume' then v_limit := 60; v_window := interval '1 hour';
+    else raise exception 'Unknown rate limit key: %', p_key;
+  end case;
+
   insert into public.api_rate_limits as r (user_id, key, window_start, count)
   values (v_user, p_key, now(), 1)
   on conflict (user_id, key) do update
-    set count = case
-          when r.window_start < now() - make_interval(secs => p_window_seconds) then 1
-          else r.count + 1
-        end,
-        window_start = case
-          when r.window_start < now() - make_interval(secs => p_window_seconds) then now()
-          else r.window_start
-        end
+    set count = case when r.window_start < now() - v_window then 1 else r.count + 1 end,
+        window_start = case when r.window_start < now() - v_window then now() else r.window_start end
   returning count into v_count;
 
-  return v_count <= p_limit;
+  return v_count <= v_limit;
 end;
 $$;
 
-revoke all on function public.consume_rate_limit(text, integer, integer) from public, anon;
-grant execute on function public.consume_rate_limit(text, integer, integer) to authenticated;
+revoke all on function public.consume_rate_limit(text) from public, anon;
+grant execute on function public.consume_rate_limit(text) to authenticated;
 
 -----------------------------------------------------------
 -- SECURITY DEFINER FUNCTIONS: pin search_path
