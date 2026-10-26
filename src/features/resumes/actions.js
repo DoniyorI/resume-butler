@@ -23,9 +23,7 @@ const contentSchema = z.object({
   experience: itemsSchema,
   projects: itemsSchema,
   skills: itemsSchema,
-  order: z
-    .array(z.object({ id: z.enum(SECTION_IDS), title: z.string().max(100) }))
-    .max(SECTION_IDS.length),
+  order: z.array(z.object({ id: z.enum(SECTION_IDS), title: z.string().max(100) })).max(SECTION_IDS.length),
 });
 
 export async function createResume(input) {

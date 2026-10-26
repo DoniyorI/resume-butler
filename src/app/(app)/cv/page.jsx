@@ -31,8 +31,8 @@ export default async function CvPage() {
       <div className="text-center mb-6">
         <h1 className="text-2xl font-semibold text-brand">Master CV</h1>
         <p className="pt-1 font-light text-sm text-gray-500 max-w-lg mx-auto">
-          Add everything here — all your experience, projects, education, and skills. When you
-          apply to a job, we&apos;ll pick the most relevant items to build a tailored resume.
+          Add everything here — all your experience, projects, education, and skills. When you apply to a job,
+          we&apos;ll pick the most relevant items to build a tailored resume.
         </p>
       </div>
 

@@ -22,17 +22,8 @@ const GoogleAuthButton = ({ redirectPath = "/" }) => {
   };
 
   return (
-    <Button
-      variant="outline"
-      className="w-full space-x-2"
-      onClick={handleGoogleSignIn}
-    >
-      <Image
-        src="/image/google-logo.png"
-        alt="Google logo"
-        width={25}
-        height={25}
-      />
+    <Button variant="outline" className="w-full space-x-2" onClick={handleGoogleSignIn}>
+      <Image src="/image/google-logo.png" alt="Google logo" width={25} height={25} />
       <span>Sign up with Google</span>
     </Button>
   );

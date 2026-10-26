@@ -47,10 +47,6 @@ export default function CoverLetterBodyEditor({ initial, onChange }) {
   };
 
   return (
-    <Editor
-      editorState={editorState}
-      onChange={handleChange}
-      placeholder="Write your cover letter here..."
-    />
+    <Editor editorState={editorState} onChange={handleChange} placeholder="Write your cover letter here..." />
   );
 }

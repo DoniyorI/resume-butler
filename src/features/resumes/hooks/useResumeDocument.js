@@ -132,10 +132,7 @@ export function useResumeDocument({ resumeId, initialContent, needsInitialSave =
     setDoc((prev) => ({ ...prev, header: { ...prev.header, [field]: value } }));
   }, []);
 
-  const sections = useMemo(
-    () => doc.order.map((section) => ({ ...section, items: doc[section.id] })),
-    [doc]
-  );
+  const sections = useMemo(() => doc.order.map((section) => ({ ...section, items: doc[section.id] })), [doc]);
 
   // What /api/ats-score and /api/suggest-bullets expect
   const resumeContent = useMemo(

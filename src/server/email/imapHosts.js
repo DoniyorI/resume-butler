@@ -13,7 +13,9 @@ export const ALLOWED_IMAP_HOSTS = [
 export const IMAP_PORT = 993;
 
 export function normalizeImapHost(host) {
-  return String(host || "").trim().toLowerCase();
+  return String(host || "")
+    .trim()
+    .toLowerCase();
 }
 
 export function isAllowedImapHost(host) {

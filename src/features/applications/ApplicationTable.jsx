@@ -12,14 +12,7 @@ import {
   DropdownMenuContent,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import BulkActions from "@/features/applications/BulkActions";
 import { INTERACTIVE_COLUMNS } from "@/features/applications/columns";
 import { applicationsToCsv, downloadCsv } from "@/features/applications/csv";
@@ -36,8 +29,7 @@ export default function ApplicationTable({ applications, total, page, pageSize }
   const firstShown = page * pageSize + 1;
   const lastShown = page * pageSize + applications.length;
 
-  const goToPage = (index) =>
-    router.push(index > 0 ? `/?page=${index + 1}` : "/", { scroll: false });
+  const goToPage = (index) => router.push(index > 0 ? `/?page=${index + 1}` : "/", { scroll: false });
 
   const handleExportCsv = () => {
     const date = new Date().toISOString().split("T")[0];
@@ -160,12 +152,7 @@ export default function ApplicationTable({ applications, total, page, pageSize }
         </div>
 
         <div className="space-x-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => goToPage(page - 1)}
-            disabled={page === 0}
-          >
+          <Button variant="outline" size="sm" onClick={() => goToPage(page - 1)} disabled={page === 0}>
             Previous
           </Button>
           <Button

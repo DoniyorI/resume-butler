@@ -27,7 +27,9 @@ function records(value, max) {
 }
 
 function bulletList(value) {
-  return list(value, LIMITS.bullets).map((b) => text(b, 1000)).filter(Boolean);
+  return list(value, LIMITS.bullets)
+    .map((b) => text(b, 1000))
+    .filter(Boolean);
 }
 
 function extractPdfText(buffer) {
@@ -92,7 +94,10 @@ async function extractResumeText(buffer, fileName) {
   const isText = !isPdf && fileName?.toLowerCase().endsWith(".txt");
   if (!isPdf && !isText) throw new HttpError(400, "Upload a PDF or .txt file");
 
-  const resumeText = (isPdf ? await extractPdfText(buffer) : buffer.toString("utf-8")).slice(0, MAX_TEXT_CHARS);
+  const resumeText = (isPdf ? await extractPdfText(buffer) : buffer.toString("utf-8")).slice(
+    0,
+    MAX_TEXT_CHARS
+  );
   if (!resumeText.trim()) throw new HttpError(400, "Could not extract text from file");
   return resumeText;
 }
@@ -120,7 +125,11 @@ async function saveWithBullets(supabase, { table, bulletTable, foreignKey, entri
   let saved = 0;
   for (let i = 0; i < entries.length; i++) {
     const entry = entries[i];
-    const { data: inserted, error } = await supabase.from(table).insert(toRow(entry, i)).select("id").single();
+    const { data: inserted, error } = await supabase
+      .from(table)
+      .insert(toRow(entry, i))
+      .select("id")
+      .single();
     if (error) continue;
     saved++;
 

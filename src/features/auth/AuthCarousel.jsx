@@ -14,9 +14,7 @@ const EmblaCarousel = ({ slides, options }) => {
   };
 
   // Always call the hook unconditionally at the top of your component.
-  const [emblaRef] = useEmblaCarousel(options, [
-    Autoplay(autoplayOptions),
-  ]);
+  const [emblaRef] = useEmblaCarousel(options, [Autoplay(autoplayOptions)]);
 
   // After hook calls, you can handle any conditional rendering.
   if (!slides || slides.length === 0) {
@@ -43,8 +41,8 @@ const EmblaCarousel = ({ slides, options }) => {
                     slide.animation === "salesman"
                       ? Animation1
                       : slide.animation === "design"
-                      ? Animation2
-                      : Animation3
+                        ? Animation2
+                        : Animation3
                   }
                   autoplay
                   loop
@@ -52,9 +50,7 @@ const EmblaCarousel = ({ slides, options }) => {
               )}
               <div className="text-center space-y-2">
                 <div className="font-semibold">{slide.title}</div>
-                <div className="text-sm text-[#6B7F71]">
-                  {slide.description}
-                </div>
+                <div className="text-sm text-[#6B7F71]">{slide.description}</div>
               </div>
             </div>
           ))}

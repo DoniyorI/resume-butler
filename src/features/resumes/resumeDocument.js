@@ -21,7 +21,15 @@ export function blankItem(sectionId) {
     case "education":
       return { degreeType: "", endDate: "", location: "", gpa: "", major: "", school: "", startDate: "" };
     case "experience":
-      return { companyName: "", position: "", startDate: "", endDate: "", location: "", description: "", currentlyWorking: false };
+      return {
+        companyName: "",
+        position: "",
+        startDate: "",
+        endDate: "",
+        location: "",
+        description: "",
+        currentlyWorking: false,
+      };
     case "projects":
       return { projectName: "", description: "", startDate: "", endDate: "", currentlyWorking: false };
     case "skills":

@@ -23,11 +23,7 @@ export default function LinkedDocuments({ resumeId, coverLetterId }) {
       </CardHeader>
       <CardContent className="space-y-3">
         {resumeId ? (
-          <DocumentLink
-            href={`/resumes/${resumeId}`}
-            label="View Resume"
-            iconClassName="text-blue-600"
-          />
+          <DocumentLink href={`/resumes/${resumeId}`} label="View Resume" iconClassName="text-blue-600" />
         ) : (
           <p className="text-sm text-gray-400">No resume linked</p>
         )}

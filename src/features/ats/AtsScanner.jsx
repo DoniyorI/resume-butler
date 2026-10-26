@@ -37,9 +37,7 @@ export default function AtsScanner({ resumeContent, initialJobDescription = "" }
             <ScanSearch size={18} className="text-brand" />
             <CardTitle className="text-lg">ATS Scanner</CardTitle>
           </div>
-          {result && !expanded && (
-            <ScoreRing score={result.overallScore} size={40} strokeWidth={3} />
-          )}
+          {result && !expanded && <ScoreRing score={result.overallScore} size={40} strokeWidth={3} />}
           {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
         </div>
         <CardDescription>Paste a job description to see how well your resume matches</CardDescription>

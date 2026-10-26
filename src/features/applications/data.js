@@ -29,10 +29,7 @@ export async function getApplicationsPage(supabase, userId, pageIndex) {
   const to = from + APPLICATIONS_PAGE_SIZE - 1;
 
   const [countRes, listRes] = await Promise.all([
-    supabase
-      .from("applications")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", userId),
+    supabase.from("applications").select("id", { count: "exact", head: true }).eq("user_id", userId),
     supabase
       .from("applications")
       .select(LIST_COLUMNS)

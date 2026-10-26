@@ -83,7 +83,12 @@ export default function AtsPanel({ open, onClose, resumeContent, onScanComplete,
   const markHandled = (index) => setHandled((prev) => new Set(prev).add(index));
 
   const handleAccept = (suggestion, index) => {
-    onAcceptSuggestion(suggestion.section, suggestion.itemIndex, suggestion.bulletIndex, suggestion.suggested);
+    onAcceptSuggestion(
+      suggestion.section,
+      suggestion.itemIndex,
+      suggestion.bulletIndex,
+      suggestion.suggested
+    );
     markHandled(index);
   };
 

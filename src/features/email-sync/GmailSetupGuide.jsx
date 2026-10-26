@@ -10,7 +10,9 @@ export default function GmailSetupGuide() {
         </CardTitle>
       </CardHeader>
       <CardContent className="text-xs text-gray-600 space-y-2">
-        <p>For Gmail, you need an <strong>App Password</strong> (not your regular password):</p>
+        <p>
+          For Gmail, you need an <strong>App Password</strong> (not your regular password):
+        </p>
         <ol className="list-decimal ml-4 space-y-1">
           <li>Go to your Google Account settings</li>
           <li>Enable 2-Factor Authentication if not already on</li>
@@ -19,8 +21,7 @@ export default function GmailSetupGuide() {
           <li>Use the 16-character password generated</li>
         </ol>
         <p className="text-gray-400 mt-2">
-          For Outlook: use imap-mail.outlook.com port 993.
-          For Yahoo: use imap.mail.yahoo.com port 993.
+          For Outlook: use imap-mail.outlook.com port 993. For Yahoo: use imap.mail.yahoo.com port 993.
         </p>
       </CardContent>
     </Card>

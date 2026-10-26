@@ -85,9 +85,7 @@ export default function FileUpload({ onComplete }) {
     <div className="w-full max-w-[600px] mx-auto">
       <div
         className={`flex flex-col items-center justify-center w-full h-48 border-2 border-dashed rounded-lg p-4 transition-colors ${
-          dragging
-            ? "bg-green-50 border-green-400"
-            : "bg-white border-green-200 hover:border-green-300"
+          dragging ? "bg-green-50 border-green-400" : "bg-white border-green-200 hover:border-green-300"
         }`}
         onDragOver={onDragOver}
         onDragLeave={onDragLeave}
@@ -99,9 +97,7 @@ export default function FileUpload({ onComplete }) {
             <p className="text-sm text-gray-600">
               Parsing <span className="font-medium">{fileName}</span>...
             </p>
-            <p className="text-xs text-gray-400">
-              Extracting education, experience, projects, and skills
-            </p>
+            <p className="text-xs text-gray-400">Extracting education, experience, projects, and skills</p>
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center space-y-4">
@@ -124,13 +120,7 @@ export default function FileUpload({ onComplete }) {
             </Button>
           </div>
         )}
-        <input
-          ref={inputRef}
-          type="file"
-          className="hidden"
-          accept=".pdf,.txt"
-          onChange={onChange}
-        />
+        <input ref={inputRef} type="file" className="hidden" accept=".pdf,.txt" onChange={onChange} />
       </div>
     </div>
   );

@@ -155,12 +155,7 @@ export default function ApplicationEditor({ application, statusHistory, resumeCo
                   value={form.company}
                   onChange={setField("company")}
                 />
-                <LabeledInput
-                  icon={Briefcase}
-                  label="Role"
-                  value={form.role}
-                  onChange={setField("role")}
-                />
+                <LabeledInput icon={Briefcase} label="Role" value={form.role} onChange={setField("role")} />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <LabeledInput
@@ -191,9 +186,7 @@ export default function ApplicationEditor({ application, statusHistory, resumeCo
                         mode="single"
                         captionLayout="dropdown-buttons"
                         selected={appliedDate || undefined}
-                        onSelect={(date) =>
-                          setField("appliedDate")(date ? format(date, "yyyy-MM-dd") : "")
-                        }
+                        onSelect={(date) => setField("appliedDate")(date ? format(date, "yyyy-MM-dd") : "")}
                         fromYear={2020}
                         toYear={2030}
                       />
@@ -287,10 +280,7 @@ export default function ApplicationEditor({ application, statusHistory, resumeCo
 
           <StatusTimeline history={statusHistory} />
 
-          <LinkedDocuments
-            resumeId={application.resumeId}
-            coverLetterId={application.coverLetterId}
-          />
+          <LinkedDocuments resumeId={application.resumeId} coverLetterId={application.coverLetterId} />
         </div>
       </div>
     </div>

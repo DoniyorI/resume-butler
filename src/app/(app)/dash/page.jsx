@@ -6,11 +6,7 @@ import StatCard from "@/features/dashboard/StatCard";
 import ApplicationFunnel from "@/features/dashboard/ApplicationFunnel";
 import StatusSummary from "@/features/dashboard/StatusSummary";
 import ChartCard, { EmptyChart } from "@/features/dashboard/ChartCard";
-import {
-  DailyApplicationsChart,
-  SankeyDiagram,
-  StatusPieChart,
-} from "@/features/dashboard/LazyCharts";
+import { DailyApplicationsChart, SankeyDiagram, StatusPieChart } from "@/features/dashboard/LazyCharts";
 
 export const metadata = { title: "Dashboard" };
 

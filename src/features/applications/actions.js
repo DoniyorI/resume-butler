@@ -26,18 +26,10 @@ const optionalId = z
 
 // The fields the add dialog and the detail page both edit
 const applicationFields = {
-  company: z
-    .string()
-    .trim()
-    .min(1, "Company name is required")
-    .max(200, "Company name is too long"),
+  company: z.string().trim().min(1, "Company name is required").max(200, "Company name is too long"),
   role: optionalText(200, "Role"),
   location: optionalText(200, "Location"),
-  portalLink: z
-    .string()
-    .max(2048, "Portal link is too long")
-    .default("")
-    .transform(normalizeHttpUrl),
+  portalLink: z.string().max(2048, "Portal link is too long").default("").transform(normalizeHttpUrl),
   status: statusSchema.default(DEFAULT_STATUS),
   comments: commentsSchema.default(""),
   appliedDate: z

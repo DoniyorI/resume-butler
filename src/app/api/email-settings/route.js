@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
 import { requireUser } from "@/server/auth";
-import { connectionInputSchema, deleteConnection, getConnection, saveConnection } from "@/server/email/connection";
+import {
+  connectionInputSchema,
+  deleteConnection,
+  getConnection,
+  saveConnection,
+} from "@/server/email/connection";
 import { errorResponse, parseJson } from "@/server/http";
 
 // GET - the user's email connection (never includes the password)

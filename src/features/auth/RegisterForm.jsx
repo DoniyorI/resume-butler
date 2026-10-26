@@ -57,13 +57,7 @@ export default function RegisterForm() {
     <div className="w-full flex min-h-screen">
       <div className="w-full lg:w-1/2 flex items-center justify-center p-12">
         <div className="absolute left-5 top-5 flex items-center space-x-2">
-          <Image
-            src="/image/Logo.svg"
-            alt="Logo"
-            width="0"
-            height="0"
-            className="w-8 h-auto"
-          />
+          <Image src="/image/Logo.svg" alt="Logo" width="0" height="0" className="w-8 h-auto" />
           <span className="self-center text-md font-medium  whitespace-nowrap dark:text-white">
             Resume Butler
           </span>
@@ -130,16 +124,14 @@ export default function RegisterForm() {
                 height: 108,
                 type: "image",
                 title: "Tailored to Stand Out",
-                description:
-                  "Elevate Your Application process with AI and Secure Your Next Job Interview!",
+                description: "Elevate Your Application process with AI and Secure Your Next Job Interview!",
               },
               {
                 animation: "salesman",
                 alt: "Image 1",
                 type: "animation",
                 title: "Tracking for Success",
-                description:
-                  "Seamlessly integrate your strengths into every job application.",
+                description: "Seamlessly integrate your strengths into every job application.",
               },
               {
                 animation: "design",
@@ -158,8 +150,7 @@ export default function RegisterForm() {
                 height: 108,
                 type: "animation",
                 title: "Precision in Every Application",
-                description:
-                  "Every job application is unique. Let us tailor your resume to fit perfectly.",
+                description: "Every job application is unique. Let us tailor your resume to fit perfectly.",
               },
             ]}
             options={{ loop: true }}

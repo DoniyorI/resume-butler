@@ -41,11 +41,7 @@ export default function CertificationForm({ initialEntries }) {
     <>
       <div className="flex space-x-6 justify-between items-center py-4">
         <h1 className="text-2xl text-[#5CA78F] cursor-default">Certifications</h1>
-        <Button
-          className="text-[#188665] font-light hover:bg-green-100"
-          variant="ghost"
-          onClick={addEntry}
-        >
+        <Button className="text-[#188665] font-light hover:bg-green-100" variant="ghost" onClick={addEntry}>
           <Plus size={16} className="mr-1" /> Add Certification
         </Button>
       </div>

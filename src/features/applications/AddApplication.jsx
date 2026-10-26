@@ -234,12 +234,7 @@ export default function AddApplicationDialog() {
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
-                    <Calendar
-                      mode="single"
-                      selected={form.date}
-                      onSelect={setField("date")}
-                      initialFocus
-                    />
+                    <Calendar mode="single" selected={form.date} onSelect={setField("date")} initialFocus />
                   </PopoverContent>
                 </Popover>
               </div>

@@ -6,13 +6,7 @@ import { z } from "zod";
 import emailjs from "@emailjs/browser";
 
 import { Button } from "@/components/ui/button";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-} from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 
@@ -36,12 +30,7 @@ export default function ContactForm() {
 
   const onSubmit = async (data) => {
     try {
-      await emailjs.send(
-        "service_2rq05gv",
-        "template_dzw2uvk",
-        data,
-        "wUjMvvLPRp-kZOhsv"
-      );
+      await emailjs.send("service_2rq05gv", "template_dzw2uvk", data, "wUjMvvLPRp-kZOhsv");
       toast("Message sent successfully!");
       form.reset(); // Reset the form fields after successful submission
     } catch (error) {
@@ -53,9 +42,7 @@ export default function ContactForm() {
   return (
     <div className="flex flex-col w-full min-h-screen pt-24 pb-10 px-10">
       <h1 className="text-2xl font-semibold text-brand">Contact Us</h1>
-      <p className="mt-4 text-lg">
-        We would love to hear from you! Please feel free to reach out to us.
-      </p>
+      <p className="mt-4 text-lg">We would love to hear from you! Please feel free to reach out to us.</p>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <FormField

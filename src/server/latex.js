@@ -9,9 +9,9 @@ const LATEX_ESCAPES = {
   "\\": "\\textbackslash{}",
   "&": "\\&",
   "%": "\\%",
-  "$": "\\$",
+  $: "\\$",
   "#": "\\#",
-  "_": "\\_",
+  _: "\\_",
   "{": "\\{",
   "}": "\\}",
   "~": "\\textasciitilde{}",
@@ -50,14 +50,10 @@ function buildHeader(header) {
 
   if (header.email) {
     const mailto = SIMPLE_EMAIL.test(header.email) ? `mailto:${header.email}` : null;
-    parts.push(
-      link(mailto, `\\raisebox{-0.2\\height}\\faEnvelope\\  \\underline{${esc(header.email)}}`)
-    );
+    parts.push(link(mailto, `\\raisebox{-0.2\\height}\\faEnvelope\\  \\underline{${esc(header.email)}}`));
   }
   if (header.phone) {
-    parts.push(
-      `\\raisebox{-0.2\\height}\\faPhone\\  ${esc(header.phone)}`
-    );
+    parts.push(`\\raisebox{-0.2\\height}\\faPhone\\  ${esc(header.phone)}`);
   }
   if (header.linkedin) {
     const display = String(header.linkedin).replace(/^https?:\/\/(www\.)?/, "");
@@ -88,9 +84,8 @@ function buildExperience(experiences) {
     const location = esc(exp.location || "");
     const position = esc(exp.position || "");
     const startDate = formatDate(exp.startDate || exp.start_date);
-    const endDate = exp.currentlyWorking || exp.currently_working
-      ? "Present"
-      : formatDate(exp.endDate || exp.end_date);
+    const endDate =
+      exp.currentlyWorking || exp.currently_working ? "Present" : formatDate(exp.endDate || exp.end_date);
     const dateRange = startDate ? `${startDate} - ${endDate}` : "";
 
     items += `\n  \\resumeSubheading
@@ -120,9 +115,7 @@ function buildEducation(educationList) {
   for (const edu of educationList) {
     const school = esc(edu.school || "");
     const location = esc(edu.location || "");
-    const degree = [edu.degreeType || edu.degree_type, edu.major]
-      .filter(Boolean)
-      .join(" in ");
+    const degree = [edu.degreeType || edu.degree_type, edu.major].filter(Boolean).join(" in ");
     const gpa = edu.gpa ? `, GPA: ${esc(edu.gpa)}` : "";
     const subtitle = `${esc(degree)}${gpa}`;
     const endDate = formatDate(edu.endDate || edu.end_date);
@@ -144,9 +137,8 @@ function buildProjects(projects) {
   for (const proj of projects) {
     const name = esc(proj.projectName || proj.name || "");
     const startDate = formatDate(proj.startDate || proj.start_date);
-    const endDate = proj.currentlyWorking || proj.currently_working
-      ? "Present"
-      : formatDate(proj.endDate || proj.end_date);
+    const endDate =
+      proj.currentlyWorking || proj.currently_working ? "Present" : formatDate(proj.endDate || proj.end_date);
     const dateRange = startDate ? `${startDate} - ${endDate}` : "";
 
     items += `\n    \\resumeProjectHeading
@@ -173,8 +165,7 @@ function buildSkills(skillsData) {
   let lines = "";
   for (const group of skillsData) {
     if (group.header && group.skills) {
-      const skillStr =
-        typeof group.skills === "string" ? group.skills : group.skills.join(", ");
+      const skillStr = typeof group.skills === "string" ? group.skills : group.skills.join(", ");
       lines += `\\textbf{${esc(group.header)}: } ${esc(skillStr)} \\\\\n`;
     }
   }

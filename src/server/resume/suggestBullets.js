@@ -42,17 +42,31 @@ export const suggestBulletsInput = z.object({
 
 function sectionBullets(entries, section, contextOf, out) {
   (entries || []).forEach((entry, itemIndex) => {
-    const descriptions = Array.isArray(entry.description) ? entry.description : (entry.description || "").split("\n");
+    const descriptions = Array.isArray(entry.description)
+      ? entry.description
+      : (entry.description || "").split("\n");
     descriptions.forEach((bullet, bulletIndex) => {
       if (!bullet || !bullet.trim()) return;
-      out.push({ index: out.length, section, itemIndex, bulletIndex, text: bullet.trim(), context: contextOf(entry) });
+      out.push({
+        index: out.length,
+        section,
+        itemIndex,
+        bulletIndex,
+        text: bullet.trim(),
+        context: contextOf(entry),
+      });
     });
   });
 }
 
 function collectBullets(resumeContent) {
   const bullets = [];
-  sectionBullets(resumeContent.experience, "experience", (exp) => `${exp.companyName || exp.company || ""} — ${exp.position || ""}`, bullets);
+  sectionBullets(
+    resumeContent.experience,
+    "experience",
+    (exp) => `${exp.companyName || exp.company || ""} — ${exp.position || ""}`,
+    bullets
+  );
   sectionBullets(resumeContent.projects, "projects", (proj) => proj.projectName || proj.name || "", bullets);
   return bullets.slice(0, MAX_BULLETS);
 }

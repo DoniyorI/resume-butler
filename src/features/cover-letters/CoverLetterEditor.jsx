@@ -112,7 +112,9 @@ export default function CoverLetterEditor({ coverLetter }) {
 
   return (
     <div className="flex w-full font-sans my-10">
-      <div className={`flex-grow transition-all duration-300 p-10 ${aiPanelOpen ? SIDE_PANEL_MARGIN_CLASS : ""}`}>
+      <div
+        className={`flex-grow transition-all duration-300 p-10 ${aiPanelOpen ? SIDE_PANEL_MARGIN_CLASS : ""}`}
+      >
         <div className="flex items-center justify-between mb-4">
           <EditableTitleHeader
             label="Cover Letter"
@@ -143,15 +145,40 @@ export default function CoverLetterEditor({ coverLetter }) {
           <div className="w-[850px] min-h-[1100px] border border-gray-800 rounded-md bg-white box-border overflow-hidden p-4">
             <div className="border-b-2 border-black p-4 flex justify-between items-center">
               <div className="flex flex-col space-y-1">
-                <HeaderInput {...headerInputProps} name="contactPhone" className="border px-1 cursor-text" placeholder="Phone" />
-                <HeaderInput {...headerInputProps} name="contactEmail" className="border px-1 flex-grow cursor-text" placeholder="Email" />
+                <HeaderInput
+                  {...headerInputProps}
+                  name="contactPhone"
+                  className="border px-1 cursor-text"
+                  placeholder="Phone"
+                />
+                <HeaderInput
+                  {...headerInputProps}
+                  name="contactEmail"
+                  className="border px-1 flex-grow cursor-text"
+                  placeholder="Email"
+                />
               </div>
               <div className="text-center">
-                <HeaderInput {...headerInputProps} name="name" className="text-2xl font-bold border text-center cursor-text" placeholder="Your Name" />
+                <HeaderInput
+                  {...headerInputProps}
+                  name="name"
+                  className="text-2xl font-bold border text-center cursor-text"
+                  placeholder="Your Name"
+                />
               </div>
               <div className="flex flex-col space-y-1 text-right">
-                <HeaderInput {...headerInputProps} name="linkedin" className="border px-1 text-right cursor-text" placeholder="LinkedIn" />
-                <HeaderInput {...headerInputProps} name="portfolio" className="border px-1 text-right cursor-text" placeholder="Portfolio" />
+                <HeaderInput
+                  {...headerInputProps}
+                  name="linkedin"
+                  className="border px-1 text-right cursor-text"
+                  placeholder="LinkedIn"
+                />
+                <HeaderInput
+                  {...headerInputProps}
+                  name="portfolio"
+                  className="border px-1 text-right cursor-text"
+                  placeholder="Portfolio"
+                />
               </div>
             </div>
             <div className="flex flex-col p-4">
@@ -171,7 +198,11 @@ export default function CoverLetterEditor({ coverLetter }) {
                 </div>
               </div>
               <div className="py-1 pb-3">{GREETING}</div>
-              <CoverLetterBodyEditor key={bodySeed.key} initial={bodySeed.initial} onChange={handleBodyChange} />
+              <CoverLetterBodyEditor
+                key={bodySeed.key}
+                initial={bodySeed.initial}
+                onChange={handleBodyChange}
+              />
               <div className="mt-3">{SIGN_OFF}</div>
               <HeaderInput {...headerInputProps} name="name" className="w-1/5 cursor-text" />
               <HeaderInput {...headerInputProps} name="contactPhone" className="w-1/5 cursor-text" />

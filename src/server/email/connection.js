@@ -1,11 +1,17 @@
 import "server-only";
 import { z } from "zod";
 import { decryptSecret, encryptSecret, isEncrypted } from "@/server/crypto";
-import { ALLOWED_IMAP_HOSTS, IMAP_PORT, isAllowedImapHost, normalizeImapHost } from "@/server/email/imapHosts";
+import {
+  ALLOWED_IMAP_HOSTS,
+  IMAP_PORT,
+  isAllowedImapHost,
+  normalizeImapHost,
+} from "@/server/email/imapHosts";
 import { HttpError } from "@/server/http";
 
 // Everything except app_password. Never select "*" for anything sent to the browser.
-export const PUBLIC_CONNECTION_COLUMNS = "id, imap_host, imap_port, email_address, is_active, last_scan_at, created_at";
+export const PUBLIC_CONNECTION_COLUMNS =
+  "id, imap_host, imap_port, email_address, is_active, last_scan_at, created_at";
 
 export const connectionInputSchema = z.object({
   email_address: z.string().trim().email().max(254),
@@ -38,7 +44,11 @@ export async function getConnection(supabase, userId) {
 
 // Create or replace the user's IMAP connection. `input` must already match
 // connectionInputSchema. Returns the public columns.
-export async function saveConnection(supabase, userId, { email_address, app_password, imap_host, imap_port }) {
+export async function saveConnection(
+  supabase,
+  userId,
+  { email_address, app_password, imap_host, imap_port }
+) {
   const host = normalizeImapHost(imap_host || "imap.gmail.com");
   if (!isAllowedImapHost(host)) {
     throw new HttpError(400, `Unsupported IMAP server. Supported: ${ALLOWED_IMAP_HOSTS.join(", ")}`);

@@ -29,7 +29,10 @@ export function encryptSecret(plaintext) {
 // Values saved before encryption was added are returned unchanged
 export function decryptSecret(value) {
   if (!isEncrypted(value)) return value;
-  const [iv, tag, ciphertext] = value.slice(PREFIX.length).split(":").map((p) => Buffer.from(p, "base64"));
+  const [iv, tag, ciphertext] = value
+    .slice(PREFIX.length)
+    .split(":")
+    .map((p) => Buffer.from(p, "base64"));
   const decipher = createDecipheriv("aes-256-gcm", getKey(), iv);
   decipher.setAuthTag(tag);
   return Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString("utf8");

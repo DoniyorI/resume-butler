@@ -22,7 +22,7 @@ export default function Footer() {
               Github
             </Link>
           </li>
-          
+
           <li>
             <Link href="/contact" className="hover:underline">
               Contact Us

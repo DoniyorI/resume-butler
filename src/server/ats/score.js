@@ -24,8 +24,14 @@ export function scoreResume(jobDescription, resumeContent) {
   const keywordScore = totalKeywords > 0 ? Math.round((matched.length / totalKeywords) * 100) : 0;
 
   const sectionChecks = checkSections(resumeContent);
-  const sectionScore = percentPresent(sectionChecks.filter((c) => c.category === "sections"), 0);
-  const qualityScore = percentPresent(sectionChecks.filter((c) => c.category === "quality"), 100);
+  const sectionScore = percentPresent(
+    sectionChecks.filter((c) => c.category === "sections"),
+    0
+  );
+  const qualityScore = percentPresent(
+    sectionChecks.filter((c) => c.category === "quality"),
+    100
+  );
 
   const overallScore = Math.round(keywordScore * 0.5 + sectionScore * 0.2 + qualityScore * 0.3);
 

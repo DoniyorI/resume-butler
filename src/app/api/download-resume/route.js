@@ -6,7 +6,11 @@ import { renderResume, renderResumeInput } from "@/server/resume/renderResume";
 
 // Build a Content-Disposition header that a resume title can't break out of
 function attachment(title, extension) {
-  const base = (title || "resume").replace(/[^\w .-]/g, "").trim().slice(0, 100) || "resume";
+  const base =
+    (title || "resume")
+      .replace(/[^\w .-]/g, "")
+      .trim()
+      .slice(0, 100) || "resume";
   const filename = `${base}.${extension}`;
   return `attachment; filename="${filename}"; filename*=UTF-8''${encodeURIComponent(filename)}`;
 }

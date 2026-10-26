@@ -29,8 +29,7 @@ export function useCvEntries(
 
   const addEntry = () => setEntries((current) => [...current, withKey(newEntry())]);
 
-  const updateEntry = (index, field, value) =>
-    updateAt(index, (entry) => ({ ...entry, [field]: value }));
+  const updateEntry = (index, field, value) => updateAt(index, (entry) => ({ ...entry, [field]: value }));
 
   const deleteEntry = async (index) => {
     const entry = entries[index];
@@ -44,8 +43,7 @@ export function useCvEntries(
     setEntries((current) => current.filter((item) => item.key !== entry.key));
   };
 
-  const addBullet = (index) =>
-    updateAt(index, (entry) => ({ ...entry, bullets: [...entry.bullets, ""] }));
+  const addBullet = (index) => updateAt(index, (entry) => ({ ...entry, bullets: [...entry.bullets, ""] }));
 
   const updateBullet = (index, bulletIndex, value) =>
     updateAt(index, (entry) => ({

@@ -6,12 +6,7 @@ import { requireUser } from "@/server/auth";
 import { parseInput, runAction } from "@/server/actionResult";
 import { HttpError } from "@/server/http";
 import { normalizeHttpUrl } from "@/lib/safeUrl";
-import {
-  getCertifications,
-  getEducation,
-  getExperience,
-  getProjects,
-} from "@/features/cv/data";
+import { getCertifications, getEducation, getExperience, getProjects } from "@/features/cv/data";
 
 const MAX_ENTRIES = 100;
 const MAX_BULLETS = 50;
@@ -271,7 +266,5 @@ export async function addSkill(input) {
 }
 
 export async function deleteSkill(skillId) {
-  return run("deleteSkill", (supabase, user) =>
-    deleteOwnedRow(supabase, user.id, "cv_skills", skillId)
-  );
+  return run("deleteSkill", (supabase, user) => deleteOwnedRow(supabase, user.id, "cv_skills", skillId));
 }

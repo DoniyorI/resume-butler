@@ -34,7 +34,11 @@ function recordProcessed(supabase, record) {
 // Create or update the application an email is about. Returns the
 // processed_emails action and the application ID. `applications` is updated in
 // place so later emails in the same scan see the change.
-async function applyClassification(supabase, userId, { emailDate, classification, company, status, applications }) {
+async function applyClassification(
+  supabase,
+  userId,
+  { emailDate, classification, company, status, applications }
+) {
   const existing = findApplicationByCompany(applications, company);
 
   if (existing) {
@@ -81,7 +85,10 @@ export async function syncEmailsForUser(supabase, userId, { daysBack = 14 } = {}
   }
   // Re-check stored settings, since rows saved before validation may hold any host
   if (!isAllowedImapHost(credentials.host)) {
-    throw new HttpError(400, "Your email connection uses an unsupported IMAP server. Reconnect your email in Email Sync.");
+    throw new HttpError(
+      400,
+      "Your email connection uses an unsupported IMAP server. Reconnect your email in Email Sync."
+    );
   }
 
   const processedIds = await loadProcessedIds(supabase, userId);

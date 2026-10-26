@@ -103,7 +103,9 @@ export default function ResumeEditor({ resume, masterCv }) {
 
   return (
     <div className="flex w-full font-sans my-10">
-      <div className={`flex-grow transition-all duration-300 p-10 ${openPanel ? SIDE_PANEL_MARGIN_CLASS : ""}`}>
+      <div
+        className={`flex-grow transition-all duration-300 p-10 ${openPanel ? SIDE_PANEL_MARGIN_CLASS : ""}`}
+      >
         <div className="flex items-center justify-between mb-4">
           <EditableTitleHeader
             label="Resume"

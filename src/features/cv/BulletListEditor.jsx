@@ -9,11 +9,7 @@ export default function BulletListEditor({ bullets, onAdd, onChange, onDelete })
     <div>
       <div className="flex justify-between items-center">
         <Label className="font-normal">Description</Label>
-        <Button
-          className="text-[#188665] font-light hover:bg-green-100"
-          variant="ghost"
-          onClick={onAdd}
-        >
+        <Button className="text-[#188665] font-light hover:bg-green-100" variant="ghost" onClick={onAdd}>
           + Add
         </Button>
       </div>

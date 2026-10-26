@@ -1,12 +1,12 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { buttonVariants } from "@/components/ui/button"
-import { ScrollArea } from "@/components/ui/scroll-area"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { cn } from "@/lib/utils"
-import { ChevronLeft, ChevronRight } from "lucide-react"
-import { DayPicker } from "react-day-picker"
+import * as React from "react";
+import { buttonVariants } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { DayPicker } from "react-day-picker";
 
 // export type CalendarProps = React.ComponentProps<typeof DayPicker>
 
@@ -45,19 +45,19 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }) {
       }}
       components={{
         Dropdown: ({ value, onChange, children }) => {
-          const options = React.Children.toArray(children)
-          const selected = options.find((child) => child.props.value === value)
+          const options = React.Children.toArray(children);
+          const selected = options.find((child) => child.props.value === value);
           const handleChange = (value) => {
             const changeEvent = {
               target: { value },
-            }
-            onChange?.(changeEvent)
-          }
+            };
+            onChange?.(changeEvent);
+          };
           return (
             <Select
               value={value?.toString()}
               onValueChange={(value) => {
-                handleChange(value)
+                handleChange(value);
               }}
             >
               <SelectTrigger className="pr-1.5 focus:ring-0">
@@ -66,22 +66,25 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }) {
               <SelectContent position="popper">
                 <ScrollArea className="h-80">
                   {options.map((option, id) => (
-                    <SelectItem key={`${option.props.value}-${id}`} value={option.props.value?.toString() ?? ""}>
+                    <SelectItem
+                      key={`${option.props.value}-${id}`}
+                      value={option.props.value?.toString() ?? ""}
+                    >
                       {option.props.children}
                     </SelectItem>
                   ))}
                 </ScrollArea>
               </SelectContent>
             </Select>
-          )
+          );
         },
         IconLeft: () => <ChevronLeft className="h-4 w-4" />,
         IconRight: () => <ChevronRight className="h-4 w-4" />,
       }}
       {...props}
     />
-  )
+  );
 }
-Calendar.displayName = "Calendar"
+Calendar.displayName = "Calendar";
 
-export { Calendar }
+export { Calendar };

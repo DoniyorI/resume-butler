@@ -82,11 +82,7 @@ export async function getMasterCv(supabase, userId) {
       .select("*, cv_experience_bullets(*)")
       .eq("user_id", userId)
       .order("sort_order"),
-    supabase
-      .from("cv_projects")
-      .select("*, cv_project_bullets(*)")
-      .eq("user_id", userId)
-      .order("sort_order"),
+    supabase.from("cv_projects").select("*, cv_project_bullets(*)").eq("user_id", userId).order("sort_order"),
     supabase.from("cv_skills").select("*").eq("user_id", userId).order("sort_order"),
   ]);
 

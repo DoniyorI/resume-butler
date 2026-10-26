@@ -19,9 +19,7 @@ const CHECK_GROUPS = [
 ];
 
 function SectionLabel({ children }) {
-  return (
-    <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">{children}</p>
-  );
+  return <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">{children}</p>;
 }
 
 function KeywordChips({ keywords, matched }) {
@@ -99,9 +97,7 @@ export function AtsResults({ result, size = "regular" }) {
                   ) : (
                     <AlertTriangle size={14} className="text-amber-500" />
                   )}
-                  <span className={check.present ? "text-gray-600" : "text-amber-700"}>
-                    {check.label}
-                  </span>
+                  <span className={check.present ? "text-gray-600" : "text-amber-700"}>{check.label}</span>
                   {check.detail && <span className="text-xs text-gray-400">({check.detail})</span>}
                 </div>
               ))}

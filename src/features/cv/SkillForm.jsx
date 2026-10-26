@@ -97,9 +97,7 @@ export default function SkillForm({ initialSkills }) {
       <div className="mt-6 space-y-4">
         {Object.entries(grouped).map(([category, categorySkills]) => (
           <div key={category}>
-            <Label className="text-xs font-medium text-gray-500 uppercase tracking-wider">
-              {category}
-            </Label>
+            <Label className="text-xs font-medium text-gray-500 uppercase tracking-wider">{category}</Label>
             <div className="flex flex-wrap gap-2 mt-1.5">
               {categorySkills.map((skill) => (
                 <div

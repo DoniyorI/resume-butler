@@ -2,25 +2,25 @@
 
 import * as React from "react";
 import { Button } from "@/components/ui/button";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar as CalendarIcon, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { parseDate } from "@/lib/dates";
 
 const MONTHS = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
 ];
 
 const YEARS = Array.from({ length: 30 }, (_, i) => 2040 - i);
@@ -36,8 +36,8 @@ export function MonthYearPicker({ value, onChange, placeholder = "Select date", 
   const displayText = isPresent
     ? "Present"
     : selectedDate
-    ? `${MONTHS[selectedDate.getMonth()]} ${selectedDate.getFullYear()}`
-    : null;
+      ? `${MONTHS[selectedDate.getMonth()]} ${selectedDate.getFullYear()}`
+      : null;
 
   const handleMonthChange = (month) => {
     const year = selectedYear || new Date().getFullYear().toString();
@@ -67,10 +67,7 @@ export function MonthYearPicker({ value, onChange, placeholder = "Select date", 
         <PopoverTrigger asChild>
           <Button
             variant="outline"
-            className={cn(
-              "w-[240px] justify-start text-left font-normal",
-              !value && "text-muted-foreground"
-            )}
+            className={cn("w-[240px] justify-start text-left font-normal", !value && "text-muted-foreground")}
           >
             <CalendarIcon className="mr-2 h-4 w-4 flex-shrink-0" />
             {displayText || placeholder}
@@ -116,12 +113,7 @@ export function MonthYearPicker({ value, onChange, placeholder = "Select date", 
                 </Button>
               )}
               {value && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-xs h-7 text-gray-500"
-                  onClick={handleClear}
-                >
+                <Button variant="ghost" size="sm" className="text-xs h-7 text-gray-500" onClick={handleClear}>
                   <X size={12} className="mr-1" /> Clear
                 </Button>
               )}

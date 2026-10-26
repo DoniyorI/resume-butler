@@ -39,34 +39,21 @@ const newEntry = () => ({
 });
 
 export default function ProjectForm({ initialEntries }) {
-  const {
-    entries,
-    saving,
-    addEntry,
-    updateEntry,
-    deleteEntry,
-    addBullet,
-    updateBullet,
-    deleteBullet,
-    save,
-  } = useCvEntries(initialEntries, {
-    toState,
-    toInput,
-    newEntry,
-    saveAction: saveProjects,
-    deleteAction: deleteProject,
-    savedMessage: "Project entries saved successfully!",
-  });
+  const { entries, saving, addEntry, updateEntry, deleteEntry, addBullet, updateBullet, deleteBullet, save } =
+    useCvEntries(initialEntries, {
+      toState,
+      toInput,
+      newEntry,
+      saveAction: saveProjects,
+      deleteAction: deleteProject,
+      savedMessage: "Project entries saved successfully!",
+    });
 
   return (
     <>
       <div className="flex space-x-6 justify-between items-center py-4">
         <h1 className=" text-2xl text-[#5CA78F] cursor-default">Personal Project</h1>
-        <Button
-          className="text-[#188665] font-light hover:bg-green-100"
-          variant="ghost"
-          onClick={addEntry}
-        >
+        <Button className="text-[#188665] font-light hover:bg-green-100" variant="ghost" onClick={addEntry}>
           + Add Project
         </Button>
       </div>
@@ -80,10 +67,7 @@ export default function ProjectForm({ initialEntries }) {
           <div className="flex space-x-6">
             <div className="flex-grow">
               <Label>Project Name</Label>
-              <Input
-                value={entry.name}
-                onChange={(e) => updateEntry(index, "name", e.target.value)}
-              />
+              <Input value={entry.name} onChange={(e) => updateEntry(index, "name", e.target.value)} />
             </div>
           </div>
           <div className="flex space-x-6">
@@ -101,7 +85,7 @@ export default function ProjectForm({ initialEntries }) {
             endDate={entry.endDate}
             onChange={(field, value) => updateEntry(index, field, value)}
             allowPresent
-            />
+          />
           <CurrentlyWorkingField
             id={`currently-working-${entry.key}`}
             checked={entry.currentlyWorking}
@@ -113,8 +97,7 @@ export default function ProjectForm({ initialEntries }) {
           />
 
           <div className="text-center font-light text-xs my-2">
-            Please add as much information about your role so we can better tailor to the job
-            application
+            Please add as much information about your role so we can better tailor to the job application
           </div>
 
           <BulletListEditor

@@ -44,27 +44,20 @@ const newEntry = () => ({
 });
 
 export default function EducationForm({ initialEntries }) {
-  const { entries, saving, addEntry, updateEntry, deleteEntry, save } = useCvEntries(
-    initialEntries,
-    {
-      toState,
-      toInput,
-      newEntry,
-      saveAction: saveEducation,
-      deleteAction: deleteEducation,
-      savedMessage: "Education entries saved successfully!",
-    }
-  );
+  const { entries, saving, addEntry, updateEntry, deleteEntry, save } = useCvEntries(initialEntries, {
+    toState,
+    toInput,
+    newEntry,
+    saveAction: saveEducation,
+    deleteAction: deleteEducation,
+    savedMessage: "Education entries saved successfully!",
+  });
 
   return (
     <>
       <div className="flex space-x-6 justify-between items-center py-4">
         <h1 className=" text-2xl text-[#5CA78F] cursor-default">Education</h1>
-        <Button
-          className="text-[#188665] font-light hover:bg-green-100"
-          variant="ghost"
-          onClick={addEntry}
-        >
+        <Button className="text-[#188665] font-light hover:bg-green-100" variant="ghost" onClick={addEntry}>
           + Add Education
         </Button>
       </div>
@@ -79,10 +72,7 @@ export default function EducationForm({ initialEntries }) {
           <div className="flex space-x-6 ">
             <div className="flex-grow">
               <Label>School</Label>
-              <Input
-                value={entry.school}
-                onChange={(e) => updateEntry(index, "school", e.target.value)}
-              />
+              <Input value={entry.school} onChange={(e) => updateEntry(index, "school", e.target.value)} />
             </div>
             <div className="flex-grow">
               <Label>Location</Label>
@@ -96,10 +86,7 @@ export default function EducationForm({ initialEntries }) {
           <div className="flex space-x-6">
             <div className="flex-grow">
               <Label>Major</Label>
-              <Input
-                value={entry.major}
-                onChange={(e) => updateEntry(index, "major", e.target.value)}
-              />
+              <Input value={entry.major} onChange={(e) => updateEntry(index, "major", e.target.value)} />
             </div>
             <div>
               <Label>Degree Type</Label>

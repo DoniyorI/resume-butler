@@ -15,16 +15,16 @@ export default function SankeyDiagram({ nodes, links }) {
     if (links.length === 0) return null;
     try {
       return sankey()
-      .nodeWidth(20)
-      .nodePadding(15)
-      .nodeAlign(sankeyCenter)
-      .extent([
-        [MARGIN, MARGIN],
-        [WIDTH - MARGIN, HEIGHT - MARGIN],
-      ])({
-      nodes: nodes.map((node) => ({ ...node })),
-      links: links.map((link) => ({ ...link })),
-    });
+        .nodeWidth(20)
+        .nodePadding(15)
+        .nodeAlign(sankeyCenter)
+        .extent([
+          [MARGIN, MARGIN],
+          [WIDTH - MARGIN, HEIGHT - MARGIN],
+        ])({
+        nodes: nodes.map((node) => ({ ...node })),
+        links: links.map((link) => ({ ...link })),
+      });
     } catch (error) {
       // A bad graph shouldn't take the whole dashboard down
       console.error("Sankey layout failed:", error);

@@ -28,18 +28,11 @@ export default function CommentsCell({ row }) {
 
   if (draft !== null) {
     return (
-      <Textarea
-        value={draft}
-        onChange={(e) => setDraft(e.target.value)}
-        onBlur={handleBlur}
-        autoFocus
-      />
+      <Textarea value={draft} onChange={(e) => setDraft(e.target.value)} onBlur={handleBlur} autoFocus />
     );
   }
 
   return (
-    <div onDoubleClick={startEditing}>
-      {comments || <span className="text-gray-300">No Comment</span>}
-    </div>
+    <div onDoubleClick={startEditing}>{comments || <span className="text-gray-300">No Comment</span>}</div>
   );
 }

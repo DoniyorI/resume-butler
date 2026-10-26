@@ -5,14 +5,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 
 import { Button } from "@/components/ui/button";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { createClient } from "@/lib/supabase/client";
 
@@ -47,9 +40,7 @@ export default function ForgotPasswordForm() {
   return (
     <div className="flex items-center justify-center min-h-screen bg-white">
       <div className="w-full max-w-md p-6 bg-white rounded-lg border border-gray-100 shadow-md">
-        <h2 className="text-2xl font-bold text-brand text-center mb-6">
-          Forgot Password
-        </h2>
+        <h2 className="text-2xl font-bold text-brand text-center mb-6">Forgot Password</h2>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
             <FormField
@@ -69,9 +60,7 @@ export default function ForgotPasswordForm() {
               Send Reset Link
             </Button>
             {form.formState.errors.formMessage && (
-              <p className="text-red-500">
-                {form.formState.errors.formMessage.message}
-              </p>
+              <p className="text-red-500">{form.formState.errors.formMessage.message}</p>
             )}
           </form>
         </Form>

@@ -16,7 +16,11 @@ function stripGreetingAndSignOff(text) {
 }
 
 function generateCoverLetter({ jobDescription, companyName }) {
-  return postJson("/api/generate-cover-letter", { jobDescription, companyName }, "Failed to generate cover letter");
+  return postJson(
+    "/api/generate-cover-letter",
+    { jobDescription, companyName },
+    "Failed to generate cover letter"
+  );
 }
 
 // Side panel that drafts a cover letter from the master CV and a job description
@@ -101,7 +105,9 @@ export default function AiCoverLetterPanel({ open, onClose, onApply }) {
           <div className="space-y-4 pt-2">
             {highlights.length > 0 && (
               <div>
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">CV items used</p>
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">
+                  CV items used
+                </p>
                 <div className="space-y-1">
                   {highlights.map((highlight, i) => (
                     <div key={i} className="flex items-start gap-2 text-xs text-gray-600">
