@@ -53,57 +53,49 @@ export const getResumeForEditor = cache(async (resumeId) => {
   };
 });
 
-function sortedBullets(bullets) {
-  return [...(bullets || [])].sort((a, b) => a.sort_order - b.sort_order).map((b) => b.content);
-}
+// The master CV in camelCase, for the editor's CV panel
+export { loadMasterCv as getMasterCv } from "@/server/resume/loadCv";
 
-// The master CV shown in the editor's side drawer
-export async function getMasterCv(supabase, userId) {
-  const [eduRes, expRes, projRes, skillRes] = await Promise.all([
-    supabase.from("cv_education").select("*").eq("user_id", userId).order("sort_order"),
+const JOB_OPTIONS_LIMIT = 100;
+
+// Jobs the editor can tailor this resume to: the user's applications that have
+// a job description (newest first), and the application this resume is
+// attached to, with its description, so the editor can start from it.
+export async function getJobOptions(supabase, userId, resumeId) {
+  const [optionsRes, linkedRes] = await Promise.all([
     supabase
-      .from("cv_experience")
-      .select("*, cv_experience_bullets(*)")
+      .from("applications")
+      .select("id, company, role")
       .eq("user_id", userId)
-      .order("sort_order"),
-    supabase.from("cv_projects").select("*, cv_project_bullets(*)").eq("user_id", userId).order("sort_order"),
-    supabase.from("cv_skills").select("*").eq("user_id", userId).order("sort_order"),
+      .not("job_description", "is", null)
+      .neq("job_description", "")
+      .order("applied_date", { ascending: false, nullsFirst: false })
+      .limit(JOB_OPTIONS_LIMIT),
+    supabase
+      .from("applications")
+      .select("id, company, role, job_description")
+      .eq("user_id", userId)
+      .eq("resume_id", resumeId)
+      .order("applied_date", { ascending: false, nullsFirst: false })
+      .limit(1)
+      .maybeSingle(),
   ]);
+  if (optionsRes.error) throw optionsRes.error;
 
+  const linked = linkedRes.data;
   return {
-    education: (eduRes.data || []).map((edu) => ({
-      id: edu.id,
-      school: edu.school || "",
-      location: edu.location || "",
-      major: edu.major || "",
-      degreeType: edu.degree_type || "",
-      gpa: edu.gpa || "",
-      startDate: edu.start_date || "",
-      endDate: edu.end_date || "",
+    applications: optionsRes.data.map((app) => ({
+      id: app.id,
+      company: app.company || "",
+      role: app.role || "",
     })),
-    experience: (expRes.data || []).map((exp) => ({
-      id: exp.id,
-      company: exp.company || "",
-      position: exp.position || "",
-      location: exp.location || "",
-      startDate: exp.start_date || "",
-      endDate: exp.end_date || "",
-      currentlyWorking: Boolean(exp.currently_working),
-      bullets: sortedBullets(exp.cv_experience_bullets),
-    })),
-    projects: (projRes.data || []).map((proj) => ({
-      id: proj.id,
-      name: proj.name || "",
-      description: proj.description || "",
-      startDate: proj.start_date || "",
-      endDate: proj.end_date || "",
-      currentlyWorking: Boolean(proj.currently_working),
-      bullets: sortedBullets(proj.cv_project_bullets),
-    })),
-    skills: (skillRes.data || []).map((skill) => ({
-      id: skill.id,
-      name: skill.name,
-      category: skill.category || "",
-    })),
+    linked: linked
+      ? {
+          applicationId: linked.id,
+          company: linked.company || "",
+          role: linked.role || "",
+          jobDescription: linked.job_description || "",
+        }
+      : null,
   };
 }

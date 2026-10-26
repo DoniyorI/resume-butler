@@ -6,6 +6,7 @@ export const SKILL_ALIASES = {
   typescript: ["ts", "typescript"],
   python: ["python", "py"],
   react: ["react", "reactjs", "react.js"],
+  "react native": ["react native"],
   "next.js": ["next", "nextjs", "next.js"],
   "node.js": ["node", "nodejs", "node.js"],
   express: ["express", "expressjs", "express.js"],

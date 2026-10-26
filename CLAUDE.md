@@ -29,7 +29,8 @@ src/
     api/*/route.js        Route Handlers (uploads, downloads, AI, email scan, future extension API)
     auth/callback/        Exchanges OAuth / email-link codes for a session
   features/<feature>/     UI and logic per feature: applications, ats, auth, contact,
-                          cover-letters and resumes (editors), cv (data + actions only), dashboard,
+                          cover-letters and resumes (editors; resumes/studio is the new resume
+                          editor at /resumes/[id]/new), cv (data + actions only), dashboard,
                           documents (resume + cover letter library), email-sync, profile (profile and
                           master CV page), suggestions
     actions.js            Server Actions for that feature ("use server")
@@ -47,7 +48,9 @@ src/
     openai.js, rateLimit.js, crypto.js, latex.js
     ats/                  ATS scoring (scoreResume)
     email/                IMAP client, classification, matching, connection settings, syncEmailsForUser
-    resume/               loadCv, generateResume, coverLetter, suggestBullets, parseResume, renderResume
+    resume/               loadCv, tailorResume, generateResume, coverLetter, suggestBullets,
+                          rewriteBullet, guardrails (blocks AI edits that add or swap facts),
+                          parseResume, renderResume
   middleware.js           Refreshes the session and redirects signed-out visitors
 supabase/migrations/      SQL schema; apply in order
 ```
@@ -65,6 +68,8 @@ supabase/migrations/      SQL schema; apply in order
 - **Naming.** Components are PascalCase `.jsx`; hooks, lib and server modules are camelCase `.js`. Import with the `@/` alias.
 - **Database** fields are snake_case; frontend state is camelCase, mapped in `data.js` / at the query boundary.
 - **Feedback.** Use `toast` from `sonner`, not `alert()`.
+- **AI edits to user text** go through `checkRewrite` (`@/server/resume/guardrails`): a suggestion may never add or swap a technology, or drop a fact, the user wrote.
+- **Resume page fidelity.** The editor's page (`.rb-paper` in globals.css) is calibrated to the LaTeX PDF in `src/server/latex.js`. If you change the LaTeX spacing, margins or fonts, re-measure and update the CSS, or the one-page estimate drifts.
 
 ## API Routes (`src/app/api/`)
 
@@ -72,7 +77,10 @@ supabase/migrations/      SQL schema; apply in order
 |---|---|
 | `POST /api/generate-resume` | Align the master CV to a job description and store a resume |
 | `POST /api/generate-cover-letter` | Draft a cover letter from the CV and job description |
-| `POST /api/suggest-bullets` | Suggest edits to resume bullets for a job description |
+| `POST /api/tailor-resume` | Pick the master CV entries that fit a job (previewed, then applied in the editor) |
+| `POST /api/suggest-bullets` | Suggest edits to resume bullets (`focus`: "match" a job, or "concise" to fit one page) |
+| `POST /api/rewrite-bullet` | Three AI rewrites of one bullet (stronger, tailored, shorter) |
+| `POST /api/resume-pages` | Compile the saved resume and return the PDF's page count |
 | `POST /api/ats-score` | Heuristic ATS keyword/section score (no AI) |
 | `POST /api/parse-resume` | Parse an uploaded PDF/.txt resume into the master CV |
 | `POST /api/download-resume` | Render a resume to LaTeX and compile to PDF (latex.ytotech.com) |
@@ -90,4 +98,5 @@ NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 OPENAI_API_KEY=
 APP_ENCRYPTION_KEY=   # base64 32 bytes: openssl rand -base64 32 (server-only)
+OPENAI_MODEL=         # optional; defaults to gpt-4o-mini
 ```

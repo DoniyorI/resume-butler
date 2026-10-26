@@ -4,47 +4,9 @@ import { formatMonthYear } from "@/lib/dates";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SidePanel } from "@/components/shared/SidePanel";
+import { cvToResumeItem as toResumeItem, skillLines as skillGroups } from "@/features/resumes/resumeDocument";
 
 const shortDate = (value) => formatMonthYear(value, { month: "short" });
-
-// Master CV items (from getMasterCv in features/resumes/data.js) converted to resume items
-const toResumeItem = {
-  education: (edu) => ({
-    school: edu.school,
-    location: edu.location,
-    major: edu.major,
-    degreeType: edu.degreeType,
-    gpa: edu.gpa,
-    startDate: edu.startDate,
-    endDate: edu.endDate,
-  }),
-  experience: (exp) => ({
-    companyName: exp.company,
-    position: exp.position,
-    location: exp.location,
-    startDate: exp.startDate,
-    endDate: exp.endDate,
-    currentlyWorking: exp.currentlyWorking,
-    description: exp.bullets.length > 0 ? [...exp.bullets] : [""],
-  }),
-  projects: (proj) => ({
-    projectName: proj.name,
-    description: proj.bullets.length > 0 ? [...proj.bullets] : [proj.description],
-    startDate: proj.startDate,
-    endDate: proj.endDate,
-    currentlyWorking: proj.currentlyWorking,
-  }),
-};
-
-// One resume skills line per CV skill category
-function skillGroups(skills) {
-  const grouped = {};
-  skills.forEach((skill) => {
-    const category = skill.category || "Skills";
-    (grouped[category] ||= []).push(skill.name);
-  });
-  return Object.entries(grouped).map(([header, names]) => ({ header, skills: names.join(", ") }));
-}
 
 function groupByCategory(skills) {
   return skills.reduce((acc, skill) => {

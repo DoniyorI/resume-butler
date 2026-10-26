@@ -1,10 +1,11 @@
 import "server-only";
 
 const OPENAI_URL = "https://api.openai.com/v1/chat/completions";
-const MODEL = "gpt-4o-mini";
+// OPENAI_MODEL switches every AI feature to another chat model without a code change
+const MODEL = process.env.OPENAI_MODEL || "gpt-4o-mini";
 
 // Sends a chat completion that must return a JSON object, and returns it parsed
-export async function chatJSON({ system, user, maxTokens, timeoutMs = 60_000 }) {
+export async function chatJSON({ system, user, maxTokens, temperature, timeoutMs = 60_000 }) {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error("OPENAI_API_KEY not configured");
 
@@ -22,6 +23,7 @@ export async function chatJSON({ system, user, maxTokens, timeoutMs = 60_000 }) 
         { role: "user", content: user },
       ],
       ...(maxTokens ? { max_tokens: maxTokens } : {}),
+      ...(temperature !== undefined ? { temperature } : {}),
     }),
     signal: AbortSignal.timeout(timeoutMs),
   });

@@ -11,6 +11,8 @@ const BULLET_SECTIONS = new Set(["experience", "projects"]);
 // `initialContent` comes from features/resumes/data.js (already normalized).
 export function useResumeDocument({ resumeId, initialContent, needsInitialSave = false }) {
   const [doc, setDoc] = useState(initialContent);
+  // "saved" | "saving" (includes edits waiting for the autosave delay) | "error"
+  const [saveStatus, setSaveStatus] = useState("saved");
 
   // The document last written to the database. Autosave runs whenever `doc`
   // differs from it, so the initial render doesn't save (unless the header
@@ -34,6 +36,7 @@ export function useResumeDocument({ resumeId, initialContent, needsInitialSave =
           const result = await saveResumeContent(resumeId, snapshot);
           if (result.ok) {
             savedDocRef.current = snapshot;
+            if (latestDocRef.current === snapshot) setSaveStatus("saved");
             return true;
           }
           error = result.error;
@@ -41,6 +44,7 @@ export function useResumeDocument({ resumeId, initialContent, needsInitialSave =
           // Network failure: keep the default message
         }
         toast.error(error, { id: "resume-autosave" });
+        setSaveStatus("error");
         return false;
       });
       return saveQueueRef.current;
@@ -49,7 +53,12 @@ export function useResumeDocument({ resumeId, initialContent, needsInitialSave =
   );
 
   useEffect(() => {
-    if (doc === savedDocRef.current) return;
+    if (doc === savedDocRef.current) {
+      // e.g. an undo back to the saved document before the autosave ran
+      setSaveStatus("saved");
+      return;
+    }
+    setSaveStatus("saving");
     const timer = setTimeout(() => persist(doc), AUTOSAVE_DELAY_MS);
     return () => clearTimeout(timer);
   }, [doc, persist]);
@@ -132,25 +141,64 @@ export function useResumeDocument({ resumeId, initialContent, needsInitialSave =
     setDoc((prev) => ({ ...prev, header: { ...prev.header, [field]: value } }));
   }, []);
 
+  const updateSectionMeta = useCallback((sectionId, changes) => {
+    setDoc((prev) => ({
+      ...prev,
+      order: prev.order.map((section) => {
+        if (section.id !== sectionId) return section;
+        const next = { ...section, ...changes };
+        if (!next.hidden) delete next.hidden;
+        return next;
+      }),
+    }));
+  }, []);
+
+  const setTarget = useCallback((target) => setDoc((prev) => ({ ...prev, target })), []);
+
+  // Replace whole sections at once (e.g. the AI's picks from the master CV)
+  const replaceSections = useCallback((sectionsById) => {
+    setDoc((prev) => {
+      const next = { ...prev };
+      for (const [sectionId, items] of Object.entries(sectionsById)) {
+        if (!Array.isArray(prev[sectionId])) continue;
+        next[sectionId] = DATED_SECTIONS.has(sectionId) ? sortByDateDesc(items) : items;
+      }
+      return next;
+    });
+  }, []);
+
+  // The current document, and a way back to it, for undoing bulk changes
+  const snapshot = useCallback(() => latestDocRef.current, []);
+  const restore = useCallback((saved) => setDoc(saved), []);
+
   const sections = useMemo(() => doc.order.map((section) => ({ ...section, items: doc[section.id] })), [doc]);
 
-  // What /api/ats-score and /api/suggest-bullets expect
-  const resumeContent = useMemo(
-    () => ({
+  // What /api/ats-score and /api/suggest-bullets expect. Hidden sections
+  // aren't printed, so they don't count.
+  const resumeContent = useMemo(() => {
+    const visible = (sectionId) =>
+      doc.order.some((section) => section.id === sectionId && section.hidden) ? [] : doc[sectionId];
+    return {
       header: doc.header,
-      education: doc.education,
-      experience: doc.experience,
-      projects: doc.projects,
-      skills: doc.skills,
-    }),
-    [doc]
-  );
+      education: visible("education"),
+      experience: visible("experience"),
+      projects: visible("projects"),
+      skills: visible("skills"),
+    };
+  }, [doc]);
 
   return {
     header: doc.header,
+    target: doc.target,
     sections,
     resumeContent,
+    saveStatus,
     flush,
+    snapshot,
+    restore,
+    setTarget,
+    updateSectionMeta,
+    replaceSections,
     updateHeaderField,
     updateItem,
     addBlankItem,

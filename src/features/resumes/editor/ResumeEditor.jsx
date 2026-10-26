@@ -15,6 +15,9 @@ import { EditableTitleHeader } from "@/features/resumes/EditableTitleHeader";
 import { SIDE_PANEL_MARGIN_CLASS } from "@/components/shared/SidePanel";
 import { ResumeHeader } from "@/features/resumes/editor/ResumeHeader";
 import { useResumeDocument } from "@/features/resumes/hooks/useResumeDocument";
+import { useResumeDownload } from "@/features/resumes/hooks/useResumeDownload";
+import ViewSwitch from "@/components/shared/ViewSwitch";
+import { editorViews } from "@/features/resumes/studio/editorViews";
 
 // The on-screen resume page, in CSS pixels
 const PAGE_WIDTH_PX = 850;
@@ -36,17 +39,6 @@ const ADDED_FROM_CV = {
   skills: "Skills added from CV",
 };
 
-function saveBlob(blob, filename) {
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-}
-
 // `resume` and `masterCv` come from features/resumes/data.js
 export default function ResumeEditor({ resume, masterCv }) {
   const resumeDoc = useResumeDocument({
@@ -57,8 +49,12 @@ export default function ResumeEditor({ resume, masterCv }) {
   const [title, setTitle] = useState(resume.title);
   // Only one side panel is open at a time: "cv", "ats" or null
   const [openPanel, setOpenPanel] = useState(null);
-  const [downloading, setDownloading] = useState(false);
   const [bulletFeedback, setBulletFeedback] = useState([]);
+  const { download: handleDownload, downloading } = useResumeDownload({
+    resumeId: resume.id,
+    title,
+    flush: resumeDoc.flush,
+  });
 
   const togglePanel = (panel) => setOpenPanel((current) => (current === panel ? null : panel));
   const closePanel = () => setOpenPanel(null);
@@ -66,39 +62,6 @@ export default function ResumeEditor({ resume, masterCv }) {
   const handleAddFromCv = (sectionId, item) => {
     resumeDoc.addItem(sectionId, item);
     toast(ADDED_FROM_CV[sectionId]);
-  };
-
-  const handleDownload = async (format) => {
-    setDownloading(true);
-    try {
-      // The route renders the saved resume, so write pending edits first.
-      // If that failed the save toast already explains why; don't download stale content.
-      if (!(await resumeDoc.flush())) return;
-      const response = await fetch("/api/download-resume", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ resumeId: resume.id, format }),
-      });
-      if (!response.ok) {
-        const data = await response.json().catch(() => ({}));
-        throw new Error(data.error || "Failed to download resume");
-      }
-
-      // PDF compilation falls back to the .tex source when it fails
-      const isTex = response.headers.get("Content-Type")?.includes("x-tex") || format === "tex";
-      const extension = isTex ? "tex" : "pdf";
-      saveBlob(await response.blob(), `${title || "resume"}.${extension}`);
-
-      if (isTex && format === "pdf") {
-        toast("PDF compilation unavailable — downloaded .tex file instead. Open it in Overleaf to compile.");
-      } else {
-        toast(`Resume downloaded as .${extension}`);
-      }
-    } catch (error) {
-      toast.error(error.message);
-    } finally {
-      setDownloading(false);
-    }
   };
 
   return (
@@ -115,6 +78,7 @@ export default function ResumeEditor({ resume, masterCv }) {
             placeholder="Untitled Resume"
           />
           <div className="flex items-center gap-2">
+            <ViewSwitch views={editorViews(resume.id)} current={`/resumes/${resume.id}`} />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" disabled={downloading}>

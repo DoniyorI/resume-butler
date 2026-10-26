@@ -10,12 +10,19 @@ import { SECTION_IDS } from "@/features/resumes/resumeDocument";
 
 const TITLE_MAX = 200;
 const MAX_ITEMS_PER_SECTION = 100;
-const MAX_CONTENT_CHARS = 200_000;
+const MAX_CONTENT_CHARS = 250_000;
 
 const idSchema = z.string().uuid("Invalid resume");
 const titleSchema = z.string().trim().min(1, "Title is required").max(TITLE_MAX, "Title is too long");
 
 const itemsSchema = z.array(z.record(z.unknown())).max(MAX_ITEMS_PER_SECTION, "Too many items");
+
+const targetSchema = z.object({
+  jobDescription: z.string().max(50_000),
+  applicationId: z.string().uuid().nullable(),
+  company: z.string().max(200),
+  role: z.string().max(200),
+});
 
 const contentSchema = z.object({
   header: z.record(z.string().max(1000).nullable()),
@@ -23,7 +30,11 @@ const contentSchema = z.object({
   experience: itemsSchema,
   projects: itemsSchema,
   skills: itemsSchema,
-  order: z.array(z.object({ id: z.enum(SECTION_IDS), title: z.string().max(100) })).max(SECTION_IDS.length),
+  order: z
+    .array(z.object({ id: z.enum(SECTION_IDS), title: z.string().max(100), hidden: z.boolean().optional() }))
+    .max(SECTION_IDS.length),
+  // Optional so the classic editor, which doesn't send it, keeps the stored one
+  target: targetSchema.optional(),
 });
 
 export async function createResume(input) {
@@ -108,5 +119,30 @@ export async function saveResumeContent(resumeId, content) {
       .eq("user_id", user.id);
     if (error) throw error;
     return null;
+  });
+}
+
+// The job description of one of the user's applications, for tailoring a
+// resume to it. Loaded on demand so the editor page doesn't ship every posting.
+export async function loadApplicationJob(applicationId) {
+  return runAction("Error loading the job", async () => {
+    const { supabase, user } = await requireUser();
+    const id = parseInput(z.string().uuid("Invalid application"), applicationId);
+
+    const { data, error } = await supabase
+      .from("applications")
+      .select("id, company, role, job_description")
+      .eq("id", id)
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (error) throw error;
+    if (!data) throw new HttpError(404, "Application not found");
+
+    return {
+      applicationId: data.id,
+      company: data.company || "",
+      role: data.role || "",
+      jobDescription: data.job_description || "",
+    };
   });
 }

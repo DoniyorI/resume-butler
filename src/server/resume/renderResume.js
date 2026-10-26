@@ -1,4 +1,5 @@
 import "server-only";
+import { inflateSync } from "node:zlib";
 import { z } from "zod";
 import { HttpError } from "@/server/http";
 import { generateLatex } from "@/server/latex";
@@ -42,4 +43,31 @@ export async function renderResume(supabase, userId, { resumeId, format }) {
   const latex = generateLatex(resume.content || {});
   const pdf = format === "tex" ? null : await compilePdf(latex);
   return { title: resume.title, latex, pdf };
+}
+
+/**
+ * Number of pages in a compiled PDF. pdflatex stores the page tree in
+ * compressed object streams, so streams are inflated and searched for the
+ * root /Pages object's /Count. Returns null if it can't be found.
+ */
+export function countPdfPages(pdf) {
+  const bytes = Buffer.from(pdf);
+  const text = bytes.toString("latin1");
+  const chunks = [text];
+  for (const match of text.matchAll(/<<([^]*?)>>\s*stream\r?\n/g)) {
+    const length = Number(match[1].match(/\/Length\s+(\d+)/)?.[1]);
+    if (!length || !/FlateDecode/.test(match[1])) continue;
+    const start = match.index + match[0].length;
+    try {
+      chunks.push(inflateSync(bytes.subarray(start, start + length)).toString("latin1"));
+    } catch {
+      // Not every stream inflates on its own (e.g. images); they don't hold the page tree
+    }
+  }
+  const counts = chunks.flatMap((chunk) =>
+    [
+      ...chunk.matchAll(/\/Type\s*\/Pages\b[^>]*?\/Count\s+(\d+)|\/Count\s+(\d+)[^>]*?\/Type\s*\/Pages\b/g),
+    ].map((m) => Number(m[1] || m[2]))
+  );
+  return counts.length ? Math.max(...counts) : null;
 }

@@ -1,6 +1,7 @@
 import "server-only";
 import { formatMonthYear } from "@/lib/dates";
 import { safeHttpUrl } from "@/lib/safeUrl";
+import { normalizeResumeContent } from "@/features/resumes/resumeDocument";
 
 // Every user-supplied value must go through esc() or escUrl() before it is
 // placed in the document; otherwise text like "}\input{/etc/passwd}" would run
@@ -75,7 +76,7 @@ function buildHeader(header) {
     \\end{center}`;
 }
 
-function buildExperience(experiences) {
+function buildExperience(experiences, title) {
   if (!experiences || experiences.length === 0) return "";
 
   let items = "";
@@ -102,13 +103,13 @@ function buildExperience(experiences) {
     }
   }
 
-  return `\\section{Experience}
+  return `\\section{${esc(title)}}
   \\resumeSubHeadingListStart
 ${items}
   \\resumeSubHeadingListEnd`;
 }
 
-function buildEducation(educationList) {
+function buildEducation(educationList, title) {
   if (!educationList || educationList.length === 0) return "";
 
   let items = "";
@@ -125,12 +126,12 @@ function buildEducation(educationList) {
     {${subtitle}}{${endDate}}`;
   }
 
-  return `\\section{Education}
+  return `\\section{${esc(title)}}
   \\resumeSubHeadingListStart${items}
   \\resumeSubHeadingListEnd`;
 }
 
-function buildProjects(projects) {
+function buildProjects(projects, title) {
   if (!projects || projects.length === 0) return "";
 
   let items = "";
@@ -154,12 +155,12 @@ function buildProjects(projects) {
     }
   }
 
-  return `\\section{Projects}
+  return `\\section{${esc(title)}}
   \\resumeSubHeadingListStart${items}
   \\resumeSubHeadingListEnd`;
 }
 
-function buildSkills(skillsData) {
+function buildSkills(skillsData, title) {
   if (!skillsData || skillsData.length === 0) return "";
 
   let lines = "";
@@ -172,7 +173,7 @@ function buildSkills(skillsData) {
 
   if (!lines) return "";
 
-  return `\\section{Technical Skills}
+  return `\\section{${esc(title)}}
  \\begin{itemize}[leftmargin=0.15in, label={}]
     \\small{\\item{
 ${lines}    }}
@@ -266,23 +267,18 @@ export function generateLatex(resumeData) {
   const projects = resumeData.projects || [];
   const skills = resumeData.skills || [];
 
-  // Build sections in the order defined by the user's drag-and-drop
-  const order = resumeData.order || [
-    { id: "experience" },
-    { id: "skills" },
-    { id: "projects" },
-    { id: "education" },
-  ];
+  // Sections in the editor's order and with its titles; hidden ones are left out
+  const order = normalizeResumeContent(resumeData).order.filter((section) => !section.hidden);
 
   const sectionBuilders = {
-    experience: () => buildExperience(experience),
-    education: () => buildEducation(education),
-    projects: () => buildProjects(projects),
-    skills: () => buildSkills(skills),
+    experience: (title) => buildExperience(experience, title),
+    education: (title) => buildEducation(education, title),
+    projects: (title) => buildProjects(projects, title),
+    skills: (title) => buildSkills(skills, title),
   };
 
   const sectionContent = order
-    .map((s) => sectionBuilders[s.id]?.())
+    .map((s) => sectionBuilders[s.id]?.(s.title))
     .filter(Boolean)
     .join("\n\n");
 

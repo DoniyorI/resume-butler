@@ -28,7 +28,8 @@ function entryLine(sectionId, item) {
 function resumePreview(rawContent) {
   const content = normalizeResumeContent(rawContent);
   const sections = [];
-  for (const { id, title } of content.order) {
+  for (const { id, title, hidden } of content.order) {
+    if (hidden) continue;
     const items = content[id] || [];
     const lines = items
       .slice(0, 2)
