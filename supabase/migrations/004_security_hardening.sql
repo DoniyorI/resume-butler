@@ -74,12 +74,23 @@ alter function public.handle_updated_at() set search_path = '';
 -- APPLICATION DATA CHECKS
 -----------------------------------------------------------
 -- Email sync, AI and (later) the browser extension write applications, so the
--- database enforces the basics too. NOT VALID skips existing rows.
+-- database enforces the basics too.
+
+-- Portal links must be http(s). Clean existing values first: a NOT VALID check
+-- would still reject any later update to a row that breaks it. Values that look
+-- like a domain ("linkedin.com/jobs/1") get https://; anything else is cleared.
+update public.applications
+set portal_link = case
+  when portal_link ~* '^(www\.)?[a-z0-9-]+(\.[a-z0-9-]+)+([/?#]\S*)?$' then 'https://' || portal_link
+  else ''
+end
+where portal_link is not null and portal_link <> '' and portal_link !~* '^https?://';
+
 alter table public.applications
   add constraint applications_portal_link_http
-  check (portal_link is null or portal_link = '' or portal_link ~* '^https?://')
-  not valid;
+  check (portal_link is null or portal_link = '' or portal_link ~* '^https?://');
 
+-- NOT VALID skips existing rows; every status written by the app is in this list
 alter table public.applications
   add constraint applications_status_known
   check (status in ('Applied', 'Interviewed', 'Pending', 'Offered', 'Rejected', 'Withdrew', 'Reached Out'))
