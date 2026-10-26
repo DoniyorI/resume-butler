@@ -47,7 +47,7 @@ export default function Navbar() {
         </Link>
         <div className="flex md:order-2 space-x-3 md:space-x-0 rtl:space-x-reverse">
           <div className="flex space-x-2">
-            <AddApplicationDialog className="text-green-700 bg-green-200 hover:bg-green-300 focus:ring-4 focus:outline-none focus:ring-blue-300  rounded-lg text-sm px-4 py-2 text-center" />
+            <AddApplicationDialog />
             <Button
               onClick={handleLogout}
               variant="outline"
