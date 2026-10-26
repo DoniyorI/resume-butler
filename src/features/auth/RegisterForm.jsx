@@ -15,6 +15,21 @@ const EmblaCarousel = dynamic(() => import("@/features/auth/AuthCarousel"), { ss
 import { createClient } from "@/lib/supabase/client";
 import GoogleAuthButton from "@/features/auth/GoogleAuthButton";
 
+// Supabase auth errors are written for end users (e.g. "Password should be at
+// least 6 characters"), so show them instead of a generic message
+function signUpErrorMessage(error) {
+  if (error?.status === 429) {
+    return "Too many sign-up attempts right now. Please wait a few minutes and try again.";
+  }
+  if (error?.message?.includes("already registered")) {
+    return "This email is already in use by another account.";
+  }
+  if (error?.name === "AuthRetryableFetchError") {
+    return "Couldn't reach the server. Check your connection and try again.";
+  }
+  return error?.message || "Failed to create account. Please try again later.";
+}
+
 export default function RegisterForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -45,11 +60,7 @@ export default function RegisterForm() {
       router.refresh();
     } catch (error) {
       console.error("Error creating new user: ", error);
-      if (error.message?.includes("already registered")) {
-        toast.error("This email is already in use by another account.");
-      } else {
-        toast.error("Failed to create account. Please try again later.");
-      }
+      toast.error(signUpErrorMessage(error));
     }
   };
 
