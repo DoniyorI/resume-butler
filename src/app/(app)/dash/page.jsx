@@ -5,7 +5,7 @@ import { getDashboardStats } from "@/features/dashboard/data";
 import DashboardSwitch from "@/features/dashboard/DashboardSwitch";
 import StatCard from "@/features/dashboard/StatCard";
 import ApplicationFunnel from "@/features/dashboard/ApplicationFunnel";
-import StatusSummary from "@/features/dashboard/StatusSummary";
+import FollowUps from "@/features/dashboard/FollowUps";
 import ChartCard, { EmptyChart } from "@/features/dashboard/ChartCard";
 import { DailyApplicationsChart, SankeyDiagram, StatusPieChart } from "@/features/dashboard/LazyCharts";
 
@@ -83,7 +83,7 @@ export default async function DashboardPage() {
         )}
       </ChartCard>
 
-      <StatusSummary counts={stats.statusCounts} percents={stats.statusPercents} />
+      <FollowUps followUps={stats.followUps} />
     </div>
   );
 }

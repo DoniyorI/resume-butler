@@ -1,6 +1,7 @@
 import { requirePageUser } from "@/server/auth";
 import { getDashboardStats } from "@/features/dashboard/data";
 import DashboardSwitch from "@/features/dashboard/DashboardSwitch";
+import FollowUps from "@/features/dashboard/FollowUps";
 import SectionCards from "@/features/dashboard/next/SectionCards";
 import {
   ApplicationFlow,
@@ -34,6 +35,8 @@ export default async function NewDashboardPage() {
         <StatusBreakdown pie={stats.pie} total={stats.total} />
         <Pipeline funnel={stats.funnel} total={stats.total} />
       </div>
+
+      <FollowUps followUps={stats.followUps} />
 
       <ApplicationFlow flow={stats.flow} />
     </div>

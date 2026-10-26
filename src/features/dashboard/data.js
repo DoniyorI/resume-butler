@@ -16,6 +16,33 @@ function groupHistoryByApplication(statusHistory) {
 }
 
 // Applied -> first "Interviewed" entry, in whole days
+// No reply after this long is worth a follow-up email
+export const FOLLOW_UP_AFTER_DAYS = 14;
+const FOLLOW_UP_LIMIT = 6;
+
+// Applications still at "Applied" (never moved on) two weeks or more after
+// applying, oldest first: the ones to nudge
+function followUps(applications, historyByApp) {
+  const now = Date.now();
+  const waiting = applications
+    .filter((app) => app.status === "Applied")
+    .filter((app) => (historyByApp.get(app.id) || []).every((h) => h.status === "Applied"))
+    .map((app) => {
+      const applied = parseDate(app.applied_date);
+      return (
+        applied && {
+          id: app.id,
+          company: app.company || "Unknown company",
+          role: app.role || "",
+          daysWaiting: Math.floor((now - applied.getTime()) / DAY_MS),
+        }
+      );
+    })
+    .filter((app) => app && app.daysWaiting >= FOLLOW_UP_AFTER_DAYS)
+    .sort((a, b) => b.daysWaiting - a.daysWaiting);
+  return { total: waiting.length, items: waiting.slice(0, FOLLOW_UP_LIMIT) };
+}
+
 function responseTimes(applications, historyByApp) {
   const times = [];
   for (const app of applications) {
@@ -119,7 +146,7 @@ export async function getDashboardStats(supabase, userId) {
     fetchAll(() =>
       supabase
         .from("applications")
-        .select("id, status, applied_date")
+        .select("id, company, role, status, applied_date")
         .eq("user_id", userId)
         .order("applied_date", { ascending: false })
         .order("id")
@@ -155,9 +182,6 @@ export async function getDashboardStats(supabase, userId) {
   return {
     total,
     statusCounts,
-    statusPercents: Object.fromEntries(
-      Object.entries(statusCounts).map(([status, count]) => [status, percent(count, total)])
-    ),
     responseRate: percent(
       statusCounts.Interviewed + statusCounts.Offered + statusCounts["Reached Out"],
       total
@@ -186,5 +210,6 @@ export async function getDashboardStats(supabase, userId) {
       .map(([label, value]) => ({ label, value, color: STATUS_COLORS[label] })),
     daily: dailyCounts(applications),
     flow: buildFlow(applications, historyByApp),
+    followUps: followUps(applications, historyByApp),
   };
 }
