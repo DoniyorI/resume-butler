@@ -1,33 +1,10 @@
 import { EditableText } from "@/features/resumes/editor/EditableText";
-export const SkillsSection = ({ item, onChange }) => {
-  const handleInputChange = (field, value) => {
-    onChange({ ...item, [field]: value.trim() }); // Update the item with the field changed
-  };
+import { editableFieldProps } from "@/features/resumes/editor/editableField";
 
-  const handleKeyDown = (e) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      e.target.blur(); // Trigger onBlur
-    }
-  };
-
-  const handleFocus = (e) => {
-    // Clears placeholder if the content is the placeholder
-    if (e.target.textContent === e.target.getAttribute("data-placeholder")) {
-      e.target.textContent = "";
-    }
-  };
-
+export function SkillsSection({ item, onChange }) {
   const handleBlur = (e) => {
-    // Gets the field and updates the item on blur
     const field = e.target.getAttribute("data-field");
-    handleInputChange(field, e.target.textContent);
-  };
-
-  const handlePaste = (e) => {
-    e.preventDefault();
-    const text = e.clipboardData.getData("text/plain");
-    document.execCommand("insertText", false, text); // Inserts plain text
+    onChange({ ...item, [field]: e.target.textContent.trim() });
   };
 
   return (
@@ -35,34 +12,24 @@ export const SkillsSection = ({ item, onChange }) => {
       <div className="text-md flex items-center">
         <EditableText
           as="span"
-          className={`input text-md font-semibold ${
-            !item.header ? "contentEditablePlaceholder" : ""
-          }`}
-          role="textbox"
-          onFocus={handleFocus}
+          className={`input text-md font-semibold ${!item.header ? "contentEditablePlaceholder" : ""}`}
+          {...editableFieldProps}
           onBlur={handleBlur}
-          onPaste={handlePaste}
-          onKeyDown={handleKeyDown}
           data-placeholder="Header"
-          data-field="header" // Added for clarity in handleBlur
+          data-field="header"
           value={item.header || ""}
         />
         :{" "}
         <EditableText
           as="span"
-          className={`input text-md font-normal ${
-            !item.skills ? "contentEditablePlaceholder" : ""
-          }`}
-          role="textbox"
-          onFocus={handleFocus}
+          className={`input text-md font-normal ${!item.skills ? "contentEditablePlaceholder" : ""}`}
+          {...editableFieldProps}
           onBlur={handleBlur}
-          onPaste={handlePaste}
-          onKeyDown={handleKeyDown}
           data-placeholder="Skill1, Skill2, Skill3..."
-          data-field="skills" // Added for clarity in handleBlur
+          data-field="skills"
           value={item.skills || ""}
         />
       </div>
     </div>
   );
-};
+}

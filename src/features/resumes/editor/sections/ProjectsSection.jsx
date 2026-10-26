@@ -1,167 +1,42 @@
 import { formatMonthYear } from "@/lib/dates";
+import { BulletList } from "@/features/resumes/editor/BulletList";
 import { EditableText } from "@/features/resumes/editor/EditableText";
-import { X } from "lucide-react";
-export const ProjectsSection = ({ item, onChange, bulletSeverities = {} }) => {
-  const handleInputChange = (field, e) => {
-    const value = e.target.textContent.trim();
+import { editableFieldProps, readFieldOnBlur, toBullets } from "@/features/resumes/editor/editableField";
+
+export function ProjectsSection({ item, onChange, bulletSeverities = {} }) {
+  const handleBlur = (e) => {
+    const { field, value } = readFieldOnBlur(e);
     onChange({ [field]: value });
   };
 
-  const handleKeyDown = (e) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      e.target.blur();
-    }
-  };
-
-  const handleFocus = (e) => {
-    if (e.target.textContent === e.target.getAttribute("data-placeholder")) {
-      e.target.textContent = "";
-    }
-  };
-
-  const handleBlur = (e) => {
-    const field = e.target.getAttribute("data-field");
-    const value = e.target.textContent.trim();
-    if (!value) {
-      e.target.textContent = e.target.getAttribute("data-placeholder");
-      e.target.classList.add("contentEditablePlaceholder");
-    } else {
-      e.target.classList.remove("contentEditablePlaceholder");
-    }
-    handleInputChange(field, { target: { textContent: value } });
-  };
-
-  const handlePaste = (e) => {
-    e.preventDefault();
-    const text = e.clipboardData.getData("text/plain");
-    document.execCommand("insertText", false, text);
-  };
-
-  const formattedStartDate = formatMonthYear(item.startDate);
-  const formattedEndDate = item.currentlyWorking
-    ? "Present"
-    : formatMonthYear(item.endDate);
-
-  const handleDescriptionChange = (index, value) => {
-    const newDescription = [...item.description];
-    newDescription[index] = value;
-    onChange({ description: newDescription });
-  };
-
-  const addDescriptionPointBelow = (index) => {
-    const newDescription = [...item.description];
-    newDescription.splice(index + 1, 0, "");
-    onChange({ description: newDescription });
-  };
-
-  const deleteDescriptionPoint = (index) => {
-    const newDescription = [...item.description];
-    newDescription.splice(index, 1);
-    onChange({ description: newDescription });
-  };
+  const fieldProps = { ...editableFieldProps, onBlur: handleBlur };
+  const noEndDate = !item.endDate && !item.currentlyWorking;
 
   return (
     <div className="Project">
       <div className="flex justify-between items-baseline">
         <EditableText
           as="span"
-          className={`input text-sm font-semibold ${
-            !item.projectName ? "contentEditablePlaceholder" : ""
-          }`}
-          role="textbox"
-          onFocus={handleFocus}
-          onBlur={handleBlur}
-          onPaste={handlePaste}
-          onKeyDown={handleKeyDown}
+          className={`input text-sm font-semibold ${!item.projectName ? "contentEditablePlaceholder" : ""}`}
+          {...fieldProps}
           data-placeholder="Enter Project Name"
           data-field="projectName"
           value={item.projectName || ""}
         />
-
         <EditableText
           as="span"
-          className={`input text-sm font-semibold ${
-            !item.endDate && !item.currentlyWorking
-              ? "contentEditablePlaceholder"
-              : ""
-          }`}
-          role="textbox"
-          onFocus={handleFocus}
-          onBlur={handleBlur}
-          onPaste={handlePaste}
-          onKeyDown={handleKeyDown}
+          className={`input text-sm font-semibold ${noEndDate ? "contentEditablePlaceholder" : ""}`}
+          {...fieldProps}
           data-placeholder="Enter End Date"
           data-field="endDate"
-          value={formattedEndDate || ""}
+          value={item.currentlyWorking ? "Present" : formatMonthYear(item.endDate)}
         />
       </div>
-      <div className="pl-[22px] mt-1">
-        <ul className="list-inside">
-          {item.description && item.description.length > 0 ? (
-            item.description.map((point, index) => {
-              const feedback = bulletSeverities[index];
-              const bulletColor = feedback?.severity === "error"
-                ? "text-red-500"
-                : feedback?.severity === "warning"
-                ? "text-orange-400"
-                : "";
-              return (
-              <li key={index} className={`text-md flex items-center`} title={feedback?.issues?.map(i => i.message).join("\n") || ""}>
-                <span
-                  className={`bullet-toggle mr-2 ${bulletColor}`}
-                  onClick={() => addDescriptionPointBelow(index)}
-                ></span>
-                <EditableText
-                  as="div"
-                  className={`input w-full text-sm ${bulletColor} ${
-                    !point ? "contentEditablePlaceholder" : ""
-                  }`}
-                  role="textbox"
-                  onFocus={handleFocus}
-                  onPaste={handlePaste}
-                  onBlur={(e) =>
-                    handleDescriptionChange(index, e.target.textContent)
-                  }
-                  onKeyDown={handleKeyDown}
-                  data-placeholder="Enter Description Detail"
-                  value={point || ""}
-                />
-                <button
-                  onClick={() => deleteDescriptionPoint(index)}
-                  className="ml-1 cursor-pointer text-red-800 hover:text-red-500"
-                >
-                  <X size={16} />
-                </button>
-              </li>
-              );
-            })
-          ) : (
-            <li className="text-sm flex items-center">
-              <span
-                className="bullet-toggle mr-2"
-                onClick={() => addDescriptionPointBelow(0)}
-              ></span>
-              <div
-                contentEditable
-                className="input grow text-md contentEditablePlaceholder"
-                role="textbox"
-                onFocus={handleFocus}
-                onPaste={handlePaste}
-                onBlur={(e) => handleDescriptionChange(0, e.target.textContent)}
-                onKeyDown={handleKeyDown}
-                data-placeholder="Enter Description Detail"
-              />
-              <button
-                onClick={() => deleteDescriptionPoint(0)}
-                className="ml-1 cursor-pointer text-red-800 hover:text-red-500"
-              >
-                <X size={16} />
-              </button>
-            </li>
-          )}
-        </ul>
-      </div>
+      <BulletList
+        bullets={toBullets(item.description)}
+        severities={bulletSeverities}
+        onChange={(description) => onChange({ description })}
+      />
     </div>
   );
-};
+}

@@ -1,75 +1,30 @@
+import { formatMonthYear } from "@/lib/dates";
 import { EditableText } from "@/features/resumes/editor/EditableText";
-import React from "react";
+import { editableFieldProps, readFieldOnBlur } from "@/features/resumes/editor/editableField";
+
+// Without an end date the current month is shown, as an expected graduation
+function expectedEndDate(endDate) {
+  return endDate
+    ? formatMonthYear(endDate)
+    : new Date().toLocaleDateString("en-US", { year: "numeric", month: "long" });
+}
 
 export function EducationSection({ item, onChange }) {
-  const handleInputChange = (field, e) => {
-    const value = e.target.textContent.trim();
-    const newEducationData = { ...item, [field]: value };
-    onChange(newEducationData);
-  };
-
   const handleBlur = (e) => {
-    const field = e.target.getAttribute("data-field");
-    const value = e.target.textContent.trim();
-    if (!value) {
-      e.target.textContent = e.target.getAttribute("data-placeholder");
-      e.target.classList.add("contentEditablePlaceholder");
-    } else {
-      e.target.classList.remove("contentEditablePlaceholder");
-    }
-    handleInputChange(field, { target: { textContent: value } });
+    const { field, value } = readFieldOnBlur(e);
+    onChange({ ...item, [field]: value });
   };
 
-  const handleKeyDown = (e) => {
-    if (e.key === "Enter") {
-      e.preventDefault(); // Stop the default enter key action
-      e.target.blur(); // Remove focus from element
-    }
-  };
-
-  const handleFocus = (e) => {
-    if (e.target.textContent === e.target.getAttribute("data-placeholder")) {
-      e.target.textContent = ""; // Clear placeholder on focus if text is placeholder
-    }
-  };
-  const handlePaste = (e) => {
-    e.preventDefault();
-    const text = e.clipboardData.getData("text/plain");
-    document.execCommand("insertText", false, text);
-  };
-
-  // const handleBlur = (e) => {
-  //   const field = e.target.getAttribute('data-field');
-  //   const value = e.target.textContent.trim();
-  //   if (!value) {
-  //     e.target.textContent = e.target.getAttribute("data-placeholder");
-  //     e.target.classList.add('contentEditablePlaceholder');
-  //   } else {
-  //     e.target.classList.remove('contentEditablePlaceholder');
-  //   }
-  //   handleInputChange(field, { target: { textContent: value } });
-  // };
-
-  const endDateString = item.endDate ? item.endDate.split(" at ")[0] : "";
-  const endDate = endDateString ? new Date(endDateString) : new Date();
-  const formattedEndDate = endDate.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-  });
+  const fieldProps = { ...editableFieldProps, onBlur: handleBlur };
+  const placeholderClass = (empty) => (empty ? "contentEditablePlaceholder" : "");
 
   return (
     <div>
       <div className="flex justify-between items-end mt-3">
         <EditableText
           as="span"
-          className={`input text-md font-semibold ${
-            !item.school ? "contentEditablePlaceholder" : ""
-          }`}
-          role="textbox"
-          onFocus={handleFocus}
-          onBlur={handleBlur}
-          onPaste={handlePaste}
-          onKeyDown={handleKeyDown}
+          className={`input text-md font-semibold ${placeholderClass(!item.school)}`}
+          {...fieldProps}
           data-placeholder="Enter School Name"
           data-field="school"
           value={item.school || ""}
@@ -78,17 +33,11 @@ export function EducationSection({ item, onChange }) {
           Expected{" "}
           <EditableText
             as="span"
-            className={`input text-sm${
-              !item.endDate ? "contentEditablePlaceholder" : ""
-            }`}
-            role="textbox"
-            onFocus={handleFocus}
-            onBlur={handleBlur}
-            onPaste={handlePaste}
-            onKeyDown={handleKeyDown}
+            className="input text-sm"
+            {...fieldProps}
             data-placeholder="Enter End Date"
             data-field="endDate"
-            value={formattedEndDate || ""}
+            value={expectedEndDate(item.endDate)}
           />
         </div>
       </div>
@@ -96,14 +45,8 @@ export function EducationSection({ item, onChange }) {
         <div className="flex items-center">
           <EditableText
             as="span"
-            className={`input ${
-              !item.degreeType ? "contentEditablePlaceholder" : ""
-            }`}
-            role="textbox"
-            onFocus={handleFocus}
-            onPaste={handlePaste}
-            onBlur={handleBlur}
-            onKeyDown={handleKeyDown}
+            className={`input ${placeholderClass(!item.degreeType)}`}
+            {...fieldProps}
             data-placeholder="Degree Type"
             data-field="degreeType"
             value={item.degreeType || ""}
@@ -111,13 +54,8 @@ export function EducationSection({ item, onChange }) {
           <span className="label"> ,</span>
           <EditableText
             as="span"
-            className={`input ${
-              !item.major ? "contentEditablePlaceholder" : ""
-            }`}
-            role="textbox"
-            onFocus={handleFocus}
-            onBlur={handleBlur}
-            onKeyDown={handleKeyDown}
+            className={`input ${placeholderClass(!item.major)}`}
+            {...fieldProps}
             data-placeholder="Major"
             data-field="major"
             value={item.major || ""}
@@ -125,12 +63,8 @@ export function EducationSection({ item, onChange }) {
           <span className="label"> ,</span>
           <EditableText
             as="span"
-            className={`input ${!item.gpa ? "contentEditablePlaceholder" : ""}`}
-            role="textbox"
-            onFocus={handleFocus}
-            onPaste={handlePaste}
-            onBlur={handleBlur}
-            onKeyDown={handleKeyDown}
+            className={`input ${placeholderClass(!item.gpa)}`}
+            {...fieldProps}
             data-placeholder="GPA"
             data-field="gpa"
             value={item.gpa || ""}
@@ -140,14 +74,8 @@ export function EducationSection({ item, onChange }) {
 
         <EditableText
           as="span"
-          className={`input italic ${
-            !item.location ? "contentEditablePlaceholder" : ""
-          }`}
-          role="textbox"
-          onFocus={handleFocus}
-          onPaste={handlePaste}
-          onBlur={handleBlur}
-          onKeyDown={handleKeyDown}
+          className={`input italic ${placeholderClass(!item.location)}`}
+          {...fieldProps}
           data-placeholder="Location"
           data-field="location"
           value={item.location || ""}

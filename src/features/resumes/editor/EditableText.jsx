@@ -8,7 +8,7 @@ export function EditableText({ as: Tag = "span", value, ...props }) {
   const ref = useRef(null);
 
   useLayoutEffect(() => {
-    const text = value || "";
+    const text = value ? String(value) : "";
     if (ref.current && ref.current.textContent !== text) {
       ref.current.textContent = text;
     }
