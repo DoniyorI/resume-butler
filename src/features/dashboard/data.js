@@ -61,11 +61,13 @@ function buildFlow(applications, historyByApp) {
   }));
   const index = Object.fromEntries(nodes.map((node, i) => [node.name, i]));
 
+  // Nodes follow APPLICATION_STATUSES order. Keeping only forward links keeps the
+  // graph acyclic: d3-sankey throws on cycles, e.g. when a status is moved back.
   const links = [];
   if (Object.keys(transitions).length > 0) {
     for (const [key, value] of Object.entries(transitions)) {
       const [from, to] = key.split("→");
-      if (index[from] !== undefined && index[to] !== undefined && from !== to) {
+      if (index[from] !== undefined && index[to] !== undefined && index[from] < index[to]) {
         links.push({ source: index[from], target: index[to], value });
       }
     }
@@ -95,25 +97,42 @@ function dailyCounts(applications) {
   };
 }
 
+// Supabase returns at most 1,000 rows per request, so page through with range()
+// to compute stats from every row
+const PAGE_SIZE = 1000;
+
+async function fetchAll(buildQuery) {
+  const rows = [];
+  for (let from = 0; ; from += PAGE_SIZE) {
+    const { data, error } = await buildQuery().range(from, from + PAGE_SIZE - 1);
+    if (error) throw error;
+    rows.push(...data);
+    if (data.length < PAGE_SIZE) return rows;
+  }
+}
+
 // Everything the dashboard shows, computed from the user's applications and history
 export async function getDashboardStats(supabase, userId) {
-  const [appsRes, historyRes] = await Promise.all([
-    supabase
-      .from("applications")
-      .select("id, status, applied_date")
-      .eq("user_id", userId)
-      .order("applied_date", { ascending: false }),
-    supabase
-      .from("application_status_history")
-      .select("application_id, status, changed_at, applications!inner(user_id)")
-      .eq("applications.user_id", userId)
-      .order("changed_at", { ascending: true }),
+  const [applications, history] = await Promise.all([
+    fetchAll(() =>
+      supabase
+        .from("applications")
+        .select("id, status, applied_date")
+        .eq("user_id", userId)
+        .order("applied_date", { ascending: false })
+        .order("id")
+    ),
+    fetchAll(() =>
+      supabase
+        .from("application_status_history")
+        .select("application_id, status, changed_at, applications!inner(user_id)")
+        .eq("applications.user_id", userId)
+        .order("changed_at", { ascending: true })
+        .order("id")
+    ),
   ]);
-  if (appsRes.error) throw appsRes.error;
-  if (historyRes.error) throw historyRes.error;
 
-  const applications = appsRes.data || [];
-  const historyByApp = groupHistoryByApplication(historyRes.data || []);
+  const historyByApp = groupHistoryByApplication(history);
   const total = applications.length;
 
   const statusCounts = Object.fromEntries(APPLICATION_STATUSES.map((status) => [status, 0]));

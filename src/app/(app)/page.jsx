@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import { redirect } from "next/navigation";
 import { requirePageUser } from "@/server/auth";
 import ApplicationTable from "@/features/applications/ApplicationTable";
 import ApplicationTableSkeleton from "@/features/applications/ApplicationTableSkeleton";
@@ -15,6 +16,12 @@ function pageIndexFrom(searchParams) {
 async function ApplicationsList({ pageIndex }) {
   const { supabase, user } = await requirePageUser();
   const { applications, total } = await getApplicationsPage(supabase, user.id, pageIndex);
+
+  // Past the last page (e.g. after deleting every row on it): go to the last real page
+  if (applications.length === 0 && pageIndex > 0) {
+    const lastPage = Math.max(1, Math.ceil(total / APPLICATIONS_PAGE_SIZE));
+    redirect(lastPage > 1 ? `/?page=${lastPage}` : "/");
+  }
 
   return (
     <ApplicationTable

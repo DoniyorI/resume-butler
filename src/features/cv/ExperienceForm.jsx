@@ -17,10 +17,11 @@ import { toDateString, toPickerDate } from "@/features/cv/pickerDates";
 import BulletListEditor from "@/features/cv/BulletListEditor";
 import DateRangeFields, { CurrentlyWorkingField } from "@/features/cv/DateRangeFields";
 
+// "present" is the picker's Present option; it is stored as currently_working
 const toState = (entry) => ({
   ...entry,
   startDate: toPickerDate(entry.startDate),
-  endDate: toPickerDate(entry.endDate),
+  endDate: entry.currentlyWorking ? "present" : toPickerDate(entry.endDate),
 });
 
 const toInput = (entry) => ({
@@ -29,7 +30,7 @@ const toInput = (entry) => ({
   position: entry.position,
   location: entry.location,
   type: entry.type,
-  currentlyWorking: Boolean(entry.currentlyWorking),
+  currentlyWorking: Boolean(entry.currentlyWorking) || entry.endDate === "present",
   startDate: toDateString(entry.startDate),
   endDate: toDateString(entry.endDate),
   bullets: entry.bullets,
@@ -130,11 +131,16 @@ export default function ExperienceForm({ initialEntries }) {
             startDate={entry.startDate}
             endDate={entry.endDate}
             onChange={(field, value) => updateEntry(index, field, value)}
-          />
+            allowPresent
+            />
           <CurrentlyWorkingField
             id={`currently-working-${entry.key}`}
             checked={entry.currentlyWorking}
-            onChange={(checked) => updateEntry(index, "currentlyWorking", checked)}
+            onChange={(checked) => {
+              // Unticking must also clear a "Present" end date, which implies currently working
+              if (!checked && entry.endDate === "present") updateEntry(index, "endDate", "");
+              updateEntry(index, "currentlyWorking", checked);
+            }}
           />
 
           <div className="text-center font-light text-xs my-2">

@@ -2,8 +2,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { MonthYearPicker } from "@/components/shared/MonthYearPicker";
 
-// Start/End month pickers shared by experience, project and education entries
-export default function DateRangeFields({ startDate, endDate, onChange }) {
+// Start/End month pickers shared by experience, project and education entries.
+// allowPresent adds a "Present" end date; only use it where the entry has a
+// currently_working column to store it in.
+export default function DateRangeFields({ startDate, endDate, onChange, allowPresent = false }) {
   return (
     <div className="flex space-x-6">
       <div>
@@ -15,7 +17,7 @@ export default function DateRangeFields({ startDate, endDate, onChange }) {
         <MonthYearPicker
           value={endDate}
           onChange={(date) => onChange("endDate", date)}
-          allowPresent
+          allowPresent={allowPresent}
         />
       </div>
     </div>

@@ -34,8 +34,8 @@ export const suggestBulletsInput = z.object({
   jobDescription: z.string().min(1).max(20_000),
   resumeContent: z
     .object({
-      experience: z.array(z.any()).max(30).optional(),
-      projects: z.array(z.any()).max(30).optional(),
+      experience: z.array(z.any()).max(100).optional(),
+      projects: z.array(z.any()).max(100).optional(),
     })
     .passthrough(),
 });
@@ -71,25 +71,30 @@ export async function suggestBullets({ jobDescription, resumeContent }) {
     user: `Job Description:\n${jobDescription}\n\nBullet Points:\n${bulletList}\n\nReturn a JSON object with a "suggestions" array.`,
   });
 
-  // Map the model's answer back to our section/item/bullet indices
-  const suggestions = (parsed.suggestions || [])
-    .filter((s) => s.changed)
+  // Map the model's answer back to a bullet we actually sent. Model output is
+  // untrusted: suggestions that don't match a real bullet are dropped, and the
+  // indices always come from our own list so the editor can apply them safely.
+  const suggestions = (Array.isArray(parsed.suggestions) ? parsed.suggestions : [])
+    .filter((s) => s && s.changed && typeof s.suggested === "string" && s.suggested.trim())
     .map((s) => {
-      const match = bullets.find(
-        (b) =>
-          b.section === s.section &&
-          b.itemIndex === s.itemIndex &&
-          (b.bulletIndex === s.bulletIndex || b.text === s.original)
-      );
+      const match =
+        bullets.find(
+          (b) =>
+            b.section === s.section &&
+            b.itemIndex === s.itemIndex &&
+            (b.bulletIndex === s.bulletIndex || b.text === s.original)
+        ) || bullets.find((b) => b.text === s.original);
+      if (!match) return null;
       return {
-        section: s.section,
-        itemIndex: s.itemIndex,
-        bulletIndex: match?.bulletIndex ?? s.bulletIndex ?? s.index,
-        original: s.original,
-        suggested: s.suggested,
-        reason: s.reason,
+        section: match.section,
+        itemIndex: match.itemIndex,
+        bulletIndex: match.bulletIndex,
+        original: match.text,
+        suggested: s.suggested.slice(0, 1000),
+        reason: typeof s.reason === "string" ? s.reason.slice(0, 500) : null,
       };
-    });
+    })
+    .filter(Boolean);
 
   return { suggestions };
 }

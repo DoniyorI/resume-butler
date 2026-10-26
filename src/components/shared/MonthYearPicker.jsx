@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/select";
 import { Calendar as CalendarIcon, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { parseDate } from "@/lib/dates";
 
 const MONTHS = [
   "January", "February", "March", "April", "May", "June",
@@ -26,9 +27,9 @@ const YEARS = Array.from({ length: 30 }, (_, i) => 2040 - i);
 
 export function MonthYearPicker({ value, onChange, placeholder = "Select date", allowPresent = false }) {
   const [open, setOpen] = React.useState(false);
-  const [isPresent, setIsPresent] = React.useState(value === "present");
-
-  const selectedDate = value && value !== "present" ? new Date(value) : null;
+  // Derived from value (not state) so it follows changes made by the parent
+  const isPresent = value === "present";
+  const selectedDate = isPresent ? null : parseDate(value);
   const selectedMonth = selectedDate ? selectedDate.getMonth().toString() : "";
   const selectedYear = selectedDate ? selectedDate.getFullYear().toString() : "";
 
@@ -39,27 +40,23 @@ export function MonthYearPicker({ value, onChange, placeholder = "Select date", 
     : null;
 
   const handleMonthChange = (month) => {
-    setIsPresent(false);
     const year = selectedYear || new Date().getFullYear().toString();
     const date = new Date(parseInt(year), parseInt(month), 1);
     onChange(date);
   };
 
   const handleYearChange = (year) => {
-    setIsPresent(false);
     const month = selectedMonth || "0";
     const date = new Date(parseInt(year), parseInt(month), 1);
     onChange(date);
   };
 
   const handleClear = () => {
-    setIsPresent(false);
     onChange("");
     setOpen(false);
   };
 
   const handlePresent = () => {
-    setIsPresent(true);
     onChange("present");
     setOpen(false);
   };

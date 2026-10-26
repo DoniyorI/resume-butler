@@ -13,7 +13,8 @@ const FALLBACK_COLOR = "#ccc";
 export default function SankeyDiagram({ nodes, links }) {
   const layout = useMemo(() => {
     if (links.length === 0) return null;
-    return sankey()
+    try {
+      return sankey()
       .nodeWidth(20)
       .nodePadding(15)
       .nodeAlign(sankeyCenter)
@@ -24,6 +25,11 @@ export default function SankeyDiagram({ nodes, links }) {
       nodes: nodes.map((node) => ({ ...node })),
       links: links.map((link) => ({ ...link })),
     });
+    } catch (error) {
+      // A bad graph shouldn't take the whole dashboard down
+      console.error("Sankey layout failed:", error);
+      return null;
+    }
   }, [nodes, links]);
 
   const linkPath = sankeyLinkHorizontal();

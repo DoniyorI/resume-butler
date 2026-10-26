@@ -4,6 +4,7 @@ import { saveResumeContent } from "@/features/resumes/actions";
 import { DATED_SECTIONS, blankItem, sortByDateDesc } from "@/features/resumes/resumeDocument";
 
 const AUTOSAVE_DELAY_MS = 500;
+const BULLET_SECTIONS = new Set(["experience", "projects"]);
 
 // Editor state for one resume: the content document, debounced autosave
 // through a Server Action, and the edits the editor makes to it.
@@ -22,23 +23,25 @@ export function useResumeDocument({ resumeId, initialContent, needsInitialSave =
     latestDocRef.current = doc;
   }, [doc]);
 
-  // Saves run one after another so an older save can't land after a newer one
+  // Saves run one after another so an older save can't land after a newer one.
+  // Resolves to true when the snapshot is saved, false when saving failed.
   const persist = useCallback(
     (snapshot) => {
       saveQueueRef.current = saveQueueRef.current.then(async () => {
-        if (snapshot === savedDocRef.current) return;
+        if (snapshot === savedDocRef.current) return true;
         let error = "Failed to save resume";
         try {
           const result = await saveResumeContent(resumeId, snapshot);
           if (result.ok) {
             savedDocRef.current = snapshot;
-            return;
+            return true;
           }
           error = result.error;
         } catch {
           // Network failure: keep the default message
         }
         toast.error(error, { id: "resume-autosave" });
+        return false;
       });
       return saveQueueRef.current;
     },
@@ -51,7 +54,22 @@ export function useResumeDocument({ resumeId, initialContent, needsInitialSave =
     return () => clearTimeout(timer);
   }, [doc, persist]);
 
-  // Save pending edits now (e.g. before downloading the stored resume)
+  // Fields commit on blur, so clicking a link can leave an edit inside the
+  // autosave delay. Save it when the editor unmounts, and warn before closing
+  // the tab while changes are unsaved.
+  useEffect(() => {
+    const warnIfUnsaved = (event) => {
+      if (latestDocRef.current !== savedDocRef.current) event.preventDefault();
+    };
+    window.addEventListener("beforeunload", warnIfUnsaved);
+    return () => {
+      window.removeEventListener("beforeunload", warnIfUnsaved);
+      if (latestDocRef.current !== savedDocRef.current) persist(latestDocRef.current);
+    };
+  }, [persist]);
+
+  // Save pending edits now (e.g. before downloading the stored resume).
+  // Resolves to false if the save failed.
   const flush = useCallback(() => persist(latestDocRef.current), [persist]);
 
   const updateSection = useCallback((sectionId, update) => {
@@ -82,16 +100,23 @@ export function useResumeDocument({ resumeId, initialContent, needsInitialSave =
     setDoc((prev) => ({ ...prev, [sectionId]: prev[sectionId].filter((_, i) => i !== index) }));
   }, []);
 
+  // Applies an AI suggestion. Only experience/project bullets have suggestions;
+  // anything that doesn't point at an existing bullet is ignored.
   const replaceBullet = useCallback((sectionId, itemIndex, bulletIndex, text) => {
-    setDoc((prev) => ({
-      ...prev,
-      [sectionId]: prev[sectionId].map((item, i) => {
-        if (i !== itemIndex) return item;
-        const bullets = Array.isArray(item.description) ? [...item.description] : [];
-        bullets[bulletIndex] = text;
-        return { ...item, description: bullets };
-      }),
-    }));
+    setDoc((prev) => {
+      const item = BULLET_SECTIONS.has(sectionId) ? prev[sectionId]?.[itemIndex] : undefined;
+      if (!item || !Number.isInteger(bulletIndex) || bulletIndex < 0) return prev;
+      // Older items may store bullets as one newline-separated string
+      const bullets = Array.isArray(item.description)
+        ? [...item.description]
+        : String(item.description || "").split("\n");
+      if (bulletIndex >= bullets.length) return prev;
+      bullets[bulletIndex] = text;
+      return {
+        ...prev,
+        [sectionId]: prev[sectionId].map((it, i) => (i === itemIndex ? { ...it, description: bullets } : it)),
+      };
+    });
   }, []);
 
   const moveSection = useCallback((fromIndex, toIndex) => {

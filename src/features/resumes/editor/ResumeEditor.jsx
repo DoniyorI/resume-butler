@@ -71,8 +71,9 @@ export default function ResumeEditor({ resume, masterCv }) {
   const handleDownload = async (format) => {
     setDownloading(true);
     try {
-      // The route renders the saved resume, so write pending edits first
-      await resumeDoc.flush();
+      // The route renders the saved resume, so write pending edits first.
+      // If that failed the save toast already explains why; don't download stale content.
+      if (!(await resumeDoc.flush())) return;
       const response = await fetch("/api/download-resume", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
