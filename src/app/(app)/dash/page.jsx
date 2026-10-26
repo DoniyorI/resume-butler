@@ -2,6 +2,7 @@ import { Briefcase, Clock, Target, TrendingUp } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { requirePageUser } from "@/server/auth";
 import { getDashboardStats } from "@/features/dashboard/data";
+import DashboardSwitch from "@/features/dashboard/DashboardSwitch";
 import StatCard from "@/features/dashboard/StatCard";
 import ApplicationFunnel from "@/features/dashboard/ApplicationFunnel";
 import StatusSummary from "@/features/dashboard/StatusSummary";
@@ -17,7 +18,10 @@ export default async function DashboardPage() {
 
   return (
     <div className="flex flex-col w-full min-h-screen pt-24 px-5 md:px-10 pb-10">
-      <h1 className="text-2xl font-semibold text-brand mb-6">Dashboard</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+        <h1 className="text-2xl font-semibold text-brand">Dashboard</h1>
+        <DashboardSwitch current="/dash" />
+      </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <StatCard icon={Briefcase} label="Total Applications" value={stats.total} />

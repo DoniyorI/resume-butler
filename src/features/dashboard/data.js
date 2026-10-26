@@ -94,6 +94,8 @@ function dailyCounts(applications) {
       return `${Number(month)}/${Number(date)}`;
     }),
     counts: days.map((day) => perDay[day]),
+    // [{ date: "YYYY-MM-DD", count }] for charts that pick their own range
+    series: days.map((day) => ({ date: day, count: perDay[day] })),
   };
 }
 
