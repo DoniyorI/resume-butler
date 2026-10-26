@@ -1,7 +1,9 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
-import { useAuth } from "@/hooks/useAuth";
+
+import { useState, useTransition } from "react";
 import { toast } from "sonner";
+import { format, isValid } from "date-fns";
+import { Calendar as CalendarIcon, FileText, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -15,18 +17,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Calendar } from "@/components/ui/calendar";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { isValid, format } from "date-fns";
-import { Calendar as CalendarIcon, FileText, Loader2 } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { APPLICATION_STATUSES } from "@/lib/constants";
-import { normalizeHttpUrl } from "@/lib/safeUrl";
 import {
   Select,
   SelectContent,
@@ -36,191 +29,124 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { APPLICATION_STATUSES, DEFAULT_STATUS } from "@/lib/constants";
+import { createApplication, listLinkableDocuments } from "@/features/applications/actions";
 
+const emptyForm = () => ({
+  companyName: "",
+  portalLink: "",
+  role: "",
+  status: DEFAULT_STATUS,
+  location: "",
+  date: new Date(),
+  comments: "",
+  resumeId: "",
+  coverLetterId: "",
+});
+
+function DocumentSelect({ id, label, placeholder, value, onChange, options }) {
+  return (
+    <div className="w-1/2">
+      <Label htmlFor={id} className="text-right">
+        {label}
+      </Label>
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger id={id}>
+          <SelectValue placeholder={placeholder} />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectGroup>
+            {options.map((doc) => (
+              <SelectItem key={doc.id} value={doc.id}>
+                <div className="flex justify-center items-center">
+                  <FileText className="h-4 w-4 text-blue-700 mr-1" />
+                  {doc.title}
+                </div>
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
+// Rendered in the nav bar on every signed-in page. The trigger keeps its own
+// styling; NavBar's className prop has never been applied.
 export default function AddApplicationDialog() {
-  const { user: currentUser, supabase } = useAuth({ redirect: true });
-  const [companyName, setCompanyName] = useState("");
-  const [portalLink, setPortalLink] = useState("");
-  const [role, setRole] = useState("");
-  const [status, setStatus] = useState("Applied");
-  const [location, setLocation] = useState("");
-  const [date, setDate] = useState(new Date());
-  const [comments, setComments] = useState("");
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [resumes, setResumes] = useState([]);
-  const [coverLetters, setCoverLetters] = useState([]);
-  const [selectedResumeId, setSelectedResumeId] = useState("");
-  const [selectedCoverLetterId, setSelectedCoverLetterId] = useState("");
+  const [isOpen, setIsOpen] = useState(false);
+  const [form, setForm] = useState(emptyForm);
+  const [documents, setDocuments] = useState({ resumes: [], coverLetters: [] });
+  const [isSaving, startSaving] = useTransition();
 
-  const prevIsDialogOpen = useRef();
+  const setField = (field) => (value) => setForm((current) => ({ ...current, [field]: value }));
+  const setFieldFromEvent = (field) => (event) => setField(field)(event.target.value);
 
-  useEffect(() => {
-    if (isDialogOpen && !prevIsDialogOpen.current && currentUser) {
-      // Fetch resumes
-      supabase
-        .from("resumes")
-        .select("id, title, created_at")
-        .eq("user_id", currentUser.id)
-        .order("created_at", { ascending: false })
-        .then(({ data }) => setResumes(data || []));
+  const handleOpenChange = async (open) => {
+    setIsOpen(open);
+    if (!open) return;
+    const result = await listLinkableDocuments();
+    if (result.ok) setDocuments(result.data);
+    else toast.error(result.error);
+  };
 
-      // Fetch cover letters
-      supabase
-        .from("cover_letters")
-        .select("id, title, created_at")
-        .eq("user_id", currentUser.id)
-        .order("created_at", { ascending: false })
-        .then(({ data }) => setCoverLetters(data || []));
-    }
-    prevIsDialogOpen.current = isDialogOpen;
-  }, [isDialogOpen, currentUser, supabase]);
-
-  const handleSave = async () => {
-    if (!currentUser) {
-      toast("No user signed in", {
-        description: "Please sign in to save the application.",
+  const handleSave = () =>
+    startSaving(async () => {
+      const result = await createApplication({
+        company: form.companyName,
+        portalLink: form.portalLink,
+        role: form.role,
+        status: form.status,
+        location: form.location,
+        appliedDate: isValid(form.date) ? format(form.date, "yyyy-MM-dd") : null,
+        comments: form.comments,
+        resumeId: form.resumeId,
+        coverLetterId: form.coverLetterId,
       });
-      return;
-    }
-    setIsSaving(true);
-    try {
-      const applicationData = {
-        user_id: currentUser.id,
-        company: companyName,
-        portal_link: normalizeHttpUrl(portalLink),
-        role,
-        status,
-        location,
-        applied_date: date ? format(date, "yyyy-MM-dd") : null,
-        comments,
-        resume_id: selectedResumeId || null,
-        cover_letter_id: selectedCoverLetterId || null,
-      };
 
-      const { data, error } = await supabase
-        .from("applications")
-        .insert(applicationData)
-        .select()
-        .single();
+      if (!result.ok) {
+        toast("Failed to save application", { description: result.error });
+        return;
+      }
 
-      if (error) throw error;
-
-      setIsDialogOpen(false);
-
-      // Reset fields
-      setCompanyName("");
-      setPortalLink("");
-      setRole("");
-      setStatus("Applied");
-      setLocation("");
-      setDate(new Date());
-      setComments("");
-      setSelectedResumeId("");
-      setSelectedCoverLetterId("");
-
-      // Dispatch event for table update
-      window.dispatchEvent(
-        new CustomEvent("newApplication", {
-          detail: {
-            id: data.id,
-            companyName: data.company,
-            role: data.role,
-            status: data.status,
-            location: data.location,
-            date: data.applied_date
-              ? new Date(data.applied_date).toLocaleDateString("en-US")
-              : "",
-            comments: data.comments,
-            portalLink: data.portal_link,
-          },
-        })
-      );
+      setIsOpen(false);
+      setForm(emptyForm());
       toast("Application successfully saved", {
         description: "Your application data has been saved.",
       });
-    } catch (error) {
-      console.error("Error saving application data:", error);
-      toast("Failed to save application", {
-        description:
-          error.message || "An error occurred while saving your data.",
-      });
-    } finally {
-      setIsSaving(false);
-    }
-  };
+    });
 
   return (
-    <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button
-          className="text-[#188665] font-medium hover:bg-green-100"
-          variant="outline"
-          onClick={() => setIsDialogOpen(true)}
-        >
+        <Button className="text-[#188665] font-medium hover:bg-green-100" variant="outline">
           New Application
         </Button>
       </DialogTrigger>
       <DialogContent className="lg:min-w-[60vw]">
         <DialogHeader>
           <DialogTitle>New Application</DialogTitle>
-          <DialogDescription>
-            Fill in the application details and click save.
-          </DialogDescription>
+          <DialogDescription>Fill in the application details and click save.</DialogDescription>
         </DialogHeader>
         <ScrollArea className="h-[70vh] w-full px-3 rounded-md border">
           <div className="grid gap-4 py-3 mx-1">
             <div className="flex gap-4">
-              <div className="w-1/2">
-                <Label htmlFor="resume" className="text-right">
-                  Resume
-                </Label>
-                <Select
-                  value={selectedResumeId}
-                  onValueChange={setSelectedResumeId}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a Resume" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      {resumes.map((resume) => (
-                        <SelectItem key={resume.id} value={resume.id}>
-                          <div className="flex justify-center items-center">
-                            <FileText className="h-4 w-4 text-blue-700 mr-1" />
-                            {resume.title}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="w-1/2">
-                <Label htmlFor="cover-letter" className="text-right">
-                  Cover Letter
-                </Label>
-                <Select
-                  value={selectedCoverLetterId}
-                  onValueChange={setSelectedCoverLetterId}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a Cover Letter" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      {coverLetters.map((letter) => (
-                        <SelectItem key={letter.id} value={letter.id}>
-                          <div className="flex justify-center items-center">
-                            <FileText className="h-4 w-4 text-blue-700 mr-1" />
-                            {letter.title}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-              </div>
+              <DocumentSelect
+                id="resume"
+                label="Resume"
+                placeholder="Select a Resume"
+                value={form.resumeId}
+                onChange={setField("resumeId")}
+                options={documents.resumes}
+              />
+              <DocumentSelect
+                id="cover-letter"
+                label="Cover Letter"
+                placeholder="Select a Cover Letter"
+                value={form.coverLetterId}
+                onChange={setField("coverLetterId")}
+                options={documents.coverLetters}
+              />
             </div>
             <div>
               <Label htmlFor="company-name" className="text-right">
@@ -228,20 +154,21 @@ export default function AddApplicationDialog() {
               </Label>
               <Input
                 id="company-name"
-                value={companyName}
-                onChange={(e) => setCompanyName(e.target.value)}
+                value={form.companyName}
+                onChange={setFieldFromEvent("companyName")}
+                maxLength={200}
                 className="col-span-3"
               />
             </div>
             <div>
-              <Label htmlFor="portal-Link" className="text-right">
+              <Label htmlFor="portal-link" className="text-right">
                 Portal Link
               </Label>
               <Input
                 id="portal-link"
                 type="url"
-                value={portalLink}
-                onChange={(e) => setPortalLink(e.target.value)}
+                value={form.portalLink}
+                onChange={setFieldFromEvent("portalLink")}
                 className="col-span-3"
               />
             </div>
@@ -252,30 +179,25 @@ export default function AddApplicationDialog() {
                 </Label>
                 <Input
                   id="role"
-                  value={role}
-                  onChange={(e) => setRole(e.target.value)}
+                  value={form.role}
+                  onChange={setFieldFromEvent("role")}
+                  maxLength={200}
                   className="col-span-3"
                 />
               </div>
-              <div className="">
+              <div>
                 <Label htmlFor="status" className="text-right">
                   Status
                 </Label>
-                <Select
-                  id="status"
-                  value={status}
-                  onValueChange={(value) => setStatus(value)}
-                >
-                  <SelectTrigger className="w-[180px]">
+                <Select value={form.status} onValueChange={setField("status")}>
+                  <SelectTrigger id="status" className="w-[180px]">
                     <SelectValue placeholder="Select Status" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
-                      {APPLICATION_STATUSES.map((statusOption) => (
-                        <SelectItem key={statusOption} value={statusOption}>
-                          <Badge variant={statusOption.toLowerCase()}>
-                            {statusOption}
-                          </Badge>
+                      {APPLICATION_STATUSES.map((option) => (
+                        <SelectItem key={option} value={option}>
+                          <Badge variant={option.toLowerCase()}>{option}</Badge>
                         </SelectItem>
                       ))}
                     </SelectGroup>
@@ -289,8 +211,9 @@ export default function AddApplicationDialog() {
               </Label>
               <Input
                 id="location"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
+                value={form.location}
+                onChange={setFieldFromEvent("location")}
+                maxLength={200}
                 className="col-span-3"
               />
             </div>
@@ -303,20 +226,18 @@ export default function AddApplicationDialog() {
                   <PopoverTrigger asChild>
                     <Button
                       id="date-picker"
-                      variant={"outline"}
-                      className={cn(
-                        "w-full justify-start text-left font-normal"
-                      )}
+                      variant="outline"
+                      className="w-full justify-start text-left font-normal"
                     >
                       <CalendarIcon className="mr-2 h-4 w-4" />
-                      {isValid(date) ? format(date, "PPP") : "Select a date"}
+                      {isValid(form.date) ? format(form.date, "PPP") : "Select a date"}
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent className="w-auto p-0">
                     <Calendar
                       mode="single"
-                      selected={date}
-                      onSelect={setDate}
+                      selected={form.date}
+                      onSelect={setField("date")}
                       initialFocus
                     />
                   </PopoverContent>
@@ -329,8 +250,9 @@ export default function AddApplicationDialog() {
               </Label>
               <Textarea
                 id="comments"
-                value={comments}
-                onChange={(e) => setComments(e.target.value)}
+                value={form.comments}
+                onChange={setFieldFromEvent("comments")}
+                maxLength={5000}
                 className="col-span-3"
               />
             </div>
@@ -343,7 +265,7 @@ export default function AddApplicationDialog() {
               Please wait
             </Button>
           ) : (
-            <Button type="button" onClick={handleSave} disabled={isSaving}>
+            <Button type="button" onClick={handleSave}>
               Add Application
             </Button>
           )}

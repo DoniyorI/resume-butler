@@ -1,47 +1,50 @@
 "use client";
-import { useState } from 'react';
+
+import { useOptimistic, useTransition } from "react";
+import { toast } from "sonner";
 import { APPLICATION_STATUSES } from "@/lib/constants";
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem} from '@/components/ui/dropdown-menu';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { useAuth } from "@/hooks/useAuth";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { updateApplicationStatus } from "@/features/applications/actions";
 
-function StatusCell({ row }) {
-    const { supabase } = useAuth();
-    const [value, setValue] = useState(row.getValue("status"));
+export default function StatusCell({ row }) {
+  const [status, setOptimisticStatus] = useOptimistic(row.getValue("status"));
+  const [, startTransition] = useTransition();
 
-    const handleChange = async (newStatus) => {
-        setValue(newStatus);
-        try {
-          const { error } = await supabase
-            .from("applications")
-            .update({ status: newStatus })
-            .eq("id", row.original.id);
-          if (error) throw error;
-        } catch (error) {
-          console.error("Failed to update status:", error);
-          setValue(value); // revert on error
-        }
-    };
+  const handleChange = (newStatus) => {
+    startTransition(async () => {
+      setOptimisticStatus(newStatus);
+      const result = await updateApplicationStatus(row.original.id, newStatus);
+      if (!result.ok) toast.error(result.error);
+    });
+  };
 
-    return (
-        <div className="flex justify-start">
-            <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="outline-none select-none -ml-3">
-                        <Badge variant={value.toLowerCase()}>{value}</Badge>
-                    </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="text-sm">
-                    {APPLICATION_STATUSES.map((status) => (
-                        <DropdownMenuItem key={status} onClick={() => handleChange(status)} className="text-xs cursor-pointer">
-                            <Badge variant={status.toLowerCase()}>{status}</Badge>
-                        </DropdownMenuItem>
-                    ))}
-                </DropdownMenuContent>
-            </DropdownMenu>
-        </div>
-    );
+  return (
+    <div className="flex justify-start">
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" className="outline-none select-none -ml-3">
+            <Badge variant={status.toLowerCase()}>{status}</Badge>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="start" className="text-sm">
+          {APPLICATION_STATUSES.map((option) => (
+            <DropdownMenuItem
+              key={option}
+              onClick={() => handleChange(option)}
+              className="text-xs cursor-pointer"
+            >
+              <Badge variant={option.toLowerCase()}>{option}</Badge>
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  );
 }
-
-export default StatusCell;

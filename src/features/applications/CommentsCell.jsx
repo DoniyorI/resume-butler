@@ -1,50 +1,45 @@
 "use client";
-import { useState } from 'react';
-import { Textarea } from '@/components/ui/textarea';
-import { useAuth } from "@/hooks/useAuth";
 
-function CommentsCell({ row }) {
-    const { supabase } = useAuth();
-    const [editing, setEditing] = useState(false);
-    const [value, setValue] = useState(row.getValue("comments") || "");
+import { useOptimistic, useState, useTransition } from "react";
+import { toast } from "sonner";
+import { Textarea } from "@/components/ui/textarea";
+import { updateApplicationComments } from "@/features/applications/actions";
 
-    const toggleEdit = () => {
-        setEditing(!editing);
-    };
+// Double-click to edit; saves on blur
+export default function CommentsCell({ row }) {
+  const saved = row.getValue("comments") || "";
+  const [comments, setOptimisticComments] = useOptimistic(saved);
+  const [draft, setDraft] = useState(null);
+  const [, startTransition] = useTransition();
 
-    const handleChange = (e) => {
-        setValue(e.target.value);
-    };
+  const startEditing = () => setDraft(comments);
 
-    const handleBlur = async () => {
-        setEditing(false);
-        const newComment = value.trim();
-        try {
-          const { error } = await supabase
-            .from("applications")
-            .update({ comments: newComment })
-            .eq("id", row.original.id);
-          if (error) throw error;
-        } catch (error) {
-          console.error("Failed to update comment:", error);
-        }
-    };
+  const handleBlur = () => {
+    const newComments = draft.trim();
+    setDraft(null);
+    if (newComments === saved) return;
 
+    startTransition(async () => {
+      setOptimisticComments(newComments);
+      const result = await updateApplicationComments(row.original.id, newComments);
+      if (!result.ok) toast.error(result.error);
+    });
+  };
+
+  if (draft !== null) {
     return (
-        <div onDoubleClick={toggleEdit}>
-            {editing ? (
-                <Textarea
-                    type="text"
-                    value={value}
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    autoFocus
-                />
-            ) : (
-                <span onDoubleClick={toggleEdit}>{value || <span className="text-gray-300">No Comment</span>}</span>
-            )}
-        </div>
+      <Textarea
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={handleBlur}
+        autoFocus
+      />
     );
-}
+  }
 
-export default CommentsCell;
+  return (
+    <div onDoubleClick={startEditing}>
+      {comments || <span className="text-gray-300">No Comment</span>}
+    </div>
+  );
+}
