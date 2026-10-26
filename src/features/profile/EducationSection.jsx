@@ -1,11 +1,11 @@
 "use client";
 
 import { deleteEducation, saveEducation } from "@/features/cv/actions";
-import EditDialog from "@/features/career-profile/EditDialog";
-import { MonthField, SelectField, TextField } from "@/features/career-profile/fields";
-import { formatRange, fromMonthInput, toMonthInput } from "@/features/career-profile/format";
-import { EditButton, Section } from "@/features/career-profile/Section";
-import { useEntryList } from "@/features/career-profile/useEntryList";
+import EditDialog from "@/features/profile/EditDialog";
+import { MonthField, SelectField, TextField } from "@/features/profile/fields";
+import { formatRange, fromMonthInput, toMonthInput } from "@/features/profile/format";
+import { EditButton, Section } from "@/features/profile/Section";
+import { useEntryList } from "@/features/profile/useEntryList";
 
 const DEGREE_TYPES = ["Associate", "Bachelor", "Master", "PhD"];
 

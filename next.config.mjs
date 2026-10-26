@@ -38,6 +38,13 @@ const nextConfig = {
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },
+  // The master CV moved into the profile page
+  async redirects() {
+    return [
+      { source: "/cv", destination: "/profile", permanent: true },
+      { source: "/profile/new", destination: "/profile", permanent: false },
+    ];
+  },
 };
 
 export default nextConfig;

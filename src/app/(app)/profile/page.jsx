@@ -1,19 +1,21 @@
 import { requirePageUser } from "@/server/auth";
+import { getCvData } from "@/features/cv/data";
 import { getProfile } from "@/features/profile/data";
-import ProfileForm from "@/features/profile/ProfileForm";
+import CareerProfile from "@/features/profile/CareerProfile";
 
-export const metadata = { title: "Profile" };
+export const metadata = { title: "Profile & CV" };
 
+// Profile and master CV on one page (/cv redirects here)
 export default async function ProfilePage() {
   const { supabase, user } = await requirePageUser();
-  const profile = await getProfile(supabase, user);
+  const [profile, cv] = await Promise.all([getProfile(supabase, user), getCvData(supabase, user.id)]);
 
   return (
-    <div className="flex flex-col w-full min-h-screen py-16 my-10 px-32">
-      <h1 className="text-2xl font-semibold text-brand">Profile</h1>
-      <div className="px-10">
-        <ProfileForm initialProfile={profile} />
-      </div>
+    <div className="mx-auto w-full max-w-6xl px-5 pb-16 pt-24 md:px-8">
+      <p className="mb-8 text-sm text-muted-foreground">
+        Everything here feeds the resumes and cover letters you generate.
+      </p>
+      <CareerProfile profile={profile} cv={cv} />
     </div>
   );
 }

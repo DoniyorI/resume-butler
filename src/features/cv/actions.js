@@ -75,12 +75,12 @@ const skillSchema = z.object({
 
 const parse = (schema, input) => parseInput(schema, input, { withField: true });
 
-// Every CV action needs the user and refreshes /cv afterwards
+// Every CV action needs the user and refreshes the profile page (which shows the CV) afterwards
 function run(context, body) {
   return runAction(context, async () => {
     const { supabase, user } = await requireUser();
     const data = await body(supabase, user);
-    revalidatePath("/cv");
+    revalidatePath("/profile");
     return data;
   });
 }

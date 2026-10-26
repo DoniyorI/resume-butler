@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { safeHttpUrl } from "@/lib/safeUrl";
 
-// Shared by ProfileForm (client validation) and updateProfile (server)
+// Shared by ProfileDialog (client validation) and updateProfile (server)
 const optionalUrl = z
   .string()
   .trim()

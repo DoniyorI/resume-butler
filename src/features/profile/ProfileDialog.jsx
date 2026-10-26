@@ -4,8 +4,8 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { profileSchema } from "@/features/profile/schema";
 import { updateProfile } from "@/features/profile/actions";
-import EditDialog from "@/features/career-profile/EditDialog";
-import { TextField } from "@/features/career-profile/fields";
+import EditDialog from "@/features/profile/EditDialog";
+import { TextField } from "@/features/profile/fields";
 
 export default function ProfileDialog({ open, onOpenChange, profile }) {
   const router = useRouter();

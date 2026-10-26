@@ -1,9 +1,9 @@
-import IdentityRail from "@/features/career-profile/IdentityRail";
-import ExperienceSection from "@/features/career-profile/ExperienceSection";
-import EducationSection from "@/features/career-profile/EducationSection";
-import ProjectsSection from "@/features/career-profile/ProjectsSection";
-import SkillsSection from "@/features/career-profile/SkillsSection";
-import CertificationsSection from "@/features/career-profile/CertificationsSection";
+import IdentityRail from "@/features/profile/IdentityRail";
+import ExperienceSection from "@/features/profile/ExperienceSection";
+import EducationSection from "@/features/profile/EducationSection";
+import ProjectsSection from "@/features/profile/ProjectsSection";
+import SkillsSection from "@/features/profile/SkillsSection";
+import CertificationsSection from "@/features/profile/CertificationsSection";
 
 // Profile and master CV on one page: identity on the left, the CV as a
 // readable document on the right, every entry editable where it appears

@@ -3,17 +3,17 @@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { deleteExperience, saveExperience } from "@/features/cv/actions";
-import EditDialog from "@/features/career-profile/EditDialog";
-import { BulletsField, MonthField, SelectField, TextField } from "@/features/career-profile/fields";
+import EditDialog from "@/features/profile/EditDialog";
+import { BulletsField, MonthField, SelectField, TextField } from "@/features/profile/fields";
 import {
   bulletsForEditing,
   cleanBullets,
   formatRange,
   fromMonthInput,
   toMonthInput,
-} from "@/features/career-profile/format";
-import { Bullets, EditButton, Section } from "@/features/career-profile/Section";
-import { useEntryList } from "@/features/career-profile/useEntryList";
+} from "@/features/profile/format";
+import { Bullets, EditButton, Section } from "@/features/profile/Section";
+import { useEntryList } from "@/features/profile/useEntryList";
 
 const EMPLOYMENT_TYPES = ["Full-time", "Part-time", "Internship", "Contract"];
 

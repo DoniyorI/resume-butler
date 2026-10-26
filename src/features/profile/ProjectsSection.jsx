@@ -6,8 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { safeHttpUrl } from "@/lib/safeUrl";
 import { deleteProject, saveProjects } from "@/features/cv/actions";
-import EditDialog from "@/features/career-profile/EditDialog";
-import { BulletsField, Field, MonthField, TextField } from "@/features/career-profile/fields";
+import EditDialog from "@/features/profile/EditDialog";
+import { BulletsField, Field, MonthField, TextField } from "@/features/profile/fields";
 import {
   bulletsForEditing,
   cleanBullets,
@@ -15,9 +15,9 @@ import {
   formatRange,
   fromMonthInput,
   toMonthInput,
-} from "@/features/career-profile/format";
-import { Bullets, EditButton, Section } from "@/features/career-profile/Section";
-import { useEntryList } from "@/features/career-profile/useEntryList";
+} from "@/features/profile/format";
+import { Bullets, EditButton, Section } from "@/features/profile/Section";
+import { useEntryList } from "@/features/profile/useEntryList";
 
 const BLANK = {
   id: null,

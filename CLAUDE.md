@@ -29,14 +29,15 @@ src/
     api/*/route.js        Route Handlers (uploads, downloads, AI, email scan, future extension API)
     auth/callback/        Exchanges OAuth / email-link codes for a session
   features/<feature>/     UI and logic per feature: applications, ats, auth, contact,
-                          cover-letters, cv, dashboard, profile, resumes, email-sync
+                          cover-letters, cv (data + actions only), dashboard, profile (profile and
+                          master CV page), resumes, email-sync, suggestions
     actions.js            Server Actions for that feature ("use server")
     data.js               Server-only reads and snake_case -> camelCase mapping
     hooks/                Client hooks for that feature
   components/
     ui/                   shadcn/ui primitives only (kebab-case files)
     layout/               NavBar, Footer, PublicHeader
-    shared/               App-wide widgets (ErrorState, LocalDateTime, MonthYearPicker, SidePanel)
+    shared/               App-wide widgets (ErrorState, LocalDateTime, SidePanel, ViewSwitch)
   lib/                    Code safe on client and server: constants, dates, safeUrl, redirects, postJson, supabase clients
   server/                 Server-only code (`import "server-only"`), reusable by actions, routes, cron and the extension:
     auth.js               getCurrentUser (cached per request), requirePageUser, requireUser

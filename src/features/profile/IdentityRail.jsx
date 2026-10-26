@@ -19,9 +19,9 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { safeHttpUrl } from "@/lib/safeUrl";
-import { displayUrl, fullName, initials } from "@/features/career-profile/format";
-import ProfileDialog from "@/features/career-profile/ProfileDialog";
-import { cvStrength } from "@/features/career-profile/strength";
+import { displayUrl, fullName, initials } from "@/features/profile/format";
+import ProfileDialog from "@/features/profile/ProfileDialog";
+import { cvStrength } from "@/features/profile/strength";
 
 function ContactLine({ icon: Icon, children, href }) {
   const content = (

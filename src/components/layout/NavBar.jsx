@@ -15,8 +15,7 @@ const NAV_LINKS = [
   { href: "/dash", label: "Dashboard" },
   { href: "/resumes", label: "Resumes" },
   { href: "/coverletters", label: "Cover Letters" },
-  { href: "/profile", label: "Profile" },
-  { href: "/cv", label: "Master CV" },
+  { href: "/profile", label: "Profile & CV" },
   { href: "/email-sync", label: "Email Sync" },
 ];
 
