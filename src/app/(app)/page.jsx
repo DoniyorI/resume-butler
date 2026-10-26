@@ -4,6 +4,8 @@ import { requirePageUser } from "@/server/auth";
 import ApplicationTable from "@/features/applications/ApplicationTable";
 import ApplicationTableSkeleton from "@/features/applications/ApplicationTableSkeleton";
 import { APPLICATIONS_PAGE_SIZE, getApplicationsPage } from "@/features/applications/data";
+import SuggestionsBanner from "@/features/suggestions/SuggestionsBanner";
+import { countPendingSuggestions } from "@/features/suggestions/data";
 
 export const metadata = { title: "Applications" };
 
@@ -15,7 +17,10 @@ function pageIndexFrom(searchParams) {
 
 async function ApplicationsList({ pageIndex }) {
   const { supabase, user } = await requirePageUser();
-  const { applications, total } = await getApplicationsPage(supabase, user.id, pageIndex);
+  const [{ applications, total }, pendingSuggestions] = await Promise.all([
+    getApplicationsPage(supabase, user.id, pageIndex),
+    countPendingSuggestions(supabase, user.id),
+  ]);
 
   // Past the last page (e.g. after deleting every row on it): go to the last real page
   if (applications.length === 0 && pageIndex > 0) {
@@ -24,12 +29,15 @@ async function ApplicationsList({ pageIndex }) {
   }
 
   return (
-    <ApplicationTable
-      applications={applications}
-      total={total}
-      page={pageIndex}
-      pageSize={APPLICATIONS_PAGE_SIZE}
-    />
+    <>
+      <SuggestionsBanner count={pendingSuggestions} />
+      <ApplicationTable
+        applications={applications}
+        total={total}
+        page={pageIndex}
+        pageSize={APPLICATIONS_PAGE_SIZE}
+      />
+    </>
   );
 }
 

@@ -1,8 +1,12 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
+// "created"/"updated"/"skipped" come from scans before the review step existed
 const ACTION_LABELS = {
-  created: { text: "New", className: "text-green-600" },
+  suggested: { text: "Suggested", className: "text-brand" },
+  ignored: { text: "Ignored", className: "text-gray-400" },
+  error: { text: "Error", className: "text-red-500" },
+  created: { text: "Added", className: "text-green-600" },
   updated: { text: "Updated", className: "text-blue-600" },
   skipped: { text: "Skipped", className: "text-gray-400" },
 };

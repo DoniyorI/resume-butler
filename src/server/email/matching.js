@@ -16,8 +16,40 @@ export function normalizeCompany(name) {
   return normalized.length >= 2 && normalized !== "unknown" ? normalized : "";
 }
 
-export function findApplicationByCompany(applications, normalizedCompany) {
-  return applications.find((app) => normalizeCompany(app.company) === normalizedCompany);
+export function normalizeRole(role) {
+  return typeof role === "string"
+    ? role
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, " ")
+        .trim()
+    : "";
+}
+
+function sameRole(a, b) {
+  const left = normalizeRole(a);
+  const right = normalizeRole(b);
+  return Boolean(left && right) && (left === right || left.includes(right) || right.includes(left));
+}
+
+const TERMINAL_STATUSES = ["Rejected", "Withdrew"];
+
+/**
+ * The tracked application an email is about, or null if it's a new one.
+ * Matches the company exactly (after normalizing), then the role when both
+ * sides name one, so two roles at the same company stay separate. An email
+ * that names no role (common for rejections) goes to the company's only open
+ * application. A confirmation for a role not tracked yet is always new.
+ */
+export function findTargetApplication(applications, { company, role, category }) {
+  const atCompany = applications.filter((app) => normalizeCompany(app.company) === company);
+  if (atCompany.length === 0) return null;
+
+  const byRole = atCompany.find((app) => sameRole(app.role, role));
+  if (byRole) return byRole;
+  if (normalizeRole(role) && category === "application_received") return null;
+
+  const open = atCompany.filter((app) => !TERMINAL_STATUSES.includes(app.status));
+  return open.length === 1 ? open[0] : null;
 }
 
 // Date headers come from the sender and may be malformed; return null instead of throwing

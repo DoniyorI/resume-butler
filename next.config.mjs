@@ -33,7 +33,7 @@ const securityHeaders = [
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   experimental: {
-    serverComponentsExternalPackages: ["pdf2json", "imap"],
+    serverComponentsExternalPackages: ["pdf2json", "imap", "mailparser"],
   },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];

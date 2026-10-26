@@ -9,11 +9,12 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { disconnectEmail, saveEmailConnection } from "@/features/email-sync/actions";
 import LocalDateTime from "@/components/shared/LocalDateTime";
+import ScanOptions from "@/features/email-sync/ScanOptions";
 
 const DEFAULT_HOST = "imap.gmail.com";
 const DEFAULT_PORT = 993;
 
-function ConnectedState({ connection, scanning, onScan, onDisconnect }) {
+function ConnectedState({ connection, scanning, onScan, onDisconnect, scanOptions, onScanOptionsChange }) {
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg">
@@ -31,6 +32,8 @@ function ConnectedState({ connection, scanning, onScan, onDisconnect }) {
           </p>
         </div>
       </div>
+
+      <ScanOptions value={scanOptions} onChange={onScanOptionsChange} disabled={scanning} />
 
       <div className="flex gap-2">
         <Button onClick={onScan} disabled={scanning} className="flex-1">
@@ -52,7 +55,7 @@ function ConnectedState({ connection, scanning, onScan, onDisconnect }) {
   );
 }
 
-export default function ConnectionCard({ connection, scanning, onScan }) {
+export default function ConnectionCard({ connection, scanning, onScan, scanOptions, onScanOptionsChange }) {
   const [emailAddress, setEmailAddress] = useState(connection?.emailAddress ?? "");
   const [appPassword, setAppPassword] = useState("");
   const [imapHost, setImapHost] = useState(connection?.imapHost ?? DEFAULT_HOST);
@@ -104,6 +107,8 @@ export default function ConnectionCard({ connection, scanning, onScan }) {
             connection={connection}
             scanning={scanning}
             onScan={onScan}
+            scanOptions={scanOptions}
+            onScanOptionsChange={onScanOptionsChange}
             onDisconnect={handleDisconnect}
           />
         ) : (

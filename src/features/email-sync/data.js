@@ -1,5 +1,10 @@
 import "server-only";
+import { APPLICATION_STATUSES } from "@/lib/constants";
+import { EMAIL_CATEGORIES } from "@/lib/emailCategories";
 import { getConnection } from "@/server/email/connection";
+import { getPendingSuggestions } from "@/features/suggestions/data";
+
+const CATEGORY_STATUS = Object.fromEntries(EMAIL_CATEGORIES.map((c) => [c.id, c.status]));
 
 const HISTORY_LIMIT = 50;
 
@@ -13,13 +18,13 @@ export function toConnection(row) {
   };
 }
 
-// classification is stored LLM output, so only a string status is passed on
+// classification is stored LLM output, so only a known status is passed on.
+// Newer rows store a category; older ones stored a status directly.
 function toHistoryItem(row) {
   const classification = row.classification || {};
+  const candidate = CATEGORY_STATUS[classification.category] || classification.status;
   const status =
-    classification.is_job_related !== false && typeof classification.status === "string"
-      ? classification.status
-      : null;
+    row.action_taken !== "ignored" && APPLICATION_STATUSES.includes(candidate) ? candidate : null;
   return {
     id: row.id,
     subject: row.email_subject || "",
@@ -29,9 +34,9 @@ function toHistoryItem(row) {
   };
 }
 
-// The connection (without its password) and the most recently processed emails
+// The connection (without its password), recently processed emails and pending suggestions
 export async function getEmailSyncData(supabase, userId) {
-  const [connection, history] = await Promise.all([
+  const [connection, history, suggestions] = await Promise.all([
     getConnection(supabase, userId),
     supabase
       .from("processed_emails")
@@ -39,8 +44,13 @@ export async function getEmailSyncData(supabase, userId) {
       .eq("user_id", userId)
       .order("processed_at", { ascending: false })
       .limit(HISTORY_LIMIT),
+    getPendingSuggestions(supabase, userId),
   ]);
   if (history.error) throw history.error;
 
-  return { connection: toConnection(connection), history: history.data.map(toHistoryItem) };
+  return {
+    connection: toConnection(connection),
+    history: history.data.map(toHistoryItem),
+    suggestions,
+  };
 }
