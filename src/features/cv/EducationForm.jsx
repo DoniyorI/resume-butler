@@ -1,10 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
-import { format } from "date-fns";
 import { Trash2 } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
-
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,153 +11,50 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { MonthYearPicker } from "@/components/shared/MonthYearPicker";
+import { deleteEducation, saveEducation } from "@/features/cv/actions";
+import { useCvEntries } from "@/features/cv/hooks/useCvEntries";
+import { toDateString, toPickerDate } from "@/features/cv/pickerDates";
+import DateRangeFields from "@/features/cv/DateRangeFields";
 
-export default function EducationForm() {
-  const [educationEntries, setEducationEntries] = useState([]);
-  const { user, loading, supabase } = useAuth({ redirect: true });
+const toState = (entry) => ({
+  ...entry,
+  startDate: toPickerDate(entry.startDate),
+  endDate: toPickerDate(entry.endDate),
+});
 
-  useEffect(() => {
-    if (!user) return;
-    const fetchEducation = async () => {
-      const { data, error } = await supabase
-        .from("cv_education")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("sort_order", { ascending: true });
+const toInput = (entry) => ({
+  id: entry.id,
+  school: entry.school,
+  location: entry.location,
+  major: entry.major,
+  degreeType: entry.degreeType,
+  gpa: entry.gpa,
+  startDate: toDateString(entry.startDate),
+  endDate: toDateString(entry.endDate),
+});
 
-      if (error) {
-        console.error("Error fetching education:", error);
-        return;
-      }
+const newEntry = () => ({
+  school: "",
+  location: "",
+  major: "",
+  degreeType: "",
+  gpa: "",
+  startDate: "",
+  endDate: "",
+});
 
-      const educationData = (data || []).map((row) => ({
-        id: row.id,
-        school: row.school || "",
-        location: row.location || "",
-        major: row.major || "",
-        minor: row.minor || "",
-        degreeType: row.degree_type || "",
-        gpa: row.gpa || "",
-        startDate: row.start_date ? new Date(row.start_date) : "",
-        endDate: row.end_date ? new Date(row.end_date) : "",
-      }));
-      setEducationEntries(educationData);
-    };
-    fetchEducation();
-  }, [user, supabase]);
-
-  const addEducationEntry = () => {
-    setEducationEntries([
-      ...educationEntries,
-      {
-        school: "",
-        location: "",
-        major: "",
-        degreeType: "",
-        gpa: "",
-        startDate: "",
-        endDate: "",
-        isNew: true,
-      },
-    ]);
-  };
-
-  const updateEducationEntry = (index, field, value) => {
-    const updatedEntries = educationEntries.map((entry, idx) => {
-      if (idx === index) {
-        return { ...entry, [field]: value };
-      }
-      return entry;
-    });
-    setEducationEntries(updatedEntries);
-  };
-
-  const deleteEducationEntry = async (index) => {
-    const entryToDelete = educationEntries[index];
-    if (entryToDelete.isNew) {
-      setEducationEntries(educationEntries.filter((_, idx) => idx !== index));
-    } else {
-      const { error } = await supabase
-        .from("cv_education")
-        .delete()
-        .eq("id", entryToDelete.id);
-
-      if (error) {
-        console.error("Error deleting education entry:", error);
-        return;
-      }
-      setEducationEntries(educationEntries.filter((_, idx) => idx !== index));
+export default function EducationForm({ initialEntries }) {
+  const { entries, saving, addEntry, updateEntry, deleteEntry, save } = useCvEntries(
+    initialEntries,
+    {
+      toState,
+      toInput,
+      newEntry,
+      saveAction: saveEducation,
+      deleteAction: deleteEducation,
+      savedMessage: "Education entries saved successfully!",
     }
-  };
-
-  const handleSave = async () => {
-    if (user) {
-      try {
-        await Promise.all(
-          educationEntries.map((entry, index) => {
-            const { id, isNew, ...data } = entry;
-            const row = {
-              user_id: user.id,
-              school: data.school,
-              location: data.location,
-              degree_type: data.degreeType,
-              major: data.major,
-              gpa: data.gpa,
-              start_date: data.startDate
-                ? format(new Date(data.startDate), "yyyy-MM-dd")
-                : null,
-              end_date: data.endDate
-                ? format(new Date(data.endDate), "yyyy-MM-dd")
-                : null,
-              sort_order: index,
-            };
-            if (isNew) {
-              return supabase
-                .from("cv_education")
-                .insert(row)
-                .select()
-                .single();
-            } else {
-              return supabase
-                .from("cv_education")
-                .update(row)
-                .eq("id", id);
-            }
-          })
-        );
-        toast("Education entries saved successfully!");
-        // Re-fetch to get IDs for newly created entries
-        const { data } = await supabase
-          .from("cv_education")
-          .select("*")
-          .eq("user_id", user.id)
-          .order("sort_order", { ascending: true });
-
-        if (data) {
-          const educationData = data.map((row) => ({
-            id: row.id,
-            school: row.school || "",
-            location: row.location || "",
-            major: row.major || "",
-            minor: row.minor || "",
-            degreeType: row.degree_type || "",
-            gpa: row.gpa || "",
-            startDate: row.start_date ? new Date(row.start_date) : "",
-            endDate: row.end_date ? new Date(row.end_date) : "",
-          }));
-          setEducationEntries(educationData);
-        }
-      } catch (error) {
-        console.error("Error saving education entries: ", error);
-        toast("Education entires FAILED to save!");
-      }
-    }
-  };
-
-  if (!user) {
-    return <div>Loading...</div>;
-  }
+  );
 
   return (
     <>
@@ -171,36 +63,32 @@ export default function EducationForm() {
         <Button
           className="text-[#188665] font-light hover:bg-green-100"
           variant="ghost"
-          onClick={addEducationEntry}
+          onClick={addEntry}
         >
           + Add Education
         </Button>
       </div>
-      {educationEntries.map((entry, index) => (
-        <div className="flex flex-col space-y-4 pb-8 relative" key={index}>
+      {entries.map((entry, index) => (
+        <div className="flex flex-col space-y-4 pb-8 relative" key={entry.key}>
           <Trash2
             strokeWidth={1.25}
             size={18}
             className="absolute left-[-50px] top-1/2 -translate-y-1/2 cursor-pointer hover:text-red-500"
-            onClick={() => deleteEducationEntry(index)}
+            onClick={() => deleteEntry(index)}
           />
           <div className="flex space-x-6 ">
             <div className="flex-grow">
               <Label>School</Label>
               <Input
                 value={entry.school}
-                onChange={(e) =>
-                  updateEducationEntry(index, "school", e.target.value)
-                }
+                onChange={(e) => updateEntry(index, "school", e.target.value)}
               />
             </div>
             <div className="flex-grow">
               <Label>Location</Label>
               <Input
                 value={entry.location}
-                onChange={(e) =>
-                  updateEducationEntry(index, "location", e.target.value)
-                }
+                onChange={(e) => updateEntry(index, "location", e.target.value)}
               />
             </div>
           </div>
@@ -210,18 +98,14 @@ export default function EducationForm() {
               <Label>Major</Label>
               <Input
                 value={entry.major}
-                onChange={(e) =>
-                  updateEducationEntry(index, "major", e.target.value)
-                }
+                onChange={(e) => updateEntry(index, "major", e.target.value)}
               />
             </div>
             <div>
               <Label>Degree Type</Label>
               <Select
                 value={entry.degreeType}
-                onValueChange={(value) =>
-                  updateEducationEntry(index, "degreeType", value)
-                }
+                onValueChange={(value) => updateEntry(index, "degreeType", value)}
               >
                 <SelectTrigger className="max-w-[200px] md:w-[200px]">
                   <SelectValue placeholder="Select Degree Type" />
@@ -243,37 +127,19 @@ export default function EducationForm() {
                 step="0.01"
                 value={entry.gpa}
                 className="max-w-[200px] md:w-[200px]"
-                onChange={(e) =>
-                  updateEducationEntry(index, "gpa", e.target.value)
-                }
+                onChange={(e) => updateEntry(index, "gpa", e.target.value)}
               />
             </div>
           </div>
-          <div className="flex space-x-6">
-            <div>
-              <Label>Start Date</Label>
-              <MonthYearPicker
-                value={entry.startDate}
-                onChange={(date) =>
-                  updateEducationEntry(index, "startDate", date)
-                }
-              />
-            </div>
-            <div>
-              <Label>End Date</Label>
-              <MonthYearPicker
-                value={entry.endDate}
-                onChange={(date) =>
-                  updateEducationEntry(index, "endDate", date)
-                }
-                allowPresent
-              />
-            </div>
-          </div>
+          <DateRangeFields
+            startDate={entry.startDate}
+            endDate={entry.endDate}
+            onChange={(field, value) => updateEntry(index, field, value)}
+          />
         </div>
       ))}
       <div className="flex space-x-6 justify-end">
-        <Button type="button" onClick={handleSave}>
+        <Button type="button" onClick={save} disabled={saving}>
           Save
         </Button>
       </div>

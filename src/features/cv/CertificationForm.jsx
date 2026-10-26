@@ -1,135 +1,50 @@
 "use client";
-import React, { useState, useEffect } from "react";
-import { useAuth } from "@/hooks/useAuth";
-import { format } from "date-fns";
 import { Trash2, Plus } from "lucide-react";
-import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MonthYearPicker } from "@/components/shared/MonthYearPicker";
+import { deleteCertification, saveCertifications } from "@/features/cv/actions";
+import { useCvEntries } from "@/features/cv/hooks/useCvEntries";
+import { toDateString, toPickerDate } from "@/features/cv/pickerDates";
 
-export default function CertificationForm() {
-  const [certifications, setCertifications] = useState([]);
-  const { user, loading, supabase } = useAuth({ redirect: true });
+const toState = (entry) => ({ ...entry, dateEarned: toPickerDate(entry.dateEarned) });
 
-  useEffect(() => {
-    if (!user) return;
-    const fetchCertifications = async () => {
-      const { data, error } = await supabase
-        .from("cv_certifications")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("date_earned", { ascending: false });
+const toInput = (entry) => ({
+  id: entry.id,
+  name: entry.name,
+  issuer: entry.issuer,
+  dateEarned: toDateString(entry.dateEarned),
+  url: entry.url,
+});
 
-      if (error) {
-        console.error("Error fetching certifications:", error);
-        return;
-      }
+const newEntry = () => ({ name: "", issuer: "", dateEarned: "", url: "" });
 
-      setCertifications(
-        (data || []).map((row) => ({
-          id: row.id,
-          name: row.name || "",
-          issuer: row.issuer || "",
-          dateEarned: row.date_earned ? new Date(row.date_earned) : "",
-          url: row.url || "",
-        }))
-      );
-    };
-    fetchCertifications();
-  }, [user, supabase]);
-
-  const addCertification = () => {
-    setCertifications([
-      ...certifications,
-      { name: "", issuer: "", dateEarned: "", url: "", isNew: true },
-    ]);
-  };
-
-  const updateCertification = (index, field, value) => {
-    setCertifications(
-      certifications.map((cert, idx) =>
-        idx === index ? { ...cert, [field]: value } : cert
-      )
-    );
-  };
-
-  const deleteCertification = async (index) => {
-    const entry = certifications[index];
-    if (!entry.isNew) {
-      const { error } = await supabase
-        .from("cv_certifications")
-        .delete()
-        .eq("id", entry.id);
-      if (error) {
-        console.error("Error deleting certification:", error);
-        return;
-      }
-    }
-    setCertifications(certifications.filter((_, idx) => idx !== index));
-  };
-
-  const handleSave = async () => {
-    if (!user) return;
-    try {
-      await Promise.all(
-        certifications.map((cert) => {
-          const { id, isNew, ...data } = cert;
-          const row = {
-            user_id: user.id,
-            name: data.name,
-            issuer: data.issuer,
-            date_earned: data.dateEarned
-              ? format(new Date(data.dateEarned), "yyyy-MM-dd")
-              : null,
-            url: data.url || null,
-          };
-          if (isNew) {
-            return supabase.from("cv_certifications").insert(row).select().single();
-          } else {
-            return supabase.from("cv_certifications").update(row).eq("id", id);
-          }
-        })
-      );
-      toast("Certifications saved successfully!");
-
-      // Re-fetch
-      const { data } = await supabase
-        .from("cv_certifications")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("date_earned", { ascending: false });
-
-      if (data) {
-        setCertifications(
-          data.map((row) => ({
-            id: row.id,
-            name: row.name || "",
-            issuer: row.issuer || "",
-            dateEarned: row.date_earned ? new Date(row.date_earned) : "",
-            url: row.url || "",
-          }))
-        );
-      }
-    } catch (error) {
-      console.error("Error saving certifications:", error);
-      toast("Failed to save certifications.");
-    }
-  };
-
-  if (!user) return <div>Loading...</div>;
+export default function CertificationForm({ initialEntries }) {
+  const {
+    entries: certifications,
+    saving,
+    addEntry,
+    updateEntry,
+    deleteEntry,
+    save,
+  } = useCvEntries(initialEntries, {
+    toState,
+    toInput,
+    newEntry,
+    saveAction: saveCertifications,
+    deleteAction: deleteCertification,
+    savedMessage: "Certifications saved successfully!",
+  });
 
   return (
     <>
       <div className="flex space-x-6 justify-between items-center py-4">
-        <h1 className="text-2xl text-[#5CA78F] cursor-default">
-          Certifications
-        </h1>
+        <h1 className="text-2xl text-[#5CA78F] cursor-default">Certifications</h1>
         <Button
           className="text-[#188665] font-light hover:bg-green-100"
           variant="ghost"
-          onClick={addCertification}
+          onClick={addEntry}
         >
           <Plus size={16} className="mr-1" /> Add Certification
         </Button>
@@ -137,19 +52,18 @@ export default function CertificationForm() {
 
       {certifications.length === 0 && (
         <p className="text-center text-sm text-gray-400 py-8">
-          No certifications added yet. Click &quot;Add Certification&quot; to get
-          started.
+          No certifications added yet. Click &quot;Add Certification&quot; to get started.
         </p>
       )}
 
       {certifications.map((cert, index) => (
-        <div className="flex gap-4 pb-8" key={index}>
+        <div className="flex gap-4 pb-8" key={cert.key}>
           <div className="flex items-start pt-8">
             <Trash2
               strokeWidth={1.25}
               size={18}
               className="cursor-pointer hover:text-red-500 text-gray-400"
-              onClick={() => deleteCertification(index)}
+              onClick={() => deleteEntry(index)}
             />
           </div>
           <div className="flex flex-col space-y-4 flex-grow">
@@ -158,7 +72,7 @@ export default function CertificationForm() {
                 <Label>Certification Name</Label>
                 <Input
                   value={cert.name}
-                  onChange={(e) => updateCertification(index, "name", e.target.value)}
+                  onChange={(e) => updateEntry(index, "name", e.target.value)}
                   placeholder="e.g. AWS Solutions Architect"
                 />
               </div>
@@ -166,7 +80,7 @@ export default function CertificationForm() {
                 <Label>Issuing Organization</Label>
                 <Input
                   value={cert.issuer}
-                  onChange={(e) => updateCertification(index, "issuer", e.target.value)}
+                  onChange={(e) => updateEntry(index, "issuer", e.target.value)}
                   placeholder="e.g. Amazon Web Services"
                 />
               </div>
@@ -176,7 +90,7 @@ export default function CertificationForm() {
                 <Label>Date Earned</Label>
                 <MonthYearPicker
                   value={cert.dateEarned}
-                  onChange={(date) => updateCertification(index, "dateEarned", date)}
+                  onChange={(date) => updateEntry(index, "dateEarned", date)}
                 />
               </div>
               <div className="flex-grow">
@@ -184,7 +98,7 @@ export default function CertificationForm() {
                 <Input
                   type="url"
                   value={cert.url}
-                  onChange={(e) => updateCertification(index, "url", e.target.value)}
+                  onChange={(e) => updateEntry(index, "url", e.target.value)}
                   placeholder="https://..."
                 />
               </div>
@@ -195,7 +109,7 @@ export default function CertificationForm() {
 
       {certifications.length > 0 && (
         <div className="flex space-x-6 justify-end">
-          <Button type="button" onClick={handleSave}>
+          <Button type="button" onClick={save} disabled={saving}>
             Save
           </Button>
         </div>

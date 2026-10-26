@@ -1,10 +1,17 @@
 "use client";
-import React, { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Loader2, Upload } from "lucide-react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 
+const ALLOWED_TYPES = ["application/pdf", "text/plain"];
+
+// Sends a resume to /api/parse-resume, which adds the parsed entries to the
+// master CV, then refreshes the page's server data
 export default function FileUpload({ onComplete }) {
+  const router = useRouter();
+  const inputRef = useRef(null);
   const [dragging, setDragging] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [fileName, setFileName] = useState("");
@@ -12,8 +19,7 @@ export default function FileUpload({ onComplete }) {
   const handleFile = async (file) => {
     if (!file) return;
 
-    const allowedTypes = ["application/pdf", "text/plain"];
-    if (!allowedTypes.includes(file.type)) {
+    if (!ALLOWED_TYPES.includes(file.type)) {
       toast("Unsupported file type", {
         description: "Please upload a PDF or TXT file.",
       });
@@ -31,24 +37,20 @@ export default function FileUpload({ onComplete }) {
         method: "POST",
         body: formData,
       });
+      const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.error || "Failed to parse resume");
+        throw new Error(data.error || "Failed to parse resume");
       }
 
-      const data = await response.json();
       const r = data.results;
-
       toast("Resume imported successfully", {
         description: `Added ${r.education} education, ${r.experience} experience, ${r.projects} projects, ${r.skills} skills`,
       });
 
-      if (onComplete) {
-        onComplete(data.parsed);
-      }
+      router.refresh();
+      onComplete?.();
     } catch (error) {
-      console.error("Upload error:", error);
       toast("Failed to import resume", {
         description: error.message,
       });
@@ -70,13 +72,13 @@ export default function FileUpload({ onComplete }) {
   const onDrop = (e) => {
     e.preventDefault();
     setDragging(false);
-    const file = e.dataTransfer.files[0];
-    handleFile(file);
+    handleFile(e.dataTransfer.files[0]);
   };
 
   const onChange = (e) => {
-    const file = e.target.files[0];
-    if (file) handleFile(file);
+    handleFile(e.target.files[0]);
+    // Lets the same file be picked again
+    e.target.value = "";
   };
 
   return (
@@ -116,14 +118,14 @@ export default function FileUpload({ onComplete }) {
               variant="outline"
               size="sm"
               className="border-green-200 text-[#188665] hover:bg-green-50"
-              onClick={() => document.getElementById("cv-file-input").click()}
+              onClick={() => inputRef.current?.click()}
             >
               Choose File
             </Button>
           </div>
         )}
         <input
-          id="cv-file-input"
+          ref={inputRef}
           type="file"
           className="hidden"
           accept=".pdf,.txt"
