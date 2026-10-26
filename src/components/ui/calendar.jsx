@@ -44,7 +44,7 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }) {
         ...classNames,
       }}
       components={{
-        Dropdown: ({ value, onChange, children, ...props }) => {
+        Dropdown: ({ value, onChange, children }) => {
           const options = React.Children.toArray(children)
           const selected = options.find((child) => child.props.value === value)
           const handleChange = (value) => {
@@ -75,8 +75,8 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }) {
             </Select>
           )
         },
-        IconLeft: ({ ...props }) => <ChevronLeft className="h-4 w-4" />,
-        IconRight: ({ ...props }) => <ChevronRight className="h-4 w-4" />,
+        IconLeft: () => <ChevronLeft className="h-4 w-4" />,
+        IconRight: () => <ChevronRight className="h-4 w-4" />,
       }}
       {...props}
     />

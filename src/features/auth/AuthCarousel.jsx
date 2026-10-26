@@ -14,7 +14,7 @@ const EmblaCarousel = ({ slides, options }) => {
   };
 
   // Always call the hook unconditionally at the top of your component.
-  const [emblaRef, emblaApi] = useEmblaCarousel(options, [
+  const [emblaRef] = useEmblaCarousel(options, [
     Autoplay(autoplayOptions),
   ]);
 

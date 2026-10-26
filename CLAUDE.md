@@ -32,13 +32,20 @@ src/
                           cover-letters, cv, dashboard, profile, resumes, email-sync
     actions.js            Server Actions for that feature ("use server")
     data.js               Server-only reads and snake_case -> camelCase mapping
+    hooks/                Client hooks for that feature
   components/
     ui/                   shadcn/ui primitives only (kebab-case files)
     layout/               NavBar, Footer, PublicHeader
-    shared/               App-wide widgets (MonthYearPicker, ErrorState)
-  hooks/                  Client hooks (useAuth)
-  lib/                    Code safe on client and server: constants, dates, safeUrl, redirects, supabase clients
-  server/                 Server-only code (`import "server-only"`): auth, http, openai, rateLimit, crypto, latex, email/, ats/
+    shared/               App-wide widgets (ErrorState, LocalDateTime, MonthYearPicker, SidePanel)
+  lib/                    Code safe on client and server: constants, dates, safeUrl, redirects, postJson, supabase clients
+  server/                 Server-only code (`import "server-only"`), reusable by actions, routes, cron and the extension:
+    auth.js               getCurrentUser (cached per request), requirePageUser, requireUser
+    actionResult.js       runAction / parseInput for Server Actions
+    http.js               HttpError, parseJson, errorResponse for Route Handlers
+    openai.js, rateLimit.js, crypto.js, latex.js
+    ats/                  ATS scoring (scoreResume)
+    email/                IMAP client, classification, matching, connection settings, syncEmailsForUser
+    resume/               loadCv, generateResume, coverLetter, suggestBullets, parseResume, renderResume
   middleware.js           Refreshes the session and redirects signed-out visitors
 supabase/migrations/      SQL schema; apply in order
 ```
@@ -47,7 +54,8 @@ supabase/migrations/      SQL schema; apply in order
 
 - **Auth.** Use `getUser()` on the server, never `getSession()`, for any decision. Pages: `requirePageUser()` from `@/server/auth` (redirects). Route Handlers and Server Actions: `requireUser()` (throws a 401 `HttpError`). The user ID is `user.id`.
 - **Reads.** Fetch in Server Components with the server client (`@/lib/supabase/server`) and pass plain data to client components. Avoid `useEffect` fetching for initial data.
-- **Writes.** Use Server Actions in `features/<feature>/actions.js`: check the user, validate input with zod, scope queries by `user_id`, call `revalidatePath`, and return `{ ok: true, data }` or `{ ok: false, error }` with a user-safe message. Don't write to Supabase directly from the browser.
+- **Writes.** Use Server Actions in `features/<feature>/actions.js`, wrapped in `runAction` with input checked by `parseInput` (zod): check the user, scope queries by `user_id`, call `revalidatePath`, and return `{ ok: true, data }` or `{ ok: false, error }` with a user-safe message. Call `redirect()` outside `runAction` (it works by throwing). Don't write to Supabase directly from the browser; the browser client is only for sign-in/sign-out.
+- **Business logic** that more than one entry point needs (route, action, future cron or extension) goes in `src/server/<domain>/` as functions taking `(supabase, userId, input)`.
 - **Route Handlers** stay for file uploads, binary downloads, streaming, long-running jobs and anything the future Chrome extension will call. Use `parseJson(request, schema)` and `errorResponse(error, context)` from `@/server/http`, and `enforceRateLimit` for expensive routes.
 - **Client components** carry `"use client"` only where they need state, effects or browser APIs. Keep them small and push data loading up to the page.
 - **Untrusted content.** Never use `dangerouslySetInnerHTML`. Render links through `safeHttpUrl` / save through `normalizeHttpUrl` (`@/lib/safeUrl`). Treat LLM output, emails and uploaded files as untrusted: validate and cap before writing.
