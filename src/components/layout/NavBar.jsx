@@ -1,6 +1,6 @@
 "use client";
-import React, { useState } from "react";
-import { useRouter } from "next/navigation";
+import React, { useEffect, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 import Link from "next/link";
@@ -10,12 +10,32 @@ import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import AddApplicationDialog from "@/features/applications/AddApplication";
 
+const NAV_LINKS = [
+  { href: "/", label: "Applications" },
+  { href: "/dash", label: "Dashboard" },
+  { href: "/resumes", label: "Resumes" },
+  { href: "/coverletters", label: "Cover Letters" },
+  { href: "/profile", label: "Profile" },
+  { href: "/cv", label: "Master CV" },
+  { href: "/email-sync", label: "Email Sync" },
+];
+
+const NAV_LINK_CLASS =
+  "block py-2 px-3 text-gray-900 rounded hover:bg-gray-100 md:hover:bg-transparent md:hover:text-green-800 md:p-0 md:dark:hover:text-green-400 dark:text-white dark:hover:bg-gray-700 dark:hover:text-white md:dark:hover:bg-transparent dark:border-gray-700";
+
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const toggleMenu = () => setMenuOpen(!menuOpen);
   const supabase = createClient();
 
   const router = useRouter();
+  const pathname = usePathname();
+
+  // The nav stays mounted across pages, so close the mobile menu on every
+  // navigation (also covers links outside the menu, like the logo)
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname]);
 
   const handleLogout = async () => {
     try {
@@ -51,6 +71,8 @@ export default function Navbar() {
           <Button
             variant="outline"
             onClick={toggleMenu}
+            aria-expanded={menuOpen}
+            aria-controls="navbar-sticky"
             className="inline-flex items-center p-2 w-10 h-10 justify-center text-sm text-gray-500 rounded-lg md:hidden hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-200 dark:text-gray-400 dark:hover:bg-gray-700 dark:focus:ring-gray-600"
           >
             <span className="sr-only">Open main menu</span>
@@ -79,63 +101,13 @@ export default function Navbar() {
           id="navbar-sticky"
         >
           <ul className="flex flex-col p-4 md:p-0 mt-4 font-normal border border-gray-100 rounded-lg md:space-x-8 rtl:space-x-reverse md:flex-row md:mt-0 md:border-0  dark:bg-gray-800 md:dark:bg-gray-900 dark:border-gray-700">
-            <li>
-              <Link
-                href="/"
-                className="block py-2 px-3 text-gray-900 rounded hover:bg-gray-100 md:hover:bg-transparent md:hover:text-green-800 md:p-0 md:dark:hover:text-green-400 dark:text-white dark:hover:bg-gray-700 dark:hover=text-white md:dark:hover:bg-transparent dark:border-gray-700"
-              >
-                Applications
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/dash"
-                className="block py-2 px-3 text-gray-900 rounded hover:bg-gray-100 md:hover:bg-transparent md:hover:text-green-800 md:p-0 md:dark:hover:text-green-400 dark:text-white dark:hover:bg-gray-700 dark:hover=text-white md:dark:hover:bg-transparent dark:border-gray-700"
-              >
-                Dashboard
-              </Link>
-            </li>
-
-            <li>
-              <Link
-                href="/resumes"
-                className="block py-2 px-3 text-gray-900 rounded hover:bg-gray-100 md:hover:bg-transparent  md:hover:text-green-800 md:p-0 md:dark:hover:text-green-400 dark:text-white dark:hover:bg-gray-700 dark:hover=text-white md:dark:hover:bg-transparent dark:border-gray-700"
-              >
-                Resumes
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/coverletters"
-                className="block py-2 px-3 text-gray-900 rounded hover:bg-gray-100 md:hover:bg-transparent  md:hover:text-green-800 md:p-0 md:dark:hover:text-green-400 dark:text-white dark:hover:bg-gray-700 dark:hover=text-white md:dark:hover:bg-transparent dark:border-gray-700"
-              >
-                Cover Letters
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/profile"
-                className="block py-2 px-3 text-gray-900 rounded hover:bg-gray-100 md:hover:bg-transparent md:hover:text-green-800 md:p-0 md:dark:hover:text-green-400 dark:text-white dark:hover:bg-gray-700 dark:hover=text-white md:dark:hover:bg-transparent dark:border-gray-700"
-              >
-                Profile
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/cv"
-                className="block py-2 px-3 text-gray-900 rounded hover:bg-gray-100 md:hover:bg-transparent  md:hover:text-green-800 md:p-0 md:dark:hover:text-green-400 dark:text-white dark:hover:bg-gray-700 dark:hover=text-white md:dark:hover:bg-transparent dark:border-gray-700"
-              >
-                Master CV
-              </Link>
-            </li>
-            <li>
-              <Link
-                href="/email-sync"
-                className="block py-2 px-3 text-gray-900 rounded hover:bg-gray-100 md:hover:bg-transparent  md:hover:text-green-800 md:p-0 md:dark:hover:text-green-400 dark:text-white dark:hover:bg-gray-700 dark:hover=text-white md:dark:hover:bg-transparent dark:border-gray-700"
-              >
-                Email Sync
-              </Link>
-            </li>
+            {NAV_LINKS.map(({ href, label }) => (
+              <li key={href}>
+                <Link href={href} className={NAV_LINK_CLASS} onClick={() => setMenuOpen(false)}>
+                  {label}
+                </Link>
+              </li>
+            ))}
           </ul>
         </div>
       </div>
