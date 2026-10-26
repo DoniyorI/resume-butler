@@ -37,7 +37,7 @@ async function updateCoverLetter(supabase, userId, id, values) {
     .maybeSingle();
   if (error) throw error;
   if (!data) throw new HttpError(404, "Cover letter not found");
-  revalidatePath("/coverletters");
+  revalidatePath("/documents");
   revalidatePath(`/coverletters/${id}`);
   return data;
 }
@@ -57,7 +57,7 @@ export async function createCoverLetter(input) {
   });
 
   if (!result.ok) return result;
-  revalidatePath("/coverletters");
+  revalidatePath("/documents");
   redirect(`/coverletters/${result.data.id}`);
 }
 
@@ -77,7 +77,7 @@ export async function deleteCoverLetter(coverLetterId) {
     const { error } = await supabase.from("cover_letters").delete().eq("id", id).eq("user_id", user.id);
     if (error) throw error;
 
-    revalidatePath("/coverletters");
+    revalidatePath("/documents");
     return { id };
   });
 }

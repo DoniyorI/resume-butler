@@ -38,10 +38,13 @@ const nextConfig = {
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },
-  // The master CV moved into the profile page
+  // Pages that were merged: the master CV into the profile page, and the
+  // resume and cover letter lists into Documents (their editors stay put)
   async redirects() {
     return [
       { source: "/cv", destination: "/profile", permanent: true },
+      { source: "/resumes", destination: "/documents", permanent: true },
+      { source: "/coverletters", destination: "/documents", permanent: true },
       { source: "/profile/new", destination: "/profile", permanent: false },
     ];
   },

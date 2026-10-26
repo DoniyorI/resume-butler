@@ -3,22 +3,6 @@ import { cache } from "react";
 import { requirePageUser } from "@/server/auth";
 import { HEADER_FIELDS, normalizeResumeContent } from "@/features/resumes/resumeDocument";
 
-export async function listResumes(supabase, userId) {
-  const { data, error } = await supabase
-    .from("resumes")
-    .select("id, title, created_at, updated_at")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false });
-
-  if (error) throw error;
-  return (data || []).map((row) => ({
-    id: row.id,
-    title: row.title || "",
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  }));
-}
-
 // Empty header fields fall back to the profile. needsHeaderSave tells the
 // editor to persist the filled-in header, as the old client code did.
 function resolveHeader(header, profile) {

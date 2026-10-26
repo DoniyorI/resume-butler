@@ -29,8 +29,9 @@ src/
     api/*/route.js        Route Handlers (uploads, downloads, AI, email scan, future extension API)
     auth/callback/        Exchanges OAuth / email-link codes for a session
   features/<feature>/     UI and logic per feature: applications, ats, auth, contact,
-                          cover-letters, cv (data + actions only), dashboard, profile (profile and
-                          master CV page), resumes, email-sync, suggestions
+                          cover-letters and resumes (editors), cv (data + actions only), dashboard,
+                          documents (resume + cover letter library), email-sync, profile (profile and
+                          master CV page), suggestions
     actions.js            Server Actions for that feature ("use server")
     data.js               Server-only reads and snake_case -> camelCase mapping
     hooks/                Client hooks for that feature

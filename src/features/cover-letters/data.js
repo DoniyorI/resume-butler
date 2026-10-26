@@ -2,22 +2,6 @@ import "server-only";
 import { cache } from "react";
 import { requirePageUser } from "@/server/auth";
 
-export async function listCoverLetters(supabase, userId) {
-  const { data, error } = await supabase
-    .from("cover_letters")
-    .select("id, title, created_at, updated_at")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false });
-
-  if (error) throw error;
-  return (data || []).map((row) => ({
-    id: row.id,
-    title: row.title || "",
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-  }));
-}
-
 // cover_letters.content is { body: Draft.js raw content, header, date }.
 // Very old rows stored it as a JSON string.
 function parseContent(content) {

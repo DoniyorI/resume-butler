@@ -41,7 +41,7 @@ export async function createResume(input) {
   });
 
   if (!result.ok) return result;
-  revalidatePath("/resumes");
+  revalidatePath("/documents");
   redirect(`/resumes/${result.data.id}`);
 }
 
@@ -61,7 +61,7 @@ export async function renameResume(resumeId, title) {
     if (error) throw error;
     if (!data) throw new HttpError(404, "Resume not found");
 
-    revalidatePath("/resumes");
+    revalidatePath("/documents");
     revalidatePath(`/resumes/${id}`);
     return data;
   });
@@ -75,7 +75,7 @@ export async function deleteResume(resumeId) {
     const { error } = await supabase.from("resumes").delete().eq("id", id).eq("user_id", user.id);
     if (error) throw error;
 
-    revalidatePath("/resumes");
+    revalidatePath("/documents");
     return { id };
   });
 }

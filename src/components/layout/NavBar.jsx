@@ -13,8 +13,7 @@ import AddApplicationDialog from "@/features/applications/AddApplication";
 const NAV_LINKS = [
   { href: "/", label: "Applications" },
   { href: "/dash", label: "Dashboard" },
-  { href: "/resumes", label: "Resumes" },
-  { href: "/coverletters", label: "Cover Letters" },
+  { href: "/documents", label: "Documents" },
   { href: "/profile", label: "Profile & CV" },
   { href: "/email-sync", label: "Email Sync" },
 ];
