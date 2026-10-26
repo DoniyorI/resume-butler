@@ -308,14 +308,30 @@ function FlowLink({
   );
 }
 
+const applicationsCount = (n) => `${n} ${n === 1 ? "application" : "applications"}`;
+
+// Recharts gives the hovered link or node as payload[0].payload.payload
 function FlowTooltip({ active, payload }) {
-  const item = payload?.[0]?.payload;
-  if (!active || !item) return null;
-  const text = item.source ? `${item.source.name} → ${item.target.name}` : item.name;
+  const data = payload?.[0]?.payload?.payload;
+  if (!active || !data) return null;
+  const value = Number(data.value) || 0;
+  const isLink = Boolean(data.source && data.target);
+
   return (
-    <div className="rounded-lg border border-border/50 bg-background px-2.5 py-1.5 text-xs shadow-xl">
-      <span className="text-muted-foreground">{text}</span>{" "}
-      <span className="font-mono font-medium tabular-nums">{item.value}</span>
+    <div className="max-w-56 rounded-lg border border-border/50 bg-background px-2.5 py-1.5 text-xs shadow-xl">
+      {isLink ? (
+        <>
+          <p className="font-medium">
+            {data.source.name} → {data.target.name}
+          </p>
+          <p className="text-muted-foreground">{applicationsCount(value)} moved between these statuses</p>
+        </>
+      ) : (
+        <>
+          <p className="font-medium">{data.name}</p>
+          <p className="text-muted-foreground">{applicationsCount(value)} passed through this status</p>
+        </>
+      )}
     </div>
   );
 }

@@ -5,7 +5,7 @@ import ApplicationTable from "@/features/applications/ApplicationTable";
 import ApplicationTableSkeleton from "@/features/applications/ApplicationTableSkeleton";
 import { APPLICATIONS_PAGE_SIZE, getApplicationsPage } from "@/features/applications/data";
 import SuggestionsBanner from "@/features/suggestions/SuggestionsBanner";
-import { countPendingSuggestions } from "@/features/suggestions/data";
+import { getPendingSummary } from "@/features/suggestions/data";
 
 export const metadata = { title: "Applications" };
 
@@ -19,7 +19,7 @@ async function ApplicationsList({ pageIndex }) {
   const { supabase, user } = await requirePageUser();
   const [{ applications, total }, pendingSuggestions] = await Promise.all([
     getApplicationsPage(supabase, user.id, pageIndex),
-    countPendingSuggestions(supabase, user.id),
+    getPendingSummary(supabase, user.id),
   ]);
 
   // Past the last page (e.g. after deleting every row on it): go to the last real page
@@ -30,7 +30,7 @@ async function ApplicationsList({ pageIndex }) {
 
   return (
     <>
-      <SuggestionsBanner count={pendingSuggestions} />
+      <SuggestionsBanner count={pendingSuggestions.count} latestAt={pendingSuggestions.latestAt} />
       <ApplicationTable
         applications={applications}
         total={total}
