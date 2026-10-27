@@ -93,8 +93,19 @@
     globalThis.RB_showResult(result, job, key);
   }
 
+  // After a submit click, what the page shows, for the console (once per change)
+  let lastDiagnosis = "";
+  function diagnose() {
+    if (!clickedJobId) return;
+    const dialogs = site.successRoot ? [...document.querySelectorAll(site.successRoot)] : [];
+    const text = dialogs.map((el) => (el.innerText || "").replace(/\s+/g, " ").slice(0, 120)).join(" / ");
+    const diagnosis = `${window.location.pathname} | ${dialogs.length} dialog(s): ${text || "-"}`;
+    if (diagnosis !== lastDiagnosis) log("after submit:", (lastDiagnosis = diagnosis));
+  }
+
   function check() {
     if (!connected()) return stop();
+    diagnose();
     if (window.location.href !== lastUrl) {
       lastUrl = window.location.href;
       // Moved to another job: a click on the last one no longer counts
@@ -135,6 +146,7 @@
   // catch it as the page navigates there
   function onNavigate(event) {
     const url = new URL(event.destination.url);
+    if (clickedJobId) log("navigating to", url.pathname);
     if (url.origin === window.location.origin && site.successUrl?.test(url.pathname)) {
       log("confirmation page", url.pathname);
       onSubmitted(site.jobId(url), url);
