@@ -14,7 +14,7 @@ After changing files here, click the reload button on the extension's card in `c
 
 | File | What it does |
 |---|---|
-| `manifest.json` | Permissions: `storage`, `alarms`, `tabs`, `scripting` (to add the scripts to tabs already open on install or update), and only the app and the supported job sites |
+| `manifest.json` | Permissions: `storage`, `alarms`, `tabs`, `scripting` (to add the scripts to tabs already open on install or update), `webRequest` (to see LinkedIn's Easy Apply submit request succeed: its URL and status only), and only the app and the supported job sites |
 | `background.js` | Holds the connection, sends applications to the app (`/api/extension/*`), retries when offline, undo |
 | `content/app-bridge.js` | On the app: marks the page as having the extension and receives the token (no copy and paste) |
 | `content/sites.js` | Per-site rules: how to read the job and recognise a submitted application |
@@ -33,5 +33,5 @@ The plan, including what comes next (more sites, autofill, the Web Store), is in
 
 - Detecting the submission is only tested against the sites' confirmation wording and URLs, not a real submitted application yet. Apply to one real job on each site to confirm.
 - **Disconnect** in the popup forgets the token in this browser; to revoke it everywhere, use **Disconnect** on the app's Browser extension page.
-- LinkedIn's new Easy Apply (server-driven, no stable class names) is matched by the "Submit application" button text and the `/jobs/view/<id>/post-apply/` page it moves to afterwards. The company comes from the dialog's "Apply to <company>" heading or that URL; the role from the posting page's title, so it can be blank when you apply from search results.
+- LinkedIn's new Easy Apply (server-driven, no stable class names) is confirmed by its submit request succeeding (the background worker watches that one URL, observe-only), with the "Submit application" click and the brief `/jobs/view/<id>/post-apply/` page as backups. The company comes from the dialog's "Apply to <company>" heading or that URL; the role from the posting page's title, so it can be blank when you apply from search results.
 - Workday and other sites aren't supported yet. On those, use **I applied to this** in the popup.

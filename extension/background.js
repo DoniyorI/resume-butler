@@ -165,6 +165,37 @@ async function recentlyClicked(key) {
   return Boolean(clicks[key]) && Date.now() - clicks[key] <= SUBMIT_CLICK_WINDOW_MS;
 }
 
+// --- LinkedIn Easy Apply's submit request ---
+// The new Easy Apply shows no confirmation page or stable markup, but its submit
+// is one request. When it succeeds, tell that tab's detector, and let the
+// submission it reports count as confirmed. Only the URL and status are seen.
+
+const SITE_SUBMIT_REQUESTS = [
+  "https://www.linkedin.com/flagship-web/rsc-action/actions/server-request?sduiid=com.linkedin.sdui.requests.jobseeker.easyapply.submit*",
+];
+const SITE_SUBMIT_WINDOW_MS = 2 * 60 * 1000;
+
+async function noteSiteSubmit(details) {
+  if (details.tabId < 0 || details.statusCode !== 200 || details.method !== "POST") return;
+  const { siteSubmits = {} } = await chrome.storage.session.get("siteSubmits");
+  siteSubmits[details.tabId] = Date.now();
+  await chrome.storage.session.set({ siteSubmits });
+  chrome.tabs.sendMessage(details.tabId, { type: "site-submitted" }, { frameId: 0 }).catch(() => {});
+}
+
+async function recentSiteSubmit(tabId) {
+  if (tabId === undefined) return false;
+  const { siteSubmits = {} } = await chrome.storage.session.get("siteSubmits");
+  return Boolean(siteSubmits[tabId]) && Date.now() - siteSubmits[tabId] <= SITE_SUBMIT_WINDOW_MS;
+}
+
+chrome.webRequest.onCompleted.addListener(
+  (details) => {
+    noteSiteSubmit(details);
+  },
+  { urls: SITE_SUBMIT_REQUESTS }
+);
+
 /**
  * A submission the content script saw. Added automatically when the user
  * clicked submit for that job recently; otherwise (a confirmation link opened
@@ -175,7 +206,8 @@ async function reportSubmitted(key, job, sender, { confirmed = false } = {}) {
   const reported = await getLocal("reported", {});
   const now = Date.now();
   if (reported[key] && now - reported[key] < REPORT_COOLDOWN_MS) return { status: "duplicate" };
-  if (!(await recentlyClicked(key))) {
+  const sawSubmit = !sender.frameId && (await recentSiteSubmit(sender.tab?.id));
+  if (!sawSubmit && !(await recentlyClicked(key))) {
     if (sender.frameId) return { status: "ignored" };
     if (!confirmed) return { status: "unconfirmed" };
   }

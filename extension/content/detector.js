@@ -156,7 +156,14 @@
 
   // The popup asks what job this tab shows (for "I applied to this")
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message?.type !== "read-job" || window !== window.top) return false;
+    if (sender.id !== chrome.runtime.id || window !== window.top || !connected()) return false;
+    // The background worker saw the site's own submit request succeed (LinkedIn Easy Apply)
+    if (message?.type === "site-submitted") {
+      log("submit request succeeded");
+      onSubmitted(clickedJobId || currentJobId());
+      return false;
+    }
+    if (message?.type !== "read-job") return false;
     sendResponse(globalThis.RB_readJob(site));
     return false;
   });
