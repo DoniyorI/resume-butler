@@ -25,7 +25,36 @@ const contentSchema = z.object({
     portfolio: headerField,
   }),
   date: z.string().datetime().nullable(),
+  // The letter editor's fields; optional so the classic editor's saves keep them
+  recipient: z.object({ name: z.string().max(200), company: z.string().max(200) }).optional(),
+  greeting: z.string().max(200).optional(),
+  signOff: z.string().max(200).optional(),
+  target: z
+    .object({
+      jobDescription: z.string().max(50_000),
+      applicationId: z.string().uuid().nullable(),
+      company: z.string().max(200),
+      role: z.string().max(200),
+    })
+    .optional(),
 });
+
+// Writes `content` over the stored content, keeping keys it doesn't include
+async function mergeContent(supabase, userId, id, content) {
+  if (JSON.stringify(content).length > MAX_CONTENT_CHARS) {
+    throw new HttpError(413, "Cover letter is too large to save");
+  }
+  const { data: existing, error } = await supabase
+    .from("cover_letters")
+    .select("content")
+    .eq("id", id)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error) throw error;
+  if (!existing) throw new HttpError(404, "Cover letter not found");
+  const stored = existing.content && typeof existing.content === "object" ? existing.content : {};
+  return { ...stored, ...content };
+}
 
 async function updateCoverLetter(supabase, userId, id, values) {
   const { data, error } = await supabase
@@ -82,15 +111,31 @@ export async function deleteCoverLetter(coverLetterId) {
   });
 }
 
-// Save button: title plus { body, header, date }
+// The classic editor's Save button: title plus { body, header, date }
 export async function saveCoverLetter(coverLetterId, { title, content }) {
   return runAction("Error saving cover letter", async () => {
     const { supabase, user } = await requireUser();
     const id = parseInput(idSchema, coverLetterId);
-    const values = { title: parseInput(titleSchema, title), content: parseInput(contentSchema, content) };
-    if (JSON.stringify(values.content).length > MAX_CONTENT_CHARS) {
-      throw new HttpError(413, "Cover letter is too large to save");
-    }
-    return updateCoverLetter(supabase, user.id, id, values);
+    const newTitle = parseInput(titleSchema, title);
+    const merged = await mergeContent(supabase, user.id, id, parseInput(contentSchema, content));
+    return updateCoverLetter(supabase, user.id, id, { title: newTitle, content: merged });
+  });
+}
+
+// Autosave for the letter editor. Like the resume autosave it skips
+// revalidatePath, which would re-render the page after every pause in typing.
+export async function saveCoverLetterContent(coverLetterId, content) {
+  return runAction("Error saving cover letter", async () => {
+    const { supabase, user } = await requireUser();
+    const id = parseInput(idSchema, coverLetterId);
+    const merged = await mergeContent(supabase, user.id, id, parseInput(contentSchema, content));
+
+    const { error } = await supabase
+      .from("cover_letters")
+      .update({ content: merged })
+      .eq("id", id)
+      .eq("user_id", user.id);
+    if (error) throw error;
+    return null;
   });
 }

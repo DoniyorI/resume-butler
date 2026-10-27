@@ -58,10 +58,12 @@ export { loadMasterCv as getMasterCv } from "@/server/resume/loadCv";
 
 const JOB_OPTIONS_LIMIT = 100;
 
-// Jobs the editor can tailor this resume to: the user's applications that have
-// a job description (newest first), and the application this resume is
-// attached to, with its description, so the editor can start from it.
-export async function getJobOptions(supabase, userId, resumeId) {
+// Jobs a resume or cover letter can be tailored to: the user's applications
+// that have a job description (newest first), and the application the
+// document is attached to (applications.resume_id / cover_letter_id), with its
+// description, so the editor can start from it. Pass { resumeId } or { coverLetterId }.
+export async function getJobOptions(supabase, userId, { resumeId, coverLetterId }) {
+  const [linkColumn, documentId] = resumeId ? ["resume_id", resumeId] : ["cover_letter_id", coverLetterId];
   const [optionsRes, linkedRes] = await Promise.all([
     supabase
       .from("applications")
@@ -75,7 +77,7 @@ export async function getJobOptions(supabase, userId, resumeId) {
       .from("applications")
       .select("id, company, role, job_description")
       .eq("user_id", userId)
-      .eq("resume_id", resumeId)
+      .eq(linkColumn, documentId)
       .order("applied_date", { ascending: false, nullsFirst: false })
       .limit(1)
       .maybeSingle(),

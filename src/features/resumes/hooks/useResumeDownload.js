@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 
-function saveBlob(blob, filename) {
+export function saveBlob(blob, filename) {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
@@ -12,9 +12,17 @@ function saveBlob(blob, filename) {
   URL.revokeObjectURL(url);
 }
 
-// Download the resume as PDF or .tex. `flush` (from useResumeDocument) saves
-// pending edits first, since the route renders the stored resume.
-export function useResumeDownload({ resumeId, title, flush }) {
+// Download the document as PDF or .tex. `flush` (from the editor's document
+// hook) saves pending edits first, since the route renders the stored copy.
+// Cover letters pass their own `endpoint` and request `body`.
+export function useResumeDownload({
+  resumeId,
+  title,
+  flush,
+  endpoint = "/api/download-resume",
+  body = { resumeId },
+  noun = "Resume",
+}) {
   const [downloading, setDownloading] = useState(false);
 
   const download = async (format) => {
@@ -22,25 +30,25 @@ export function useResumeDownload({ resumeId, title, flush }) {
     try {
       // If saving failed the save toast already explains why; don't download stale content
       if (!(await flush())) return;
-      const response = await fetch("/api/download-resume", {
+      const response = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ resumeId, format }),
+        body: JSON.stringify({ ...body, format }),
       });
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
-        throw new Error(data.error || "Failed to download resume");
+        throw new Error(data.error || `Failed to download ${noun.toLowerCase()}`);
       }
 
       // PDF compilation falls back to the .tex source when it fails
       const isTex = response.headers.get("Content-Type")?.includes("x-tex") || format === "tex";
       const extension = isTex ? "tex" : "pdf";
-      saveBlob(await response.blob(), `${title || "resume"}.${extension}`);
+      saveBlob(await response.blob(), `${title || noun.toLowerCase()}.${extension}`);
 
       if (isTex && format === "pdf") {
         toast("PDF compilation unavailable — downloaded .tex file instead. Open it in Overleaf to compile.");
       } else {
-        toast(`Resume downloaded as .${extension}`);
+        toast(`${noun} downloaded as .${extension}`);
       }
     } catch (error) {
       toast.error(error.message);

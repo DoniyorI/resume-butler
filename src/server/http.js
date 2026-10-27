@@ -45,3 +45,15 @@ export async function parseJson(request, schema, { maxBytes = 100_000 } = {}) {
   }
   return result.data;
 }
+
+// Content-Disposition for a download named after a document title, which
+// can't break out of the header (only word characters, spaces, dots, dashes)
+export function attachmentHeader(title, extension, fallback = "resume") {
+  const base =
+    (title || fallback)
+      .replace(/[^\w .-]/g, "")
+      .trim()
+      .slice(0, 100) || fallback;
+  const filename = `${base}.${extension}`;
+  return `attachment; filename="${filename}"; filename*=UTF-8''${encodeURIComponent(filename)}`;
+}

@@ -31,8 +31,9 @@ src/
     api/cron/*            Scheduled jobs (vercel.json crons), authorized by CRON_SECRET
     auth/callback/        Exchanges OAuth / email-link codes for a session
   features/<feature>/     UI and logic per feature: applications, ats, auth, contact,
-                          cover-letters and resumes (editors; resumes/studio is the new resume
-                          editor at /resumes/[id]/new), cv (data + actions only), dashboard,
+                          cover-letters and resumes (editors: resumes/studio is the resume editor;
+                          cover-letters/studio is the new letter editor at /coverletters/[id]/new,
+                          beside the classic one), cv (data + actions only), dashboard,
                           documents (resume + cover letter library), email-sync, profile (profile and
                           master CV page), suggestions
     actions.js            Server Actions for that feature ("use server")
@@ -74,14 +75,14 @@ supabase/migrations/      SQL schema; apply in order
 - **Database** fields are snake_case; frontend state is camelCase, mapped in `data.js` / at the query boundary.
 - **Feedback.** Use `toast` from `sonner`, not `alert()`.
 - **AI edits to user text** go through `checkRewrite` (`@/server/resume/guardrails`): a suggestion may never add or swap a technology, or drop a fact, the user wrote.
-- **Resume page fidelity.** The editor's page (`.rb-paper` in globals.css) is calibrated to the LaTeX PDF in `src/server/latex.js`. If you change the LaTeX spacing, margins or fonts, re-measure and update the CSS, or the one-page estimate drifts.
+- **Page fidelity.** The editors' pages (`.rb-paper` and `.rb-letter` in globals.css) are calibrated to the LaTeX in `src/server/latex.js` (`generateLatex`, `generateCoverLetterLatex`). If you change the LaTeX spacing, margins or fonts, re-measure against a compiled PDF and update the CSS, or the one-page estimate drifts.
 
 ## API Routes (`src/app/api/`)
 
 | Route | Purpose |
 |---|---|
 | `POST /api/generate-resume` | Align the master CV to a job description and store a resume |
-| `POST /api/generate-cover-letter` | Draft a cover letter from the CV and job description |
+| `POST /api/generate-cover-letter` | Draft cover letter paragraphs from the CV and job description (tone, length; flags technologies the CV doesn't have) |
 | `POST /api/tailor-resume` | Pick the master CV entries that fit a job (previewed, then applied in the editor) |
 | `POST /api/suggest-bullets` | Suggest edits to resume bullets (`focus`: "match" a job, or "concise" to fit one page) |
 | `POST /api/rewrite-bullet` | Three AI rewrites of one bullet (stronger, tailored, shorter) |
@@ -89,6 +90,9 @@ supabase/migrations/      SQL schema; apply in order
 | `POST /api/ats-score` | Heuristic ATS keyword/section score (no AI) |
 | `POST /api/parse-resume` | Parse an uploaded PDF/.txt resume into the master CV |
 | `POST /api/download-resume` | Render a resume to LaTeX and compile to PDF (latex.ytotech.com) |
+| `POST /api/download-cover-letter` | Same for a cover letter |
+| `POST /api/cover-letter-pages` | Compile the saved cover letter and return the PDF's page count |
+| `POST /api/rewrite-paragraph` | Three AI rewrites of one cover letter paragraph |
 | `GET/POST/DELETE /api/email-settings` | Manage the IMAP connection (password encrypted) |
 | `POST /api/scan-emails` | Scan recent email and queue application suggestions for review |
 | `GET /api/cron/email-sync` | Daily auto-sync for users who turned it on (Vercel Cron, `Authorization: Bearer $CRON_SECRET`) |

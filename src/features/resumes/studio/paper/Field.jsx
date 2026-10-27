@@ -1,5 +1,5 @@
 import { forwardRef } from "react";
-import { EditableText } from "@/features/resumes/editor/EditableText";
+import { EditableText } from "@/features/resumes/studio/paper/EditableText";
 import { cn } from "@/lib/utils";
 
 // Paste as plain text so no markup ends up in the page
