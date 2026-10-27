@@ -15,13 +15,13 @@ export async function generateMetadata({ params }) {
 // The resume editor: outline and page fit, the editable page, and the tailoring assistant
 export default async function ResumeEditorPage({ params }) {
   const { supabase, user } = await requirePageUser();
-  const resume = await getResumeForEditor(params.resumeId);
-  if (!resume) notFound();
-
-  const [masterCv, jobOptions] = await Promise.all([
+  // All at once: none needs another's result (the ID is in the URL)
+  const [resume, masterCv, jobOptions] = await Promise.all([
+    getResumeForEditor(params.resumeId),
     getMasterCv(supabase, user.id),
-    getJobOptions(supabase, user.id, { resumeId: resume.id }),
+    getJobOptions(supabase, user.id, { resumeId: params.resumeId }),
   ]);
+  if (!resume) notFound();
 
   return (
     <div className={paperFont.variable}>

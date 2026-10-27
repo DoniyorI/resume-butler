@@ -16,9 +16,12 @@ export async function generateMetadata({ params }) {
 // The cover letter editor: the editable letter page and the tailoring assistant
 export default async function CoverLetterEditorPage({ params }) {
   const { supabase, user } = await requirePageUser();
-  const coverLetter = await getCoverLetterForEditor(params.coverLetterId);
+  // Both at once: the ID is in the URL
+  const [coverLetter, jobOptions] = await Promise.all([
+    getCoverLetterForEditor(params.coverLetterId),
+    getJobOptions(supabase, user.id, { coverLetterId: params.coverLetterId }),
+  ]);
   if (!coverLetter) notFound();
-  const jobOptions = await getJobOptions(supabase, user.id, { coverLetterId: coverLetter.id });
 
   return (
     <div className={paperFont.variable}>

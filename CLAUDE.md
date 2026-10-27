@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Resume Butler is a job application tracker and resume builder: Next.js 14 (App Router, JavaScript) on Supabase (Postgres, Auth). AI features (resume alignment, cover letters, bullet suggestions, resume parsing, email classification) call OpenAI `gpt-4o-mini` from server code. Email sync reads the user's inbox over IMAP; a Gmail OAuth connection and a Chrome extension are planned.
+Resume Butler is a job application tracker and resume builder: Next.js 14 (App Router, JavaScript) on Supabase (Postgres, Auth). AI features (resume alignment, cover letters, bullet suggestions, resume parsing, email classification) call OpenAI `gpt-4o-mini` from server code. Email sync reads the user's inbox over IMAP (a Gmail OAuth connection is planned), and the Chrome extension in `extension/` adds applications as the user submits them.
 
 ## Commands
 
@@ -42,7 +42,8 @@ src/
     ui/                   shadcn/ui primitives only (kebab-case files)
     layout/               NavBar, Footer, PublicHeader
     shared/               App-wide widgets (ErrorState, LocalDateTime)
-  lib/                    Code safe on client and server: constants, dates, safeUrl, redirects, postJson, supabase clients
+  lib/                    Code safe on client and server: constants, dates, safeUrl, redirects, postJson,
+                          supabase server and middleware clients (there is no browser client)
   server/                 Server-only code (`import "server-only"`), reusable by actions, routes, cron and the extension:
     auth.js               getCurrentUser (cached per request), requirePageUser, requireUser
     actionResult.js       runAction / parseInput for Server Actions
@@ -63,9 +64,9 @@ supabase/migrations/      SQL schema; apply in order
 
 - **Extension API.** Routes under `api/extension/` authenticate with `authenticateExtension(request)` (`@/server/extension/tokens`), a bearer token, not a session. It returns the service-role client, so scope every query by the returned `userId`. The plan is in `docs/chrome-extension-plan.md`.
 - **Service role.** Only scheduled jobs and the extension API use `createAdminClient()` (`@/server/supabaseAdmin`). It bypasses RLS, so every query made with it must filter by `user_id`.
-- **Auth.** Use `getUser()` on the server, never `getSession()`, for any decision. Pages: `requirePageUser()` from `@/server/auth` (redirects). Route Handlers and Server Actions: `requireUser()` (throws a 401 `HttpError`). The user ID is `user.id`.
+- **Auth.** Use `getUser()` on the server, never `getSession()`, for any decision. The middleware (pages only, not `/api`) refreshes the session and routes with `getClaims()`; layouts, pages and routes still check `getUser()` themselves. Pages: `requirePageUser()` from `@/server/auth` (redirects). Route Handlers and Server Actions: `requireUser()` (throws a 401 `HttpError`). The user ID is `user.id`.
 - **Reads.** Fetch in Server Components with the server client (`@/lib/supabase/server`) and pass plain data to client components. Avoid `useEffect` fetching for initial data.
-- **Writes.** Use Server Actions in `features/<feature>/actions.js`, wrapped in `runAction` with input checked by `parseInput` (zod): check the user, scope queries by `user_id`, call `revalidatePath`, and return `{ ok: true, data }` or `{ ok: false, error }` with a user-safe message. Call `redirect()` outside `runAction` (it works by throwing). Don't write to Supabase directly from the browser; the browser client is only for sign-in/sign-out.
+- **Writes.** Use Server Actions in `features/<feature>/actions.js`, wrapped in `runAction` with input checked by `parseInput` (zod): check the user, scope queries by `user_id`, call `revalidatePath`, and return `{ ok: true, data }` or `{ ok: false, error }` with a user-safe message. Call `redirect()` outside `runAction` (it works by throwing). Don't call Supabase from the browser: there is no browser client, and sign-in, sign-up, password reset and sign-out are Server Actions too (`features/auth/actions.js`).
 - **Business logic** that more than one entry point needs (route, action, future cron or extension) goes in `src/server/<domain>/` as functions taking `(supabase, userId, input)`.
 - **Route Handlers** stay for file uploads, binary downloads, streaming, long-running jobs and anything the future Chrome extension will call. Use `parseJson(request, schema)` and `errorResponse(error, context)` from `@/server/http`, and `enforceRateLimit` for expensive routes.
 - **Client components** carry `"use client"` only where they need state, effects or browser APIs. Keep them small and push data loading up to the page.

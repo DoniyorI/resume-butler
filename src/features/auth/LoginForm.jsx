@@ -13,32 +13,28 @@ import { Label } from "@/components/ui/label";
 import dynamic from "next/dynamic";
 const EmblaCarousel = dynamic(() => import("@/features/auth/AuthCarousel"), { ssr: false });
 
-import { createClient } from "@/lib/supabase/client";
-import { safeNextPath } from "@/lib/redirects";
+import { signIn } from "@/features/auth/actions";
 
 import GoogleAuthButton from "@/features/auth/GoogleAuthButton";
 
 export default function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [pending, setPending] = useState(false);
   const router = useRouter();
-  const supabase = createClient();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      if (error) throw error;
-      // Middleware sends signed-out visitors here with ?next=<page they wanted>
-      const next = safeNextPath(new URLSearchParams(window.location.search).get("next"));
-      router.replace(next);
-      router.refresh();
-    } catch (error) {
-      toast.error(error.message);
+    setPending(true);
+    // Middleware sends signed-out visitors here with ?next=<page they wanted>
+    const next = new URLSearchParams(window.location.search).get("next");
+    const result = await signIn({ email, password, next });
+    if (!result.ok) {
+      setPending(false);
+      return toast.error(result.error);
     }
+    router.replace(result.data.next);
+    router.refresh();
   };
   return (
     <div className="w-full flex min-h-screen">
@@ -80,7 +76,7 @@ export default function LoginForm() {
                 required
               />
             </div>
-            <Button type="submit" className="w-full">
+            <Button type="submit" className="w-full" disabled={pending}>
               Login
             </Button>
           </form>

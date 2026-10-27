@@ -1,28 +1,18 @@
 "use client";
-import { createClient } from "@/lib/supabase/client";
+import { toast } from "sonner";
+import { startGoogleSignIn } from "@/features/auth/actions";
 import { safeNextPath } from "@/lib/redirects";
 import { Button } from "@/components/ui/button";
 import Image from "next/image";
 
 const GoogleAuthButton = ({ redirectPath = "/" }) => {
-  const supabase = createClient();
-
   const handleGoogleSignIn = async () => {
-    try {
-      // Return to the page the visitor was sent here from (?next=, e.g. the
-      // extension's connect page), or to `redirectPath`
-      const next = safeNextPath(new URLSearchParams(window.location.search).get("next"), redirectPath);
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          // The callback route exchanges the OAuth code for a session cookie
-          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
-        },
-      });
-      if (error) throw error;
-    } catch (error) {
-      console.error("Google sign in error", error.message);
-    }
+    // Return to the page the visitor was sent here from (?next=, e.g. the
+    // extension's connect page), or to `redirectPath`
+    const next = safeNextPath(new URLSearchParams(window.location.search).get("next"), redirectPath);
+    const result = await startGoogleSignIn({ next });
+    if (!result.ok) return toast.error(result.error);
+    window.location.assign(result.data.url);
   };
 
   return (

@@ -3,17 +3,14 @@ import { updateSession } from "@/lib/supabase/middleware";
 import { HOME_PATH, isAuthPath, isPublicPath } from "@/lib/redirects";
 
 export async function middleware(request) {
-  const { response, user } = await updateSession(request);
+  const { response, signedIn } = await updateSession(request);
   const { pathname, search } = request.nextUrl;
 
-  // API routes do their own auth and return 401 instead of redirecting
-  if (pathname.startsWith("/api/")) return response;
-
-  if (!user && !isPublicPath(pathname) && !isAuthPath(pathname)) {
+  if (!signedIn && !isPublicPath(pathname) && !isAuthPath(pathname)) {
     return redirectWithCookies(request, response, "/login", { next: pathname + search });
   }
 
-  if (user && isAuthPath(pathname)) {
+  if (signedIn && isAuthPath(pathname)) {
     return redirectWithCookies(request, response, HOME_PATH);
   }
 
@@ -32,7 +29,9 @@ function redirectWithCookies(request, response, pathname, params = {}) {
 
 export const config = {
   matcher: [
-    // Everything except Next.js internals and static files
-    "/((?!_next/static|_next/image|favicon.ico|image/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|json)$).*)",
+    // Everything except Next.js internals, static files and /api. Routes check
+    // the user themselves (and refresh the session cookies when needed), so
+    // running here too would only add a second auth round trip per request.
+    "/((?!api/|_next/static|_next/image|favicon.ico|image/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|json)$).*)",
   ],
 };

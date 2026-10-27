@@ -7,7 +7,7 @@ import { z } from "zod";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { createClient } from "@/lib/supabase/client";
+import { sendPasswordReset } from "@/features/auth/actions";
 
 // Define the form schema
 const formSchema = z.object({
@@ -21,20 +21,11 @@ export default function ForgotPasswordForm() {
     resolver: zodResolver(formSchema),
   });
 
-  const supabase = createClient();
-
   const onSubmit = async (data) => {
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(data.email);
-      if (error) throw error;
-      form.setError("formMessage", {
-        message: "A reset link has been sent to your email.",
-      });
-    } catch (err) {
-      form.setError("formMessage", {
-        message: "Error sending reset link: " + err.message,
-      });
-    }
+    const result = await sendPasswordReset({ email: data.email });
+    form.setError("formMessage", {
+      message: result.ok ? "A reset link has been sent to your email." : result.error,
+    });
   };
 
   return (

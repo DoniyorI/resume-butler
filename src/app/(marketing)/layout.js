@@ -1,15 +1,12 @@
-import Navbar from "@/components/layout/NavBar";
 import Footer from "@/components/layout/Footer";
-import PublicHeader from "@/components/layout/PublicHeader";
-import { getCurrentUser } from "@/server/auth";
+import MarketingHeader from "@/components/layout/MarketingHeader";
 
-// Public pages: signed-in users see the app navigation, visitors a simple header
-export default async function MarketingLayout({ children }) {
-  const { user } = await getCurrentUser();
-
+// Public pages, rendered once at build time: the header picks the app
+// navigation or the visitor header in the browser
+export default function MarketingLayout({ children }) {
   return (
     <div className="flex flex-col min-h-screen">
-      {user ? <Navbar /> : <PublicHeader />}
+      <MarketingHeader />
       <main className="bg-white flex-1">{children}</main>
       <Footer />
     </div>

@@ -12,30 +12,15 @@ import { Label } from "@/components/ui/label";
 import dynamic from "next/dynamic";
 const EmblaCarousel = dynamic(() => import("@/features/auth/AuthCarousel"), { ssr: false });
 
-import { createClient } from "@/lib/supabase/client";
+import { signUp } from "@/features/auth/actions";
 import GoogleAuthButton from "@/features/auth/GoogleAuthButton";
-
-// Supabase auth errors are written for end users (e.g. "Password should be at
-// least 6 characters"), so show them instead of a generic message
-function signUpErrorMessage(error) {
-  if (error?.status === 429) {
-    return "Too many sign-up attempts right now. Please wait a few minutes and try again.";
-  }
-  if (error?.message?.includes("already registered")) {
-    return "This email is already in use by another account.";
-  }
-  if (error?.name === "AuthRetryableFetchError") {
-    return "Couldn't reach the server. Check your connection and try again.";
-  }
-  return error?.message || "Failed to create account. Please try again later.";
-}
 
 export default function RegisterForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [pending, setPending] = useState(false);
   const router = useRouter();
-  const supabase = createClient();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -43,25 +28,14 @@ export default function RegisterForm() {
       toast.error("Passwords do not match");
       return;
     }
-    try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { emailRedirectTo: `${window.location.origin}/auth/callback?next=/profile` },
-      });
-      if (error) throw error;
-      // With email confirmation on, there is no session until the link is clicked
-      if (!data.session) {
-        toast.success("Check your email to confirm your account.");
-        return;
-      }
-      // Profile is auto-created by the database trigger
-      router.replace("/profile");
-      router.refresh();
-    } catch (error) {
-      console.error("Error creating new user: ", error);
-      toast.error(signUpErrorMessage(error));
-    }
+    setPending(true);
+    const result = await signUp({ email, password });
+    setPending(false);
+    if (!result.ok) return toast.error(result.error);
+    // With email confirmation on, there is no session until the link is clicked
+    if (result.data.confirmEmail) return toast.success("Check your email to confirm your account.");
+    router.replace("/profile");
+    router.refresh();
   };
 
   return (
@@ -109,7 +83,7 @@ export default function RegisterForm() {
                 onChange={(e) => setConfirmPassword(e.target.value)}
               />
             </div>
-            <Button type="submit" className="w-full">
+            <Button type="submit" className="w-full" disabled={pending}>
               Sign up
             </Button>
           </form>

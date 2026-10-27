@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { usePathname } from "next/navigation";
+import { signOut } from "@/features/auth/actions";
 
 import Link from "next/link";
 import Image from "next/image";
@@ -24,9 +24,6 @@ const NAV_LINK_CLASS =
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const toggleMenu = () => setMenuOpen(!menuOpen);
-  const supabase = createClient();
-
-  const router = useRouter();
   const pathname = usePathname();
 
   // The nav stays mounted across pages, so close the mobile menu on every
@@ -34,16 +31,6 @@ export default function Navbar() {
   useEffect(() => {
     setMenuOpen(false);
   }, [pathname]);
-
-  const handleLogout = async () => {
-    try {
-      await supabase.auth.signOut();
-      router.replace("/login");
-      router.refresh();
-    } catch (error) {
-      console.error("Logout error", error);
-    }
-  };
 
   return (
     <nav className="bg-white dark:bg-gray-900 fixed w-full z-20 top-0 start-0 border-b border-gray-200 dark:border-gray-600">
@@ -63,13 +50,17 @@ export default function Navbar() {
         <div className="flex lg:order-2 space-x-3 lg:space-x-0 rtl:space-x-reverse">
           <div className="flex space-x-2">
             <AddApplicationDialog />
-            <Button
-              onClick={handleLogout}
-              variant="outline"
-              className="bg-red-100 hover:bg-red-300 focus:ring-4 focus:outline-none focus:ring-blue-300  rounded-lg text-sm px-4 py-2 text-center"
-            >
-              <LogOut size={14} strokeWidth={2.25} className="text-black" />
-            </Button>
+            {/* Signs out on the server, which clears the session cookies and goes to /login */}
+            <form action={signOut}>
+              <Button
+                type="submit"
+                variant="outline"
+                aria-label="Sign out"
+                className="bg-red-100 hover:bg-red-300 focus:ring-4 focus:outline-none focus:ring-blue-300  rounded-lg text-sm px-4 py-2 text-center"
+              >
+                <LogOut size={14} strokeWidth={2.25} className="text-black" />
+              </Button>
+            </form>
           </div>
 
           <Button
