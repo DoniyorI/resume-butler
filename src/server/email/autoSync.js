@@ -2,9 +2,10 @@ import "server-only";
 import { syncEmailsForUser } from "@/server/email/sync";
 import { HttpError } from "@/server/http";
 
-// Leave room inside the function's time limit (see the cron route's maxDuration);
-// whoever isn't reached today is first in line tomorrow
-const TIME_BUDGET_MS = 240_000;
+// The cron route has 60 seconds and one inbox can take most of that, so a new
+// inbox is only started early in the run. Whoever isn't reached today is
+// first in line tomorrow (oldest sync first).
+const START_NEXT_BEFORE_MS = 20_000;
 const MAX_USERS_PER_RUN = 50;
 // First run, or a long gap: look back this far at most
 const MAX_LOOKBACK_DAYS = 7;
@@ -41,7 +42,7 @@ export async function runAutoSync(admin) {
 
   const summary = { users: connections.length, synced: 0, failed: 0, skipped: 0, suggestions: 0 };
   for (const connection of connections) {
-    if (Date.now() - startedAt > TIME_BUDGET_MS) {
+    if (Date.now() - startedAt > START_NEXT_BEFORE_MS) {
       summary.skipped++;
       continue;
     }

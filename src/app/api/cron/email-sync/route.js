@@ -4,8 +4,8 @@ import { runAutoSync } from "@/server/email/autoSync";
 import { errorResponse, jsonError } from "@/server/http";
 import { createAdminClient } from "@/server/supabaseAdmin";
 
-// Several inboxes, each IMAP plus model calls
-export const maxDuration = 300;
+// The Hobby plan's limit (more fails the deploy); runAutoSync stays inside it
+export const maxDuration = 60;
 export const dynamic = "force-dynamic";
 
 // Vercel Cron calls this daily (vercel.json) with "Authorization: Bearer $CRON_SECRET"

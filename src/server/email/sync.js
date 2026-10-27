@@ -7,8 +7,9 @@ import { findTargetApplication, normalizeCompany, shouldUpdateStatus } from "@/s
 import { resolveScanOptions } from "@/server/email/scanOptions";
 import { HttpError } from "@/server/http";
 
-// Each candidate email is one model call; run a few at a time
-const CLASSIFY_CONCURRENCY = 5;
+// Each candidate email is one model call; run several at a time so a full
+// scan fits in the route's 60 seconds
+const CLASSIFY_CONCURRENCY = 10;
 const MAX_CLASSIFIED_PER_SCAN = 100;
 
 async function loadProcessedIds(supabase, userId) {
