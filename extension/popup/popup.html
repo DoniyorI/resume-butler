@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Resume Butler</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header>
+      <img src="../icons/icon-32.png" alt="" width="24" height="24" />
+      <h1>Resume Butler</h1>
+    </header>
+
+    <section id="disconnected" hidden>
+      <p class="lead">Connect to add the jobs you apply to on Greenhouse, Lever and Ashby to your tracker.</p>
+      <button id="connect" class="primary" type="button">Connect to Resume Butler</button>
+      <button id="connect-local" class="link" type="button" hidden>Connect to localhost:3000 instead</button>
+    </section>
+
+    <section id="connected" hidden>
+      <p class="account">Connected as <strong id="account"></strong></p>
+
+      <div id="job" class="card" hidden>
+        <p class="label">On this page</p>
+        <p id="job-role" class="job-role"></p>
+        <p id="job-company" class="muted"></p>
+        <button id="record" class="primary" type="button">I applied to this</button>
+        <p id="record-result" class="muted" role="status"></p>
+      </div>
+      <p id="no-job" class="muted" hidden>
+        Open a job on Greenhouse, Lever or Ashby. When you submit an application there, it's added to your
+        tracker.
+      </p>
+
+      <p id="queued" class="muted" hidden></p>
+
+      <div id="recent-wrap" hidden>
+        <p class="label">Recently added</p>
+        <ul id="recent"></ul>
+      </div>
+
+      <footer>
+        <a id="open-app" href="#" target="_blank" rel="noopener">Open Resume Butler</a>
+        <button id="disconnect" class="link" type="button">Disconnect</button>
+      </footer>
+    </section>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

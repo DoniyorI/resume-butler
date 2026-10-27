@@ -95,8 +95,8 @@ Inspected on 2026-10-27: only manifests, file names, config shape and which brow
 
 1. ~~Inspect Simplify's and Jobright's manifests.~~ Done (see above).
 2. ~~App: `extension_tokens` (migration 008), the connect page at `/extension`, and the API (`GET /api/extension/me`, `POST /api/extension/applications`, `DELETE /api/extension/applications/[id]` for undo).~~ Done and tested on 2026-10-27.
-3. Extension skeleton: manifest, background worker, popup with "Save this job", loaded unpacked in Chrome.
-4. Greenhouse, Lever and Ashby adapters: read the job and detect submission. Test on real postings, without submitting real applications (use the confirmation page markup, or postings you actually apply to).
+3. ~~Extension skeleton: manifest, background worker, popup, auto-connect.~~ Built in `extension/` (see its README).
+4. ~~Greenhouse, Lever and Ashby: read the job and detect submission.~~ Built; the readers are checked on live postings. Still to confirm with one real application per site. Test on real postings, without submitting real applications (use the confirmation page markup, or postings you actually apply to).
 5. Generic fallback prompt.
 6. Workday and LinkedIn adapters. These are the hardest: multi-step, dynamic pages.
 7. Autofill from the Master CV. This is the biggest piece and optional; tracking works without it.

@@ -1,0 +1,56 @@
+{
+  "manifest_version": 3,
+  "name": "Resume Butler",
+  "short_name": "Resume Butler",
+  "description": "Adds the jobs you apply to on Greenhouse, Lever and Ashby to your Resume Butler tracker.",
+  "version": "0.1.0",
+  "minimum_chrome_version": "116",
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "action": {
+    "default_title": "Resume Butler",
+    "default_popup": "popup/popup.html",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "permissions": ["storage", "alarms", "tabs"],
+  "host_permissions": [
+    "https://resume-butler.vercel.app/*",
+    "http://localhost:3000/*",
+    "https://boards.greenhouse.io/*",
+    "https://job-boards.greenhouse.io/*",
+    "https://jobs.lever.co/*",
+    "https://jobs.ashbyhq.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["https://resume-butler.vercel.app/*", "http://localhost:3000/*"],
+      "js": ["content/app-bridge.js"],
+      "run_at": "document_start"
+    },
+    {
+      "matches": [
+        "https://boards.greenhouse.io/*",
+        "https://job-boards.greenhouse.io/*",
+        "https://jobs.lever.co/*",
+        "https://jobs.ashbyhq.com/*"
+      ],
+      "js": ["content/sites.js", "content/job-reader.js", "content/toast.js", "content/detector.js"],
+      "run_at": "document_idle",
+      "all_frames": true
+    }
+  ],
+  "externally_connectable": {
+    "matches": ["https://resume-butler.vercel.app/*", "http://localhost:3000/*"]
+  }
+}
