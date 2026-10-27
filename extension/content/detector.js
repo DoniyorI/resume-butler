@@ -3,6 +3,8 @@
 // details to the background worker, which adds it to Resume Butler.
 //
 // A submission counts when:
+// and, to be added without asking, the submit button was clicked for that job
+// in this browser session (otherwise the notice asks "Did you just apply?"):
 //   - the site moves to its confirmation URL (Greenhouse /confirmation, Lever /thanks), or
 //   - after a click on the submit button, a "thanks for applying" message
 //     appears that wasn't on the page before the click (Ashby, and the others
@@ -55,7 +57,7 @@
     const job = merge(await send({ type: "job-lookup", key }), globalThis.RB_readJob(site));
     if (!job?.company) return;
     const result = await send({ type: "submitted", key, job });
-    globalThis.RB_showResult(result, job);
+    globalThis.RB_showResult(result, job, key);
   }
 
   function check() {
@@ -80,6 +82,9 @@
       successTextBeforeClick = successTextShowing();
       submitClicked = true;
       capture();
+      // Lets the background worker trust the confirmation that follows (often on a new page)
+      const jobId = site.jobId(new URL(window.location.href));
+      if (jobId) send({ type: "submit-clicked", key: keyFor(jobId) });
     },
     true
   );

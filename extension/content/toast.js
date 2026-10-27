@@ -75,9 +75,11 @@ function showToast({ title, detail, warn = false, actions = [] }) {
       if (action.primary) button.className = "primary";
       button.addEventListener("click", async () => {
         button.disabled = true;
+        const clicked = toastHost;
         const next = await action.onClick();
         if (next) showToast(next);
-        else removeToast();
+        // Close this notice, unless the action already replaced it with another
+        else if (toastHost === clicked) removeToast();
       });
       actionsEl.append(button);
     }
@@ -103,9 +105,27 @@ const sendToBackground = (message) =>
   );
 
 // The notice for what the background worker did with a submitted application
-globalThis.RB_showResult = function showResult(result, job) {
+globalThis.RB_showResult = function showResult(result, job, key) {
   const what = [job.role, job.company].filter(Boolean).join(" at ");
   switch (result?.status) {
+    // A confirmation without a submit click we saw: ask before adding anything
+    case "needs-confirmation":
+      showToast({
+        title: "Did you just apply?",
+        detail: what,
+        actions: [
+          {
+            label: "Add to Resume Butler",
+            primary: true,
+            onClick: async () => {
+              const reply = await sendToBackground({ type: "confirm-submitted", key, job });
+              globalThis.RB_showResult(reply, job, key);
+              return null;
+            },
+          },
+        ],
+      });
+      break;
     case "added":
       showToast({
         title: "Added to Resume Butler",

@@ -12,7 +12,11 @@
 //                         so the confirmation page can be matched to its job)
 
 const PRODUCTION_ORIGIN = "https://resume-butler.vercel.app";
-const APP_ORIGINS = [PRODUCTION_ORIGIN, "http://localhost:3000"];
+// The local app is trusted only by unpacked (development) installs, so a
+// server on someone's localhost can't pose as the app in a published build
+const LOCAL_ORIGIN = "http://localhost:3000";
+// A submission counts only if the user clicked submit for that job recently
+const SUBMIT_CLICK_WINDOW_MS = 2 * 60 * 60 * 1000;
 const RECENT_LIMIT = 10;
 // A confirmation page can be reloaded or revisited; report each job once a day
 const REPORT_COOLDOWN_MS = 24 * 60 * 60 * 1000;
@@ -56,9 +60,19 @@ async function api(path, { method = "GET", body } = {}) {
   return data;
 }
 
+async function isDevelopmentInstall() {
+  const self = await chrome.management.getSelf();
+  return self.installType === "development";
+}
+
+async function trustedOrigin(origin) {
+  if (origin === PRODUCTION_ORIGIN) return true;
+  return origin === LOCAL_ORIGIN && (await isDevelopmentInstall());
+}
+
 // The token from the app's /extension page: keep it only if the app accepts it
 async function connect(token, origin) {
-  if (!APP_ORIGINS.includes(origin) || typeof token !== "string" || !token.startsWith("rbx_")) {
+  if (!(await trustedOrigin(origin)) || typeof token !== "string" || !token.startsWith("rbx_")) {
     return { ok: false };
   }
   const response = await fetch(origin + "/api/extension/me", {
@@ -138,11 +152,29 @@ async function retryQueue() {
   }
 }
 
-// A submission the content script saw. Skips jobs already reported recently.
-async function reportSubmitted(key, job) {
+// The user clicked submit on a job's form (content/detector.js)
+async function noteSubmitClick(key) {
+  const { clicks = {} } = await chrome.storage.session.get("clicks");
+  clicks[key] = Date.now();
+  await chrome.storage.session.set({ clicks });
+  return { ok: true };
+}
+
+/**
+ * A submission the content script saw. Added automatically only if the user
+ * clicked submit for this job in this browser session, so a page that merely
+ * shows (or frames) a confirmation can't add jobs. Otherwise the detector asks
+ * the user first ("needs-confirmation"). `confirmed`: the user said yes.
+ * Skips jobs already reported recently.
+ */
+async function reportSubmitted(key, job, { confirmed = false } = {}) {
   const reported = await getLocal("reported", {});
   const now = Date.now();
   if (reported[key] && now - reported[key] < REPORT_COOLDOWN_MS) return { status: "duplicate" };
+  if (!confirmed) {
+    const { clicks = {} } = await chrome.storage.session.get("clicks");
+    if (!clicks[key] || now - clicks[key] > SUBMIT_CLICK_WINDOW_MS) return { status: "needs-confirmation" };
+  }
 
   const fresh = Object.fromEntries(
     Object.entries(reported).filter(([, at]) => now - at < REPORT_COOLDOWN_MS)
@@ -152,6 +184,9 @@ async function reportSubmitted(key, job) {
 }
 
 async function undo(id) {
+  // Only applications this extension added (and still remembers) can be undone
+  const recentIds = (await getLocal("recent", [])).map((item) => item.id);
+  if (!recentIds.includes(id)) return { ok: false, error: "Only recent additions can be undone here" };
   try {
     await api(`/api/extension/applications/${encodeURIComponent(id)}`, { method: "DELETE" });
     const recent = await getLocal("recent", []);
@@ -177,34 +212,52 @@ async function lookupJob(key) {
 
 // --- Messages ---
 
-const handlers = {
-  // From content/app-bridge.js on the app's own pages
+// Messages from content scripts on the app and the job sites
+const contentHandlers = {
+  // content/app-bridge.js on the app's own pages
   connect: (message, sender) => connect(message.token, new URL(sender.url).origin),
-  // From content/detector.js
+  // content/detector.js
   "job-seen": (message) => rememberJob(message.key, message.job).then(() => ({ ok: true })),
   "job-lookup": (message) => lookupJob(message.key),
+  "submit-clicked": (message) => noteSubmitClick(message.key),
   submitted: (message) => reportSubmitted(message.key, message.job),
-  // From the popup and the in-page notice
-  record: (message) => record(message.job),
+  // content/toast.js, after the user clicks it
+  "confirm-submitted": (message) => reportSubmitted(message.key, message.job, { confirmed: true }),
   undo: (message) => undo(message.id),
-  status: async () => ({
-    connection: await getLocal("connection", null),
-    recent: await getLocal("recent", []),
-    queued: (await getLocal("queue", [])).length,
-  }),
+  "open-connect": () => openConnect(PRODUCTION_ORIGIN),
+};
+
+// Messages only the extension's own popup may send
+const popupHandlers = {
+  ...contentHandlers,
+  record: (message) => record(message.job),
+  // Never includes the token
+  status: async () => {
+    const connection = await getLocal("connection", null);
+    return {
+      connection: connection && { origin: connection.origin, name: connection.name, email: connection.email },
+      recent: await getLocal("recent", []),
+      queued: (await getLocal("queue", [])).length,
+    };
+  },
   disconnect: async () => {
     await chrome.storage.local.remove(["connection", "recent"]);
     return { ok: true };
   },
-  "open-connect": async (message) => {
-    const origin = APP_ORIGINS.includes(message.origin) ? message.origin : PRODUCTION_ORIGIN;
-    await chrome.tabs.create({ url: `${origin}/extension?connect=1` });
-    return { ok: true };
-  },
+  "open-connect": (message) => openConnect(message.origin),
 };
 
+async function openConnect(origin) {
+  const target = (await trustedOrigin(origin)) ? origin : PRODUCTION_ORIGIN;
+  await chrome.tabs.create({ url: `${target}/extension?connect=1` });
+  return { ok: true };
+}
+
+const fromPopup = (sender) => !sender.tab && sender.url?.startsWith(chrome.runtime.getURL(""));
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  const handler = handlers[message?.type];
+  if (sender.id !== chrome.runtime.id) return false;
+  const handler = (fromPopup(sender) ? popupHandlers : contentHandlers)[message?.type];
   if (!handler) return false;
   Promise.resolve(handler(message, sender))
     .then(sendResponse)

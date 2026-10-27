@@ -23,7 +23,9 @@ After changing files here, click the reload button on the extension's card in `c
 | `content/toast.js` | The "Added to Resume Butler, Undo" notice on the job site |
 | `popup/` | Status, "I applied to this" for the current tab, recent additions with Undo |
 
-A submission counts when the site moves to its confirmation page (Greenhouse `/confirmation`, Lever `/thanks`), or when a "thanks for applying" message appears after you click submit that wasn't on the page before (Ashby, and the others as a fallback).
+A submission counts when the site moves to its confirmation page (Greenhouse `/confirmation`, Lever `/thanks`), or when a "thanks for applying" message appears after you click submit that wasn't on the page before (Ashby, and the others as a fallback). It's added automatically only if you clicked submit for that job in this browser session; otherwise the notice asks "Did you just apply?" first, so a page that shows or frames a confirmation can't add jobs.
+
+Security: popup-only actions (status, manual add, disconnect) answer only the extension's own popup, the token never leaves the background worker, undo accepts only this browser's recent additions, and `http://localhost:3000` is trusted only by unpacked (development) installs.
 
 The plan, including what comes next (more sites, autofill, the Web Store), is in `docs/chrome-extension-plan.md`.
 
