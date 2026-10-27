@@ -139,17 +139,17 @@
   margin: 0;
   background: none;
   appearance: none;
-  border: none; 
+  border: none;
 }
 
 .input-sizer::after {
-  content: attr(data-value) ' ';
+  content: attr(data-value) " ";
   visibility: hidden;
   white-space: pre-wrap;
 }
 
 .input-sizer input:focus {
-  outline: none; 
+  outline: none;
 }
 
 .input,
@@ -172,7 +172,7 @@
 
 .contentEditablePlaceholder::before {
   content: attr(data-placeholder);
-  color: #aaa;  
+  color: #aaa;
   display: block;
 }
 
@@ -189,4 +189,113 @@
   content: "+";
   font-weight: bold;
   color: green;
+}
+
+/* Resume studio (features/resumes/studio). The page copies the LaTeX PDF
+   (src/server/latex.js): letter paper, 0.5in top/bottom, 0.3in left and 0.51in
+   right margins, and the vertical spacing measured from a compiled PDF, in pt.
+   --rb-scale narrows the screen typeface to Computer Modern's widths so lines
+   wrap where they do in the PDF. Together they make the one-page estimate
+   close to the download. */
+.rb-paper {
+  --rb-scale: 0.935;
+  width: 8.5in;
+  min-height: 11in;
+  padding: 0.5in 0.51in 0.5in 0.3in;
+  background: #fff;
+  color: #000;
+  font-family: var(--font-paper), Georgia, serif;
+  font-size: calc(11pt * var(--rb-scale));
+  line-height: 14pt;
+}
+
+.rb-paper .rb-small {
+  font-size: calc(10pt * var(--rb-scale));
+}
+
+.rb-paper .rb-name {
+  font-size: calc(24.88pt * var(--rb-scale));
+  line-height: 1;
+  font-variant: small-caps;
+}
+
+.rb-paper .rb-contacts {
+  margin-bottom: 5pt;
+  line-height: 12pt;
+}
+
+/* Sections and entries keep their margins inside (no collapsing), so the gaps
+   add up like LaTeX's */
+.rb-paper .rb-section,
+.rb-paper .rb-item {
+  display: flow-root;
+}
+
+.rb-paper .rb-heading {
+  margin: 2pt 0 8pt;
+  border-bottom: 0.5pt solid #000;
+  font-size: calc(12pt * var(--rb-scale));
+  font-weight: 700;
+  line-height: 13pt;
+  font-variant: small-caps;
+}
+
+.rb-paper .rb-row {
+  line-height: 14pt;
+}
+
+.rb-paper .rb-bullets {
+  margin: 1pt 0 6pt;
+  padding-left: 0.34in;
+  line-height: 12pt;
+}
+
+.rb-paper .rb-bullets > li + li {
+  margin-top: 1pt;
+}
+
+.rb-paper .rb-education + .rb-education {
+  margin-top: 2.5pt;
+}
+
+.rb-paper .rb-heading + .rb-item > .rb-skills {
+  margin-top: 2pt;
+}
+
+.rb-paper .rb-skills {
+  padding-left: 0.15in;
+  line-height: 12pt;
+}
+
+/* Inline fields read as plain text until hovered or focused */
+.rb-field {
+  border-radius: 2px;
+  outline: none;
+  cursor: text;
+  transition: background-color 120ms ease;
+}
+
+.rb-field:hover {
+  background-color: rgb(85 159 135 / 0.08);
+}
+
+.rb-field:focus {
+  background-color: rgb(85 159 135 / 0.08);
+  box-shadow: 0 0 0 1.5px rgb(85 159 135 / 0.6);
+}
+
+.rb-field:empty {
+  display: inline-block;
+  min-width: 1.5em;
+}
+
+.rb-field:empty::before {
+  content: attr(data-placeholder);
+  color: #a1a1aa;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rb-field {
+    transition: none;
+  }
 }

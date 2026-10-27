@@ -8,28 +8,18 @@ const badgeVariants = cva(
   {
     variants: {
       variant: {
-        default:
-          "border-transparent bg-primary text-primary-foreground hover:bg-primary/80",
-        secondary:
-          "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        destructive:
-          "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80",
+        default: "border-transparent bg-primary text-primary-foreground hover:bg-primary/80",
+        secondary: "border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80",
+        destructive: "border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80",
         outline: "text-foreground",
-      
-        applied:
-          "border-transparent bg-[#B5DCF2] hover:bg-[#B5DCF2]/80 font-light",
-        interviewed:
-          "border-transparent bg-[#F3F5A3] hover:bg-[#F3F5A3]/80 font-light",
-        pending:
-          "border-transparent bg-[#FFFACD] hover:bg-[#FFFACD]/80 font-light",
-        offered:
-          "border-transparent bg-[#D8F1AE] hover:bg-[#D8F1AE]/80 font-light",
-        rejected:
-          "border-transparent bg-[#F2B5B5] hover:bg-[#F2B5B5]/80 font-light",
-        withdrew:
-          "border-transparent bg-[#D0B5F2] hover:bg-[#D0B5F2]/80 font-light",
-        "reached out":
-          "border-transparent bg-[#B5F2E0] hover:bg-[#B5F2E0]/80 font-light",
+
+        applied: "border-transparent bg-[#B5DCF2] hover:bg-[#B5DCF2]/80 font-light",
+        interviewed: "border-transparent bg-[#F3F5A3] hover:bg-[#F3F5A3]/80 font-light",
+        pending: "border-transparent bg-[#FFFACD] hover:bg-[#FFFACD]/80 font-light",
+        offered: "border-transparent bg-[#D8F1AE] hover:bg-[#D8F1AE]/80 font-light",
+        rejected: "border-transparent bg-[#F2B5B5] hover:bg-[#F2B5B5]/80 font-light",
+        withdrew: "border-transparent bg-[#D0B5F2] hover:bg-[#D0B5F2]/80 font-light",
+        "reached out": "border-transparent bg-[#B5F2E0] hover:bg-[#B5F2E0]/80 font-light",
       },
     },
     defaultVariants: {
@@ -39,9 +29,7 @@ const badgeVariants = cva(
 );
 
 function Badge({ className, variant, ...props }) {
-  return (
-    <div className={cn(badgeVariants({ variant }), className)} {...props} />
-  );
+  return <div className={cn(badgeVariants({ variant }), className)} {...props} />;
 }
 
 export { Badge, badgeVariants };

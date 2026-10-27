@@ -1,110 +1,40 @@
-import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
-import { ALLOWED_IMAP_HOSTS, IMAP_PORT, isAllowedImapHost, normalizeImapHost } from "@/lib/imapHosts";
+import { requireUser } from "@/server/auth";
+import {
+  connectionInputSchema,
+  deleteConnection,
+  getConnection,
+  saveConnection,
+} from "@/server/email/connection";
+import { errorResponse, parseJson } from "@/server/http";
 
-// GET - Retrieve the user's email connection (masks password)
+// GET - the user's email connection (never includes the password)
 export async function GET() {
   try {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { data, error } = await supabase
-      .from("email_connections")
-      .select("id, imap_host, imap_port, email_address, is_active, last_scan_at, created_at")
-      .eq("user_id", user.id)
-      .maybeSingle();
-
-    if (error) throw error;
-
-    return NextResponse.json({ connection: data });
+    const { supabase, user } = await requireUser();
+    return NextResponse.json({ connection: await getConnection(supabase, user.id) });
   } catch (error) {
-    console.error("Error fetching email settings:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return errorResponse(error, "Error fetching email settings");
   }
 }
 
-// POST - Create or update email connection
+// POST - create or update the connection; the password is encrypted with a server-only key
 export async function POST(request) {
   try {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const body = await request.json();
-    const { email_address, app_password, imap_host, imap_port } = body;
-
-    if (!email_address || !app_password) {
-      return NextResponse.json(
-        { error: "email_address and app_password are required" },
-        { status: 400 }
-      );
-    }
-
-    const host = normalizeImapHost(imap_host || "imap.gmail.com");
-    if (!isAllowedImapHost(host)) {
-      return NextResponse.json(
-        { error: `Unsupported IMAP server. Supported: ${ALLOWED_IMAP_HOSTS.join(", ")}` },
-        { status: 400 }
-      );
-    }
-
-    if (imap_port && Number(imap_port) !== IMAP_PORT) {
-      return NextResponse.json(
-        { error: `Only port ${IMAP_PORT} (IMAP over TLS) is supported` },
-        { status: 400 }
-      );
-    }
-
-    // Upsert: create or update
-    const { data, error } = await supabase
-      .from("email_connections")
-      .upsert(
-        {
-          user_id: user.id,
-          email_address,
-          app_password,
-          imap_host: host,
-          imap_port: IMAP_PORT,
-          is_active: true,
-        },
-        { onConflict: "user_id" }
-      )
-      .select("id, imap_host, imap_port, email_address, is_active, created_at")
-      .single();
-
-    if (error) throw error;
-
-    return NextResponse.json({ connection: data });
+    const { supabase, user } = await requireUser();
+    const input = await parseJson(request, connectionInputSchema);
+    return NextResponse.json({ connection: await saveConnection(supabase, user.id, input) });
   } catch (error) {
-    console.error("Error saving email settings:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return errorResponse(error, "Error saving email settings");
   }
 }
 
-// DELETE - Remove email connection
 export async function DELETE() {
   try {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { error } = await supabase
-      .from("email_connections")
-      .delete()
-      .eq("user_id", user.id);
-
-    if (error) throw error;
-
+    const { supabase, user } = await requireUser();
+    await deleteConnection(supabase, user.id);
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("Error deleting email settings:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return errorResponse(error, "Error deleting email settings");
   }
 }

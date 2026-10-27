@@ -6,24 +6,34 @@ A job application platform where users build a comprehensive CV once, then gener
 
 ---
 
-## Current State
+## Current State (October 2026)
 
-- Next.js 14 frontend + Django backend (GPT calls only) + Firebase (Auth, Firestore, Storage)
-- Application tracker table (working)
-- Basic resume builder with drag-and-drop sections
-- Cover letter editor (Draft.js)
-- Profile/CV page with education, experience, projects, skills forms
-- AI resume generation via Django → GPT-3.5 (generates full content, not selective)
+Phases 0–7 below are largely complete: the Django + Firebase stack was replaced by Next.js + Supabase, and the CV page, application detail page, resume builder, LaTeX export, ATS scanner, AI suggestions, dashboard and IMAP email sync all exist.
 
-### Problems with Current Architecture
+The **foundations refactor** (branch `refactor/foundations`) then:
 
-- **Firebase Firestore** is a poor fit for relational CV data (experiences linked to skills, tagged by industry, scored against job requirements)
-- **Django backend** only exists for one GPT call — overkill for what it does
-- **Data is scattered** — profile info, CV entries, and resume content are stored in separate places with duplication
-- **No job description storage** — postings get taken down, users lose context
-- **AI currently rewrites content** — should select and suggest instead
+- Hardened security: auth on every API route, input caps, per-user rate limits, generic errors, XSS and LaTeX-injection fixes, encrypted email passwords, security headers, Next.js 14.2.x
+- Moved auth to the server (middleware + route group layouts) and data loading to Server Components, with writes in Server Actions
+- Organized code into `src/features/<feature>`, `src/server` (server-only services) and route groups; removed the dead Django backend and unused packages
+
+See CLAUDE.md for the structure and conventions.
+
+### Next: Gmail connection
+
+- [ ] "Connect Gmail" with Google OAuth (replaces IMAP app passwords); store refresh tokens encrypted in a table with no client access
+- [ ] Incremental sync with the Gmail `historyId`; run it in the background (Gmail push via Pub/Sub, or a cron job) instead of only on "Scan Emails"
+- [ ] Review queue: detected new applications and status changes wait for the user's approval
+- [ ] Plan for Google verification: `gmail.readonly` is a restricted scope (app verification + annual security assessment); `gmail.metadata` may be enough to start
+
+### Later: Chrome extension
+
+- [ ] Versioned extension API (`/api/v1/...`) calling the same `src/server` services
+- [ ] Bearer-token auth (Supabase access token), CORS limited to the extension ID, per-user rate limits
+- [ ] Tailor a resume from the job posting the user is viewing; treat scraped page text as untrusted
 
 ---
+
+## Original Plan (2024)
 
 ## Proposed Architecture
 

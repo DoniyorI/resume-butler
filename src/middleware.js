@@ -1,48 +1,38 @@
-import { createServerClient } from "@supabase/ssr";
 import { NextResponse } from "next/server";
+import { updateSession } from "@/lib/supabase/middleware";
+import { HOME_PATH, isAuthPath, isPublicPath } from "@/lib/redirects";
 
 export async function middleware(request) {
-  let response = NextResponse.next({
-    request: {
-      headers: request.headers,
-    },
-  });
+  const { response, user } = await updateSession(request);
+  const { pathname, search } = request.nextUrl;
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-    {
-      cookies: {
-        get(name) {
-          return request.cookies.get(name)?.value;
-        },
-        set(name, value, options) {
-          request.cookies.set({ name, value, ...options });
-          response = NextResponse.next({
-            request: { headers: request.headers },
-          });
-          response.cookies.set({ name, value, ...options });
-        },
-        remove(name, options) {
-          request.cookies.set({ name, value: "", ...options });
-          response = NextResponse.next({
-            request: { headers: request.headers },
-          });
-          response.cookies.set({ name, value: "", ...options });
-        },
-      },
-    }
-  );
+  // API routes do their own auth and return 401 instead of redirecting
+  if (pathname.startsWith("/api/")) return response;
 
-  // Refresh the auth session
-  await supabase.auth.getUser();
+  if (!user && !isPublicPath(pathname) && !isAuthPath(pathname)) {
+    return redirectWithCookies(request, response, "/login", { next: pathname + search });
+  }
+
+  if (user && isAuthPath(pathname)) {
+    return redirectWithCookies(request, response, HOME_PATH);
+  }
 
   return response;
 }
 
+// Redirect while keeping any refreshed session cookies from updateSession
+function redirectWithCookies(request, response, pathname, params = {}) {
+  const url = request.nextUrl.clone();
+  url.pathname = pathname;
+  url.search = new URLSearchParams(params).toString();
+  const redirect = NextResponse.redirect(url);
+  response.cookies.getAll().forEach((cookie) => redirect.cookies.set(cookie));
+  return redirect;
+}
+
 export const config = {
   matcher: [
-    // Match all routes except static files and api
-    "/((?!_next/static|_next/image|favicon.ico|image|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    // Everything except Next.js internals and static files
+    "/((?!_next/static|_next/image|favicon.ico|image/|.*\\.(?:svg|png|jpg|jpeg|gif|webp|json)$).*)",
   ],
 };
