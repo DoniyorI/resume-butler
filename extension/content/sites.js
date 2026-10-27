@@ -85,7 +85,7 @@ globalThis.RB_SITES = [
         : "",
     // The new Easy Apply has no aria-label on it: a plain "Submit application" button
     submitButton: 'button[aria-label*="Submit application"], button',
-    submitText: /^\s*submit application\s*$/i,
+    submitText: /^\s*submit application\b/i,
     // After submitting, LinkedIn moves to /jobs/view/<id>/post-apply/
     successUrl: /^\/jobs\/view\/\d+\/post-apply/,
     // The Easy Apply dialog, which says "Your application was sent to <company>"

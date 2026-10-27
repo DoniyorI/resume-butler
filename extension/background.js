@@ -180,11 +180,16 @@ async function reportSubmitted(key, job, sender, { confirmed = false } = {}) {
     if (!confirmed) return { status: "unconfirmed" };
   }
 
-  const fresh = Object.fromEntries(
-    Object.entries(reported).filter(([, at]) => now - at < REPORT_COOLDOWN_MS)
-  );
-  await setLocal({ reported: { ...fresh, [key]: now } });
-  return record(job);
+  const result = await record(job);
+  // Only once it's in (or on its way to) the tracker: a failed attempt, such as
+  // before connecting, mustn't hide the next one
+  if (["added", "updated", "queued"].includes(result.status)) {
+    const fresh = Object.fromEntries(
+      Object.entries(reported).filter(([, at]) => now - at < REPORT_COOLDOWN_MS)
+    );
+    await setLocal({ reported: { ...fresh, [key]: now } });
+  }
+  return result;
 }
 
 async function undo(id) {

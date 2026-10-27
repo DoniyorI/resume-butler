@@ -22,6 +22,7 @@
   if (framed && !site.isEmbeddedForm?.(new URL(window.location.href))) return;
 
   const CHECK_INTERVAL_MS = 1500;
+  console.debug("[Resume Butler] watching for applications on", site.id);
   const reportedKeys = new Set();
   let lastUrl = "";
   // The job whose submit button was clicked, and whether the success text was already showing
@@ -34,6 +35,8 @@
     );
 
   const keyFor = (jobId) => `${site.id}:${jobId}`;
+  // Shown in the page's DevTools console, to see why something was or wasn't tracked
+  const log = (...args) => console.debug("[Resume Butler]", ...args);
   // Only inside the site's form or dialog when it names one, so text elsewhere on the page can't count
   const successTextShowing = () => {
     const roots = site.successRoot ? [...document.querySelectorAll(site.successRoot)] : [document.body];
@@ -66,8 +69,10 @@
     reportedKeys.add(key);
 
     const job = merge(await send({ type: "job-lookup", key }), globalThis.RB_readJob(site));
-    if (!job?.company) return;
+    log("submission detected", key, job);
+    if (!job?.company) return log("skipped: no company name found on this page");
     const result = await send({ type: "submitted", key, job });
+    log("result", result);
     globalThis.RB_showResult(result, job, key);
   }
 
@@ -91,11 +96,14 @@
     (event) => {
       // Only real clicks: the page's scripts can't fake a submission
       if (!event.isTrusted) return;
-      const target = event.target instanceof Element ? event.target : null;
-      const button = target?.closest(site.submitButton);
+      // The real target, even inside a shadow root (where event.target is only its host)
+      const button = event
+        .composedPath()
+        .find((node) => node instanceof Element && node.matches(site.submitButton));
       const label = button?.ariaLabel || button?.textContent || button?.value || "";
       if (!button || !(site.submitText || /submit/i).test(label)) return;
       const jobId = currentJobId();
+      log("submit clicked", jobId);
       if (!jobId) return;
       successTextBeforeClick = successTextShowing();
       clickedJobId = jobId;
