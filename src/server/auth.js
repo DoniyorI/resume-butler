@@ -51,10 +51,13 @@ export async function hasRecentRecovery(supabase) {
   const claims = data?.claims;
   if (!claims) return false;
   const now = Math.floor(Date.now() / 1000);
-  // amr is [{ method, timestamp }] or, in the RFC 8176 form, ["recovery", ...]
-  return (claims.amr || []).some((entry) => {
-    const method = typeof entry === "string" ? entry : entry?.method;
-    const at = typeof entry === "string" ? claims.iat : entry?.timestamp;
-    return ["recovery", "otp"].includes(method) && now - Number(at) <= RECOVERY_WINDOW_SECONDS;
-  });
+  // Supabase sends amr as [{ method, timestamp }]. Only an entry's own
+  // timestamp says when that sign-in happened (iat changes on every refresh),
+  // so the bare RFC 8176 string form never counts.
+  return (claims.amr || []).some(
+    (entry) =>
+      typeof entry === "object" &&
+      ["recovery", "otp"].includes(entry?.method) &&
+      now - Number(entry.timestamp) <= RECOVERY_WINDOW_SECONDS
+  );
 }

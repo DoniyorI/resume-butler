@@ -8,11 +8,12 @@ import { createAdminClient } from "@/server/supabaseAdmin";
 // (supabase/migrations/009_auth_rate_limits.sql), by visitor IP, by IP and
 // email together, and by email alone.
 // - Sign-in: the strict limit is per IP and email, so a stranger failing logins
-//   with your email can't lock you out from your own IP; the email-only limit
-//   is only a loose ceiling against password guessing spread over many IPs.
+//   with your email can't lock you out from your own IP. The email-only
+//   ceiling still caps guessing spread over many IPs; it trades against
+//   lockout, which only a CAPTCHA (Supabase supports Turnstile) fully solves.
 // - Sign-up and reset send email, so they're tight even per email.
 const LIMITS = {
-  "sign-in": { ip: [30, 15 * 60], ipEmail: [10, 15 * 60], email: [100, 60 * 60] },
+  "sign-in": { ip: [30, 15 * 60], ipEmail: [10, 15 * 60], email: [30, 60 * 60] },
   "sign-up": { ip: [5, 60 * 60], email: [3, 60 * 60] },
   "password-reset": { ip: [5, 60 * 60], email: [3, 60 * 60] },
   "password-update": { ip: [10, 60 * 60], email: [10, 60 * 60] },
