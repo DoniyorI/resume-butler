@@ -29,10 +29,26 @@
   let clickedJobId = null;
   let successTextBeforeClick = false;
 
+  // After the extension is reloaded or updated, this copy of the script is cut
+  // off from it ("Extension context invalidated"): stop, and let the fresh copy
+  // the background worker injects take over
+  // Only the newest copy runs, if an injected copy shares the page with an older one
+  const instance = Symbol("detector");
+  globalThis.RB_detector = instance;
+  const connected = () => globalThis.RB_detector === instance && Boolean(globalThis.chrome?.runtime?.id);
   const send = (message) =>
-    new Promise((resolve) =>
-      chrome.runtime.sendMessage(message, (reply) => resolve(chrome.runtime.lastError ? null : reply))
-    );
+    new Promise((resolve) => {
+      if (!connected()) {
+        stop();
+        return resolve(null);
+      }
+      try {
+        chrome.runtime.sendMessage(message, (reply) => resolve(chrome.runtime.lastError ? null : reply));
+      } catch {
+        stop();
+        resolve(null);
+      }
+    });
 
   const keyFor = (jobId) => `${site.id}:${jobId}`;
   // Shown in the page's DevTools console, to see why something was or wasn't tracked
@@ -62,13 +78,14 @@
     return merged;
   }
 
-  async function onSubmitted(jobId = currentJobId()) {
+  // `at`: the confirmation's URL, when the page is only passing through it
+  async function onSubmitted(jobId = currentJobId(), at = window.location) {
     if (!jobId) return;
     const key = keyFor(jobId);
     if (reportedKeys.has(key)) return;
     reportedKeys.add(key);
 
-    const job = merge(await send({ type: "job-lookup", key }), globalThis.RB_readJob(site));
+    const job = merge(await send({ type: "job-lookup", key }), globalThis.RB_readJob(site, document, at));
     log("submission detected", key, job);
     if (!job?.company) return log("skipped: no company name found on this page");
     const result = await send({ type: "submitted", key, job });
@@ -77,6 +94,7 @@
   }
 
   function check() {
+    if (!connected()) return stop();
     if (window.location.href !== lastUrl) {
       lastUrl = window.location.href;
       // Moved to another job: a click on the last one no longer counts
@@ -91,29 +109,38 @@
   }
 
   // Note the submit click (capture phase, before the site's own handlers)
-  document.addEventListener(
-    "click",
-    (event) => {
-      // Only real clicks: the page's scripts can't fake a submission
-      if (!event.isTrusted) return;
-      // The real target, even inside a shadow root (where event.target is only its host)
-      const button = event
-        .composedPath()
-        .find((node) => node instanceof Element && node.matches(site.submitButton));
-      const label = button?.ariaLabel || button?.textContent || button?.value || "";
-      if (!button || !(site.submitText || /submit/i).test(label)) return;
-      const jobId = currentJobId();
-      log("submit clicked", jobId);
-      if (!jobId) return;
-      successTextBeforeClick = successTextShowing();
-      clickedJobId = jobId;
-      capture();
-      // Lets the background worker trust the confirmation that follows (often on a new page)
-      send({ type: "submit-clicked", key: keyFor(jobId) });
-      globalThis.RB_showTracking(globalThis.RB_readJob(site) || {});
-    },
-    true
-  );
+  function onClick(event) {
+    // Only real clicks: the page's scripts can't fake a submission
+    if (!event.isTrusted) return;
+    // The real target, even inside a shadow root (where event.target is only its host)
+    const button = event
+      .composedPath()
+      .find((node) => node instanceof Element && node.matches(site.submitButton));
+    const label = button?.ariaLabel || button?.textContent || button?.value || "";
+    if (!button || !(site.submitText || /submit/i).test(label)) return;
+    const jobId = currentJobId();
+    log("submit clicked", jobId);
+    if (!jobId) return;
+    successTextBeforeClick = successTextShowing();
+    clickedJobId = jobId;
+    capture();
+    // Lets the background worker trust the confirmation that follows (often on a new page)
+    send({ type: "submit-clicked", key: keyFor(jobId) });
+    globalThis.RB_showTracking(globalThis.RB_readJob(site) || {});
+  }
+  document.addEventListener("click", onClick, true);
+
+  // LinkedIn shows its confirmation URL (/jobs/view/<id>/post-apply/) only for
+  // a moment before going back to the search page, too briefly for polling:
+  // catch it as the page navigates there
+  function onNavigate(event) {
+    const url = new URL(event.destination.url);
+    if (url.origin === window.location.origin && site.successUrl?.test(url.pathname)) {
+      log("confirmation page", url.pathname);
+      onSubmitted(site.jobId(url), url);
+    }
+  }
+  globalThis.navigation?.addEventListener("navigate", onNavigate);
 
   // The popup asks what job this tab shows (for "I applied to this")
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -124,13 +151,22 @@
 
   // Single-page sites change the page without loading a new one
   let pending = null;
-  new MutationObserver(() => {
+  const observer = new MutationObserver(() => {
     if (pending) return;
     pending = setTimeout(() => {
       pending = null;
       check();
     }, 500);
-  }).observe(document.documentElement, { childList: true, subtree: true });
-  setInterval(check, CHECK_INTERVAL_MS);
+  });
+  observer.observe(document.documentElement, { childList: true, subtree: true });
+  const interval = setInterval(check, CHECK_INTERVAL_MS);
+
+  function stop() {
+    clearInterval(interval);
+    clearTimeout(pending);
+    observer.disconnect();
+    document.removeEventListener("click", onClick, true);
+    globalThis.navigation?.removeEventListener("navigate", onNavigate);
+  }
   check();
 })();

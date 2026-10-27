@@ -8,13 +8,13 @@ Adds the jobs you apply to on LinkedIn Easy Apply, Greenhouse, Lever and Ashby t
 2. Click **Load unpacked** and pick this `extension/` folder.
 3. A Resume Butler tab opens at `/extension/connect` and connects the extension by itself. If you're signed out, sign in (email or Google) and it brings you back and connects. To use the local app instead, sign in at `http://localhost:3000`, then click the extension's toolbar icon and choose **Connect to localhost:3000 instead**.
 
-After changing files here, click the reload button on the extension's card in `chrome://extensions`, then reload the job page.
+After changing files here, click the reload button on the extension's card in `chrome://extensions`. The extension re-adds its scripts to job site and app tabs that are already open, so they don't need a reload.
 
 ## How it works
 
 | File | What it does |
 |---|---|
-| `manifest.json` | Permissions: `storage`, `alarms`, `tabs`, and only the app and the three job sites |
+| `manifest.json` | Permissions: `storage`, `alarms`, `tabs`, `scripting` (to add the scripts to tabs already open on install or update), and only the app and the supported job sites |
 | `background.js` | Holds the connection, sends applications to the app (`/api/extension/*`), retries when offline, undo |
 | `content/app-bridge.js` | On the app: marks the page as having the extension and receives the token (no copy and paste) |
 | `content/sites.js` | Per-site rules: how to read the job and recognise a submitted application |

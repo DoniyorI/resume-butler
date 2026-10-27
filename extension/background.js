@@ -305,9 +305,25 @@ chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === RETRY_ALARM) retryQueue();
 });
 
+// Chrome only adds content scripts to pages loaded after an install or update.
+// Add them to the job site and app tabs already open, so those work without a
+// reload (the old copies, cut off from the extension, stop by themselves).
+async function injectIntoOpenTabs() {
+  for (const script of chrome.runtime.getManifest().content_scripts || []) {
+    const tabs = await chrome.tabs.query({ url: script.matches });
+    for (const tab of tabs) {
+      chrome.scripting
+        .executeScript({ target: { tabId: tab.id, allFrames: Boolean(script.all_frames) }, files: script.js })
+        // Tabs that can't take scripts (discarded, still loading, an error page)
+        .catch(() => {});
+    }
+  }
+}
+
 // First install: open the app's connect page, which connects without a click
 // (after signing in, if needed)
 chrome.runtime.onInstalled.addListener((details) => {
+  if (details.reason === "install" || details.reason === "update") injectIntoOpenTabs();
   if (details.reason === "install") {
     chrome.tabs.create({ url: `${PRODUCTION_ORIGIN}/extension/connect` });
   }

@@ -3,7 +3,7 @@
   "name": "Resume Butler",
   "short_name": "Resume Butler",
   "description": "Adds the jobs you apply to on LinkedIn Easy Apply, Greenhouse, Lever and Ashby to your Resume Butler tracker, automatically.",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "minimum_chrome_version": "116",
   "icons": {
     "16": "icons/icon-16.png",
@@ -23,7 +23,7 @@
     "service_worker": "background.js",
     "type": "module"
   },
-  "permissions": ["storage", "alarms", "tabs"],
+  "permissions": ["storage", "alarms", "tabs", "scripting"],
   "host_permissions": [
     "https://resume-butler.vercel.app/*",
     "http://localhost:3000/*",

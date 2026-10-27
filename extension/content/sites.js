@@ -89,7 +89,7 @@ globalThis.RB_SITES = [
     // After submitting, LinkedIn moves to /jobs/view/<id>/post-apply/
     successUrl: /^\/jobs\/view\/\d+\/post-apply/,
     // The Easy Apply dialog, which says "Your application was sent to <company>"
-    successRoot: '[role="dialog"], .artdeco-modal',
+    successRoot: '[role="dialog"], [role="alertdialog"], [aria-modal="true"], dialog, .artdeco-modal',
     successText: LINKEDIN_SUCCESS_TEXT,
   },
   {

@@ -96,9 +96,14 @@ function showToast({ title, detail, warn = false, pending = false, actions = [] 
 }
 
 const sendToBackground = (message) =>
-  new Promise((resolve) =>
-    chrome.runtime.sendMessage(message, (reply) => resolve(chrome.runtime.lastError ? null : reply))
-  );
+  new Promise((resolve) => {
+    try {
+      chrome.runtime.sendMessage(message, (reply) => resolve(chrome.runtime.lastError ? null : reply));
+    } catch {
+      // The extension was reloaded since this page loaded
+      resolve(null);
+    }
+  });
 
 // Shown as soon as the submit button is clicked, until the result replaces it
 globalThis.RB_showTracking = function showTracking(job) {
