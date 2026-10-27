@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { MIN_PASSWORD_LENGTH } from "@/lib/constants";
 import { safeNextPath } from "@/lib/redirects";
 import { parseInput, runAction } from "@/server/actionResult";
+import { hasRecentRecovery } from "@/server/auth";
 import { enforceAuthRateLimit } from "@/server/authRateLimit";
 import { HttpError } from "@/server/http";
 
@@ -102,7 +103,11 @@ export async function updatePassword(input) {
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    if (!user) throw new HttpError(401, "This reset link has expired. Request a new one.");
+    // Only right after following the emailed link, never from any signed-in session
+    if (!user || !(await hasRecentRecovery(supabase))) {
+      throw new HttpError(401, "This reset link has expired. Request a new one.");
+    }
+    await enforceAuthRateLimit("password-update", user.email);
     const { error } = await supabase.auth.updateUser({ password });
     if (error) throw authError(error, "Couldn't update your password. Please try again.");
     return null;
