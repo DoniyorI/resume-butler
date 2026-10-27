@@ -33,5 +33,5 @@ The plan, including what comes next (more sites, autofill, the Web Store), is in
 
 - Detecting the submission is only tested against the sites' confirmation wording and URLs, not a real submitted application yet. Apply to one real job on each site to confirm.
 - **Disconnect** in the popup forgets the token in this browser; to revoke it everywhere, use **Disconnect** on the app's Browser extension page.
-- LinkedIn's signed-in Easy Apply markup isn't publicly visible, so its selectors are best-effort (with the page title as a fallback); confirm with one real Easy Apply.
+- LinkedIn's new Easy Apply (server-driven, no stable class names) is matched by the "Submit application" button text and the `/jobs/view/<id>/post-apply/` page it moves to afterwards. The company comes from the dialog's "Apply to <company>" heading or that URL; the role from the posting page's title, so it can be blank when you apply from search results.
 - Workday and other sites aren't supported yet. On those, use **I applied to this** in the popup.

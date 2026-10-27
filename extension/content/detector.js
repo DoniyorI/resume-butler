@@ -93,7 +93,8 @@
       if (!event.isTrusted) return;
       const target = event.target instanceof Element ? event.target : null;
       const button = target?.closest(site.submitButton);
-      if (!button || !/submit/i.test(button.textContent || button.value || button.ariaLabel || "")) return;
+      const label = button?.ariaLabel || button?.textContent || button?.value || "";
+      if (!button || !(site.submitText || /submit/i).test(label)) return;
       const jobId = currentJobId();
       if (!jobId) return;
       successTextBeforeClick = successTextShowing();
@@ -101,8 +102,7 @@
       capture();
       // Lets the background worker trust the confirmation that follows (often on a new page)
       send({ type: "submit-clicked", key: keyFor(jobId) });
-      const job = globalThis.RB_readJob(site);
-      if (job) globalThis.RB_showTracking(job);
+      globalThis.RB_showTracking(globalThis.RB_readJob(site) || {});
     },
     true
   );
