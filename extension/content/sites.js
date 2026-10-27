@@ -13,7 +13,12 @@
 //   successUrl    the URL after a successful submit, if the site changes it
 //   successText   text that appears after a successful submit
 //
-// Checked against live postings on 2026-10-27.
+// Checked against live postings on 2026-10-27 (LinkedIn's signed-in Easy
+// Apply markup isn't publicly visible, so its selectors are best-effort with
+// the page title and JSON-LD as fallbacks).
+
+// LinkedIn Easy Apply's dialog after submitting: "Your application was sent to <company>!"
+const LINKEDIN_SUCCESS_TEXT = /your application was sent|application sent|application submitted/i;
 
 const SUCCESS_TEXT =
   /thank(s| you) for (applying|your application)|application (has been |was )?(submitted|received)|we('ve| have) received your application/i;
@@ -22,6 +27,52 @@ const SUCCESS_TEXT =
 const companyAfterAt = (text) => text?.match(/\sat\s+(.+?)\s*$/)?.[1] || "";
 
 globalThis.RB_SITES = [
+  {
+    id: "linkedin",
+    hosts: ["www.linkedin.com"],
+    // /jobs/view/<id>/, /jobs/view/<slug>-<id> (signed out), or ?currentJobId=<id>
+    // on search and collection pages; a single-page app
+    jobId: (url) =>
+      url.pathname.match(/^\/jobs\/view\/(?:[^/]*-)?(\d+)/)?.[1] ||
+      (url.pathname.startsWith("/jobs/") ? url.searchParams.get("currentJobId") : null) ||
+      null,
+    postingUrl: (jobId) => `https://www.linkedin.com/jobs/view/${jobId}/`,
+    title: [
+      ".job-details-jobs-unified-top-card__job-title h1",
+      ".job-details-jobs-unified-top-card__job-title",
+      ".jobs-unified-top-card__job-title",
+      ".top-card-layout__title",
+    ].join(", "),
+    location: [
+      ".job-details-jobs-unified-top-card__primary-description-container .tvm__text",
+      ".job-details-jobs-unified-top-card__bullet",
+      ".topcard__flavor--bullet",
+    ].join(", "),
+    description:
+      "#job-details, .jobs-description__content, .jobs-box__html-content, .show-more-less-html__markup",
+    company: (doc) =>
+      doc
+        .querySelector(
+          ".job-details-jobs-unified-top-card__company-name a, .job-details-jobs-unified-top-card__company-name, .jobs-unified-top-card__company-name, .topcard__org-name-link"
+        )
+        ?.textContent.trim() ||
+      // Page titles: "<role> | <company> | LinkedIn" or "<role> at <company> — <place> | LinkedIn Jobs"
+      doc.title
+        .replace(/^\(\d+\)\s*/, "")
+        .split(" | ")[1]
+        ?.trim() ||
+      companyAfterAt(doc.title.split(" — ")[0]) ||
+      "",
+    roleFromTitle: (doc) =>
+      doc.title
+        .replace(/^\(\d+\)\s*/, "")
+        .split(" | ")[0]
+        .split(" at ")[0]
+        .trim(),
+    submitButton: 'button[aria-label="Submit application"], button[aria-label*="Submit application"]',
+    successUrl: null,
+    successText: LINKEDIN_SUCCESS_TEXT,
+  },
   {
     id: "greenhouse",
     hosts: ["job-boards.greenhouse.io", "boards.greenhouse.io"],

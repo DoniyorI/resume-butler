@@ -15,18 +15,27 @@ export function hashToken(token) {
 
 /**
  * Create a token for the signed-in user. `supabase` is their own client (RLS
- * applies). Returns { id, token }; the token is shown once and only its hash
- * is stored.
+ * applies). Returns { id, token }; the token is handed to the extension once
+ * and only its hash is stored.
  */
 export async function createExtensionToken(supabase, userId) {
-  const { count, error: countError } = await supabase
+  // Reconnecting (a new install, a cleared browser) shouldn't fail on the
+  // limit: retire the oldest connections instead
+  const { data: active, error: listError } = await supabase
     .from("extension_tokens")
-    .select("id", { count: "exact", head: true })
+    .select("id")
     .eq("user_id", userId)
-    .is("revoked_at", null);
-  if (countError) throw countError;
-  if (count >= MAX_ACTIVE_TOKENS) {
-    throw new HttpError(400, `You can have ${MAX_ACTIVE_TOKENS} connected browsers. Disconnect one first.`);
+    .is("revoked_at", null)
+    .order("created_at", { ascending: true });
+  if (listError) throw listError;
+  const retire = active.slice(0, Math.max(0, active.length - (MAX_ACTIVE_TOKENS - 1))).map((row) => row.id);
+  if (retire.length) {
+    const { error } = await supabase
+      .from("extension_tokens")
+      .update({ revoked_at: new Date().toISOString() })
+      .in("id", retire)
+      .eq("user_id", userId);
+    if (error) throw error;
   }
 
   const token = TOKEN_PREFIX + randomBytes(32).toString("base64url");

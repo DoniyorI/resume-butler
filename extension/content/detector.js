@@ -1,10 +1,10 @@
 // Runs on supported job sites (content/sites.js). Remembers each posting it
 // sees, and when an application is submitted, reports it with the posting's
-// details to the background worker, which adds it to Resume Butler.
+// details to the background worker, which adds it to Resume Butler
+// automatically. A small notice says "Tracking application" when the submit
+// button is clicked, then confirms with an undo.
 //
 // A submission counts when:
-// and, to be added without asking, the submit button was clicked for that job
-// in this browser session (otherwise the notice asks "Did you just apply?"):
 //   - the site moves to its confirmation URL (Greenhouse /confirmation, Lever /thanks), or
 //   - after a click on the submit button, a "thanks for applying" message
 //     appears that wasn't on the page before the click (Ashby, and the others
@@ -61,9 +61,7 @@
     const job = merge(await send({ type: "job-lookup", key }), globalThis.RB_readJob(site));
     if (!job?.company) return;
     const result = await send({ type: "submitted", key, job });
-    // Asking "Did you just apply?" inside a frame could be overlaid by the framing site
-    if (result?.status === "needs-confirmation" && framed) return;
-    globalThis.RB_showResult(result, job, key);
+    globalThis.RB_showResult(result, job);
   }
 
   function check() {
@@ -93,6 +91,8 @@
       // Lets the background worker trust the confirmation that follows (often on a new page)
       const jobId = site.jobId(new URL(window.location.href));
       if (jobId) send({ type: "submit-clicked", key: keyFor(jobId) });
+      const job = globalThis.RB_readJob(site);
+      if (job) globalThis.RB_showTracking(job);
     },
     true
   );

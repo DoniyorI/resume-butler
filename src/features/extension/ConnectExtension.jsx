@@ -1,68 +1,13 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { Check, Copy, Laptop, Loader2, PlugZap } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import LocalDateTime from "@/components/shared/LocalDateTime";
 import { connectExtension, revokeExtensionToken } from "@/features/extension/actions";
-
-// Handing the token to the extension, without copy and paste. Two routes:
-// 1. The extension's content script on this site (see docs/chrome-extension-plan.md,
-//    "Connecting"): it marks <html data-resume-butler-extension>, and answers a
-//    same-origin postMessage { source: APP_SOURCE, type: "connect", token } with
-//    { source: EXTENSION_SOURCE, type: "connected", ok: true }.
-// 2. externally_connectable, once the extension has a fixed ID (NEXT_PUBLIC_EXTENSION_ID).
-const APP_SOURCE = "resume-butler-app";
-const EXTENSION_SOURCE = "resume-butler-extension";
-const HANDOFF_TIMEOUT_MS = 2000;
-const EXTENSION_ID = process.env.NEXT_PUBLIC_EXTENSION_ID;
-
-function extensionInstalled() {
-  return (
-    typeof document !== "undefined" && document.documentElement.hasAttribute("data-resume-butler-extension")
-  );
-}
-
-function viaContentScript(token) {
-  return new Promise((resolve) => {
-    if (!extensionInstalled()) return resolve(false);
-    const timer = setTimeout(() => finish(false), HANDOFF_TIMEOUT_MS);
-    function onMessage(event) {
-      if (event.source !== window || event.origin !== window.location.origin) return;
-      if (event.data?.source === EXTENSION_SOURCE && event.data?.type === "connected")
-        finish(event.data.ok === true);
-    }
-    function finish(ok) {
-      clearTimeout(timer);
-      window.removeEventListener("message", onMessage);
-      resolve(ok);
-    }
-    window.addEventListener("message", onMessage);
-    window.postMessage({ source: APP_SOURCE, type: "connect", token }, window.location.origin);
-  });
-}
-
-function viaExternalMessage(token) {
-  return new Promise((resolve) => {
-    // eslint-disable-next-line no-undef
-    const runtime = typeof chrome !== "undefined" ? chrome.runtime : undefined;
-    if (!EXTENSION_ID || !runtime?.sendMessage) return resolve(false);
-    try {
-      runtime.sendMessage(EXTENSION_ID, { type: "resume-butler:connect", token }, (reply) => {
-        resolve(!runtime.lastError && reply?.ok === true);
-      });
-    } catch {
-      resolve(false);
-    }
-  });
-}
-
-// Resolves to true if the extension took the token
-async function handToExtension(token) {
-  return (await viaContentScript(token)) || (await viaExternalMessage(token));
-}
+import { handToExtension } from "@/features/extension/handoff";
 
 function NewToken({ token, onDone }) {
   const [copied, setCopied] = useState(false);
@@ -98,7 +43,7 @@ function NewToken({ token, onDone }) {
  * directly when possible, or shown once to paste in), and lists connected
  * browsers with a way to disconnect each. `tokens` from features/extension/data.js.
  */
-export default function ConnectExtension({ tokens, autoConnect = false }) {
+export default function ConnectExtension({ tokens }) {
   const [newToken, setNewToken] = useState(null);
   const [connected, setConnected] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -115,14 +60,6 @@ export default function ConnectExtension({ tokens, autoConnect = false }) {
         setNewToken(result.data.token);
       }
     });
-
-  // The extension opens /extension?connect=1 right after it's installed
-  const autoStarted = useRef(false);
-  useEffect(() => {
-    if (!autoConnect || autoStarted.current) return;
-    autoStarted.current = true;
-    connect();
-  });
 
   const revoke = (id) =>
     startTransition(async () => {

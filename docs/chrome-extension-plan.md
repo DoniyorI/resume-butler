@@ -63,7 +63,8 @@ Inspected on 2026-10-27: only manifests, file names, config shape and which brow
   - the submit button
   - the success state (a selector or text shown after submitting)
   - for single-page platforms like Workday, the submit request to watch instead
-- **Generic fallback** for any other site: when a page has a form with a resume upload and you submit it, show a small prompt: "Did you just apply to Role at Company? Add it to Resume Butler." One click to confirm, so there are no silent false positives.
+- **No prompts on supported sites:** a detected submission is added straight to the tracker. A small notice in the top-right corner says "Tracking application" when you click submit, then "Added to Resume Butler" with Undo.
+- **Other sites:** "I applied to this" in the popup for now. A generic detector (a form with a resume upload) may come later, adding automatically the same way.
 - **Popup:**
   - "Save this job" on any posting, for jobs you mean to apply to later
   - "Tailor my resume": sends the job description to the resume editor, which already knows how to tailor to a job
@@ -72,7 +73,7 @@ Inspected on 2026-10-27: only manifests, file names, config shape and which brow
 
 ### App side
 
-- **Connecting (built, automatic):** when the extension is installed it opens `/extension?connect=1`. The page, where you're already signed in, creates a token and hands it over by itself:
+- **Connecting (built, automatic):** when the extension is installed it opens `/extension/connect`. Signed-out visitors sign in first (email or Google) and come back. The page asks the extension whether it is already connected to this account (`type: "status"`, answered with `{ connected, email }`, never the token); if not, it creates a token and hands it over by itself:
   1. The extension's content script on our site sets `<html data-resume-butler-extension="<version>">`.
   2. The page posts `{ source: "resume-butler-app", type: "connect", token }` to its own origin (`window.postMessage`).
   3. The script stores the token and answers `{ source: "resume-butler-extension", type: "connected", ok: true }`.
@@ -97,8 +98,8 @@ Inspected on 2026-10-27: only manifests, file names, config shape and which brow
 2. ~~App: `extension_tokens` (migration 008), the connect page at `/extension`, and the API (`GET /api/extension/me`, `POST /api/extension/applications`, `DELETE /api/extension/applications/[id]` for undo).~~ Done and tested on 2026-10-27.
 3. ~~Extension skeleton: manifest, background worker, popup, auto-connect.~~ Built in `extension/` (see its README).
 4. ~~Greenhouse, Lever and Ashby: read the job and detect submission.~~ Built; the readers are checked on live postings. Still to confirm with one real application per site. Test on real postings, without submitting real applications (use the confirmation page markup, or postings you actually apply to).
-5. Generic fallback prompt.
-6. Workday and LinkedIn adapters. These are the hardest: multi-step, dynamic pages.
+5. ~~LinkedIn Easy Apply.~~ Built (detects "Your application was sent"); the signed-in selectors still need one real Easy Apply to confirm.
+6. Workday adapter, and a generic detector for other sites. Workday is the hardest: multi-step, dynamic pages.
 7. Autofill from the Master CV. This is the biggest piece and optional; tracking works without it.
 8. Chrome Web Store listing: privacy policy, screenshots, review.
 

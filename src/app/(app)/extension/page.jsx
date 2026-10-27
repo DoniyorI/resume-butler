@@ -1,11 +1,14 @@
+import { redirect } from "next/navigation";
 import { requirePageUser } from "@/server/auth";
 import ConnectExtension from "@/features/extension/ConnectExtension";
 import { listExtensionTokens } from "@/features/extension/data";
 
 export const metadata = { title: "Browser extension" };
 
-// ?connect=1 (opened by the extension after install) connects without a click
+// Manage connected browsers. Connecting happens on /extension/connect.
 export default async function ExtensionPage({ searchParams }) {
+  // Older extension builds open /extension?connect=1
+  if (searchParams?.connect === "1") redirect("/extension/connect");
   const { supabase, user } = await requirePageUser();
   const tokens = await listExtensionTokens(supabase, user.id);
 
@@ -15,7 +18,7 @@ export default async function ExtensionPage({ searchParams }) {
         <h1 className="text-xl font-semibold">Browser extension</h1>
         <p className="text-sm text-muted-foreground">Track applications automatically as you apply.</p>
       </div>
-      <ConnectExtension tokens={tokens} autoConnect={searchParams?.connect === "1"} />
+      <ConnectExtension tokens={tokens} />
     </div>
   );
 }

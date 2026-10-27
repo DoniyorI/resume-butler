@@ -161,19 +161,18 @@ async function noteSubmitClick(key) {
 }
 
 /**
- * A submission the content script saw. Added automatically only if the user
- * clicked submit for this job in this browser session, so a page that merely
- * shows (or frames) a confirmation can't add jobs. Otherwise the detector asks
- * the user first ("needs-confirmation"). `confirmed`: the user said yes.
- * Skips jobs already reported recently.
+ * A submission the content script saw: added automatically, no questions.
+ * In a frame (Greenhouse's embedded form) it also needs a submit click seen
+ * for that job in this session, so a site that merely frames a confirmation
+ * page can't add jobs. Skips jobs already reported recently.
  */
-async function reportSubmitted(key, job, { confirmed = false } = {}) {
+async function reportSubmitted(key, job, sender) {
   const reported = await getLocal("reported", {});
   const now = Date.now();
   if (reported[key] && now - reported[key] < REPORT_COOLDOWN_MS) return { status: "duplicate" };
-  if (!confirmed) {
+  if (sender.frameId) {
     const { clicks = {} } = await chrome.storage.session.get("clicks");
-    if (!clicks[key] || now - clicks[key] > SUBMIT_CLICK_WINDOW_MS) return { status: "needs-confirmation" };
+    if (!clicks[key] || now - clicks[key] > SUBMIT_CLICK_WINDOW_MS) return { status: "ignored" };
   }
 
   const fresh = Object.fromEntries(
@@ -220,9 +219,13 @@ const contentHandlers = {
   "job-seen": (message) => rememberJob(message.key, message.job).then(() => ({ ok: true })),
   "job-lookup": (message) => lookupJob(message.key),
   "submit-clicked": (message) => noteSubmitClick(message.key),
-  submitted: (message) => reportSubmitted(message.key, message.job),
-  // content/toast.js, after the user clicks it
-  "confirm-submitted": (message) => reportSubmitted(message.key, message.job, { confirmed: true }),
+  submitted: (message, sender) => reportSubmitted(message.key, message.job, sender),
+  // content/app-bridge.js: connected, and to which account? (never the token)
+  "connection-status": async (message, sender) => {
+    if (!(await trustedOrigin(new URL(sender.url).origin))) return { connected: false, email: "" };
+    const connection = await getLocal("connection", null);
+    return { connected: Boolean(connection), email: connection?.email || "" };
+  },
   undo: (message) => undo(message.id),
   "open-connect": () => openConnect(PRODUCTION_ORIGIN),
 };
@@ -249,19 +252,17 @@ const popupHandlers = {
 
 async function openConnect(origin) {
   const target = (await trustedOrigin(origin)) ? origin : PRODUCTION_ORIGIN;
-  await chrome.tabs.create({ url: `${target}/extension?connect=1` });
+  await chrome.tabs.create({ url: `${target}/extension/connect` });
   return { ok: true };
 }
 
 const fromPopup = (sender) => !sender.tab && sender.url?.startsWith(chrome.runtime.getURL(""));
 
 // Submissions are trusted from top-level pages, and from Greenhouse's embedded
-// form (an iframe on company sites). The user's confirmation is accepted only
-// from a top-level page, where no other site can overlay the button.
+// form (an iframe on company sites).
 const SUBMISSION_TYPES = new Set(["submit-clicked", "submitted"]);
 function frameAllowed(type, sender) {
   if (sender.frameId === 0 || sender.frameId === undefined) return true;
-  if (type === "confirm-submitted") return false;
   if (!SUBMISSION_TYPES.has(type)) return true;
   const url = new URL(sender.url);
   return url.hostname === "boards.greenhouse.io" && url.pathname.startsWith("/embed/");
@@ -291,9 +292,10 @@ chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === RETRY_ALARM) retryQueue();
 });
 
-// First install: open the app, which connects the extension without a click
+// First install: open the app's connect page, which connects without a click
+// (after signing in, if needed)
 chrome.runtime.onInstalled.addListener((details) => {
   if (details.reason === "install") {
-    chrome.tabs.create({ url: `${PRODUCTION_ORIGIN}/extension?connect=1` });
+    chrome.tabs.create({ url: `${PRODUCTION_ORIGIN}/extension/connect` });
   }
 });

@@ -84,7 +84,7 @@ globalThis.RB_readJob = function readJob(site, doc = document, location = window
     company,
     role,
     location: clean(postingLocation(posting)) || clean(textOf(doc, site.location)),
-    url: url.searchParams.get("token") ? url.href : postingUrl,
+    url: site.postingUrl ? site.postingUrl(jobId) : url.searchParams.get("token") ? url.href : postingUrl,
     description,
   };
 };
