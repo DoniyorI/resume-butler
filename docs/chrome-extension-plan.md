@@ -6,7 +6,7 @@ Goal: when you apply to a job in your browser, Resume Butler records it automati
 
 What's public: both are Manifest V3 Chrome extensions that autofill applications on job sites and log the jobs you apply to. Simplify's help docs say it tracks applications "to jobs that are in our database" and asks you to add others by hand. Neither documents its detection logic.
 
-The standard technique, which their manifests' permissions point to (to be confirmed by inspecting them, see below):
+The technique, confirmed by inspecting their manifests (details in the next section):
 
 1. **Content scripts on applicant tracking systems (ATS).** Most companies' "Apply" pages are hosted by a handful of ATS: Greenhouse (`boards.greenhouse.io`, `job-boards.greenhouse.io`), Lever (`jobs.lever.co`), Ashby (`jobs.ashbyhq.com`), Workday (`*.myworkdayjobs.com`), SmartRecruiters, iCIMS, Jobvite, plus LinkedIn Easy Apply and Indeed. The extension injects a script into those pages.
 2. **One adapter per ATS.** Each adapter knows its site's page structure: where the job title, company and description are, what the form fields are (for autofill), and what "submitted" looks like.
@@ -16,6 +16,34 @@ The standard technique, which their manifests' permissions point to (to be confi
    - (some extensions) watching the page's own network request that submits the application
 4. **Matching to a known job.** The job page details are captured before submitting, so the record is complete even though the confirmation page shows little.
 5. **Sending it to their backend** with your account's token.
+
+## What their extensions actually contain
+
+Inspected on 2026-10-27: only manifests, file names, config shape and which browser APIs are used. No code was copied.
+
+**Simplify Copilot 3.1.11** (installed in your Chrome):
+- **Runs everywhere:** a content script on every site and every frame (`*://*/*`, `all_frames`). Permissions include `webRequest`, `webNavigation`, `tabs` and `cookies`, and it can talk to `*.simplify.jobs` through `externally_connectable`.
+- **Detection is config-driven:** a `remoteConfig.json` maps 56 hiring platforms (Greenhouse, Lever, Ashby, Workday, iCIMS, SmartRecruiters, Taleo, LinkedIn, Indeed, Rippling and more) to fields like:
+  - `urls`: which pages the entry covers
+  - `trackedObjExtractors`: a URL pattern plus a template that pull out the job's ID
+  - `applyButtonPaths`, `continueButtonPaths`, `submitButtonPaths`: where the buttons are
+  - `submittedSuccessPaths`: selectors for what the page shows after a successful submit
+  - `inputSelectors`: the form fields, for autofill
+
+  The name and contents suggest it's refreshed from their server, so they can fix a broken site without publishing a new version.
+- **Network as a backup:** the background worker also listens to `webRequest.onCompleted` (the network request finishing), and uses `webNavigation.onCompleted` for page loads.
+
+**Jobright Autofill 1.25.1** (downloaded from Google's update server, then deleted):
+- **Same broad access:** content scripts on all URLs and frames, plus `scripting`, `webNavigation`, `declarativeNetRequest`, `tabs` and `cookies`. Built with the Plasmo extension framework.
+- **Separate scripts by job:** `ats-submission-resume` detects submissions, `applied-success-popup` shows the "applied" confirmation, and `field-discovery` finds form fields.
+- **Network watchers for the hard platforms:** `*-submission-network-main` scripts for Workday, Oracle Cloud, SuccessFactors, BrassRing and ClearCompany. These are single-page apps with no clear confirmation page, so the scripts watch the page's own submit request instead (they wrap `XMLHttpRequest`).
+- **Syncing with its web app:** a content script on `jobright.ai` (`agent-submission-sync`) passes data between the site and the extension, instead of `externally_connectable`.
+
+**What this confirms for our design:**
+- A per-site config (URLs, how to read the job, the submit button, the success state) beats hand-coded adapters, and can be updated from our server.
+- Detect the success state first, and watch the submit request only on platforms that show nothing after submitting.
+- A post-submit "applied?" prompt is normal practice. It's how Jobright handles sites it can't detect reliably.
+- They ask for access to every site so they work anywhere. We can start narrower (the supported platforms only) and add optional access later.
 
 ## Can we copy it?
 
@@ -29,9 +57,12 @@ The standard technique, which their manifests' permissions point to (to be confi
 
 ### Extension (MV3, in `extension/` in this repo)
 
-- **Content scripts** for Greenhouse, Lever and Ashby first (simple, stable pages and most startup jobs), then Workday, LinkedIn Easy Apply and the rest. Each adapter exports:
-  - `readJob()`: `{ company, role, location, url, description }` from the posting
-  - `isSubmitted()`: whether the confirmation state is showing
+- **Per-site config** (like Simplify's), starting with Greenhouse, Lever and Ashby (simple, stable pages and most startup jobs), then Workday, LinkedIn Easy Apply and the rest. Each entry is data, not code, and can be updated from the app without republishing the extension:
+  - `urls`: the pages it covers
+  - how to read the job: `{ company, role, location, url, description }`
+  - the submit button
+  - the success state (a selector or text shown after submitting)
+  - for single-page platforms like Workday, the submit request to watch instead
 - **Generic fallback** for any other site: when a page has a form with a resume upload and you submit it, show a small prompt: "Did you just apply to Role at Company? Add it to Resume Butler." One click to confirm, so there are no silent false positives.
 - **Popup:**
   - "Save this job" on any posting, for jobs you mean to apply to later
@@ -56,7 +87,7 @@ The standard technique, which their manifests' permissions point to (to be confi
 
 ### Order of work
 
-1. Inspect Simplify's and Jobright's manifests to confirm the ATS list and permissions. Read only, with your OK.
+1. ~~Inspect Simplify's and Jobright's manifests.~~ Done (see above).
 2. App: `extension_tokens` migration, the connect flow, and `POST /api/extension/applications`, with tests against the email matcher.
 3. Extension skeleton: manifest, background worker, popup with "Save this job", loaded unpacked in Chrome.
 4. Greenhouse, Lever and Ashby adapters: read the job and detect submission. Test on real postings, without submitting real applications (use the confirmation page markup, or postings you actually apply to).
