@@ -101,6 +101,19 @@ function toDetail(row) {
     appliedDate: row.applied_date || "",
     resumeId: row.resume_id || null,
     coverLetterId: row.cover_letter_id || null,
+    source: row.source || "manual",
+    createdAt: row.created_at,
+    // Migration 010's columns: absent until it's applied, so the page hides them
+    hasJobDetails: "salary_min" in row,
+    jobDetails: {
+      salaryMin: row.salary_min ?? null,
+      salaryMax: row.salary_max ?? null,
+      salaryCurrency: row.salary_currency || "USD",
+      salaryPeriod: row.salary_period || "year",
+      workplaceType: row.workplace_type || "",
+      employmentType: row.employment_type || "",
+    },
+    sourceSite: row.source_site || "",
   };
 }
 
@@ -114,9 +127,8 @@ export const getApplicationDetail = cache(async (id) => {
 
   const { data: row, error } = await supabase
     .from("applications")
-    .select(
-      "id, company, role, location, portal_link, status, comments, job_description, applied_date, resume_id, cover_letter_id"
-    )
+    // "*": the job-detail columns of migration 010 may not exist yet
+    .select("*")
     .eq("id", id)
     .eq("user_id", user.id)
     .maybeSingle();

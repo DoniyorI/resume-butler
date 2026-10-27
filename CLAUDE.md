@@ -103,7 +103,7 @@ supabase/migrations/      SQL schema; apply in order
 
 ## Database (Supabase)
 
-Key tables: `profiles`, `cv_experience` (+ `_bullets`), `cv_projects` (+ `_bullets`), `cv_education`, `cv_skills`, `cv_certifications`, `applications`, `application_status_history` (trigger-logged), `resumes` (`content` JSONB), `cover_letters` (Draft.js JSONB), `email_connections` (+ `auto_sync`), `processed_emails`, `application_suggestions`, `api_rate_limits`, `auth_rate_limits` (hashed IP/email buckets for sign-in, sign-up and reset), `extension_tokens` (hashed; the extension's credentials). `applications.source` is `manual`, `email` or `extension`. Goals are `profiles.goal_period` / `goal_target`. RLS is enabled on every table.
+Key tables: `profiles`, `cv_experience` (+ `_bullets`), `cv_projects` (+ `_bullets`), `cv_education`, `cv_skills`, `cv_certifications`, `applications`, `application_status_history` (trigger-logged), `resumes` (`content` JSONB), `cover_letters` (Draft.js JSONB), `email_connections` (+ `auto_sync`), `processed_emails`, `application_suggestions`, `api_rate_limits`, `auth_rate_limits` (hashed IP/email buckets for sign-in, sign-up and reset), `extension_tokens` (hashed; the extension's credentials). `applications.source` is `manual`, `email` or `extension`; migration 010 adds job details (`salary_min`/`salary_max`/`salary_currency`/`salary_period`, `workplace_type`, `employment_type`, `source_site`), built by `jobDetailColumns` (`@/lib/jobDetails`, pay parsed by `@/lib/salary`). Matching across hiring cycles: `isSameCycle` (`@/server/email/matching`), open and applied within 120 days. Goals are `profiles.goal_period` / `goal_target`. RLS is enabled on every table.
 
 ## Environment Variables
 

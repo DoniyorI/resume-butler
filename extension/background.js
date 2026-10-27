@@ -100,6 +100,9 @@ function toPayload(job) {
     jobDescription: job.description || "",
     appliedDate: job.appliedDate || localDate(),
     detectedBy: job.site || "",
+    salary: job.salary || null,
+    employmentType: job.employmentType || "",
+    workplaceType: job.workplaceType || "",
   };
 }
 

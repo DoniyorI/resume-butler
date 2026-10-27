@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
-import { Check, Inbox, Loader2, X } from "lucide-react";
+import { ArrowRight, Check, Inbox, Loader2, Pencil, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,85 +13,136 @@ import { APPLICATION_STATUSES } from "@/lib/constants";
 import { CATEGORY_LABELS } from "@/lib/emailCategories";
 import { approveSuggestion, dismissAllSuggestions, dismissSuggestion } from "@/features/suggestions/actions";
 
-function SuggestionRow({ suggestion }) {
+// Columns on wide screens: what it is, the status to set, the email it came from, actions.
+// Narrow screens stack the same cells.
+const ROW_GRID =
+  "grid gap-x-4 gap-y-2 md:grid-cols-[minmax(0,1.3fr)_9.5rem_minmax(0,1.5fr)_auto] md:items-center";
+
+function SuggestionRow({ suggestion, onDone }) {
   const [company, setCompany] = useState(suggestion.company);
   const [role, setRole] = useState(suggestion.role);
   const [status, setStatus] = useState(suggestion.status);
+  const [editing, setEditing] = useState(false);
   const [pending, startTransition] = useTransition();
+  const isUpdate = suggestion.kind === "update";
 
   const run = (action, successMessage) =>
     startTransition(async () => {
       const result = await action();
-      if (result.ok) toast.success(successMessage);
-      else toast.error(result.error);
+      if (result.ok) {
+        toast.success(successMessage);
+        onDone?.();
+      } else toast.error(result.error);
     });
 
   const approve = () =>
     run(
       () => approveSuggestion(suggestion.id, { company, role, status }),
-      suggestion.kind === "update"
-        ? `${company} updated to ${status}`
-        : `${company} added to your applications`
+      isUpdate ? `${company} updated to ${status}` : `${company} added to your applications`
     );
   const dismiss = () => run(() => dismissSuggestion(suggestion.id), "Suggestion dismissed");
 
   return (
-    <div className="rounded-lg border p-3 space-y-3">
-      <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
-        <Badge variant="outline">{CATEGORY_LABELS[suggestion.category] || suggestion.category}</Badge>
-        <span>{suggestion.kind === "update" ? "Status update" : "New application"}</span>
-        {suggestion.emailDate && (
+    <li className={`${ROW_GRID} px-4 py-3 ${pending ? "opacity-60" : ""}`}>
+      {/* What it is: the application, and whether it's new or a status change */}
+      <div className="min-w-0">
+        {editing && !isUpdate ? (
+          <div className="grid grid-cols-2 gap-2">
+            <Input aria-label="Company" value={company} onChange={(e) => setCompany(e.target.value)} />
+            <Input
+              aria-label="Role"
+              placeholder="Role"
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+            />
+          </div>
+        ) : (
           <>
-            <span>&middot;</span>
-            <LocalDateTime value={suggestion.emailDate} format="date" />
+            <p className="truncate text-sm font-medium">
+              {company}
+              {role && <span className="font-normal text-muted-foreground"> · {role}</span>}
+            </p>
+            <p className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+              {isUpdate ? (
+                <>
+                  Status update
+                  {suggestion.current && (
+                    <>
+                      : <span>{suggestion.current.status}</span>
+                      <ArrowRight className="h-3 w-3" aria-label="to" />
+                      <span className="font-medium text-foreground">{status}</span>
+                    </>
+                  )}
+                </>
+              ) : (
+                "New application"
+              )}
+            </p>
           </>
         )}
       </div>
 
-      <div>
-        <p className="text-sm font-medium truncate">{suggestion.emailSubject || "No subject"}</p>
-        <p className="text-xs text-gray-400 truncate">{suggestion.emailFrom}</p>
-        {suggestion.summary && <p className="text-xs text-gray-600 mt-1">{suggestion.summary}</p>}
+      {/* The status it will get */}
+      <Select value={status} onValueChange={setStatus} disabled={pending}>
+        <SelectTrigger aria-label="Status" className="h-8">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {APPLICATION_STATUSES.map((s) => (
+            <SelectItem key={s} value={s}>
+              <Badge variant={s.toLowerCase()}>{s}</Badge>
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      {/* The email behind it */}
+      <div className="min-w-0 text-xs" title={suggestion.summary || undefined}>
+        <p className="truncate text-sm text-foreground">{suggestion.emailSubject || "No subject"}</p>
+        <p className="mt-0.5 flex min-w-0 items-center gap-1.5 text-muted-foreground">
+          <Badge variant="outline" className="shrink-0 px-1.5 py-0 text-[11px] font-normal">
+            {CATEGORY_LABELS[suggestion.category] || suggestion.category}
+          </Badge>
+          <span className="truncate">{suggestion.emailFrom}</span>
+          {suggestion.emailDate && (
+            <span className="shrink-0">
+              · <LocalDateTime value={suggestion.emailDate} format="date" />
+            </span>
+          )}
+        </p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_10rem] gap-2">
-        <Input
-          aria-label="Company"
-          value={company}
-          onChange={(e) => setCompany(e.target.value)}
-          disabled={pending || suggestion.kind === "update"}
-        />
-        <Input
-          aria-label="Role"
-          placeholder="Role"
-          value={role}
-          onChange={(e) => setRole(e.target.value)}
-          disabled={pending || suggestion.kind === "update"}
-        />
-        <Select value={status} onValueChange={setStatus} disabled={pending}>
-          <SelectTrigger aria-label="Status">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {APPLICATION_STATUSES.map((s) => (
-              <SelectItem key={s} value={s}>
-                <Badge variant={s.toLowerCase()}>{s}</Badge>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="flex justify-end gap-2">
-        <Button variant="outline" size="sm" onClick={dismiss} disabled={pending}>
-          <X className="mr-1 h-4 w-4" /> Dismiss
+      <div className="flex items-center justify-end gap-1">
+        {!isUpdate && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => setEditing((on) => !on)}
+            disabled={pending}
+            aria-label={editing ? "Done editing" : "Edit company and role"}
+            title={editing ? "Done editing" : "Edit company and role"}
+          >
+            <Pencil className="h-4 w-4" />
+          </Button>
+        )}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 text-muted-foreground hover:text-foreground"
+          onClick={dismiss}
+          disabled={pending}
+          aria-label="Dismiss"
+          title="Dismiss"
+        >
+          <X className="h-4 w-4" />
         </Button>
-        <Button size="sm" onClick={approve} disabled={pending || !company.trim()}>
+        <Button size="sm" className="h-8" onClick={approve} disabled={pending || !company.trim()}>
           {pending ? <Loader2 className="mr-1 h-4 w-4 animate-spin" /> : <Check className="mr-1 h-4 w-4" />}
-          {suggestion.kind === "update" ? "Update status" : "Add application"}
+          {isUpdate ? "Update" : "Add"}
         </Button>
       </div>
-    </div>
+    </li>
   );
 }
 
@@ -106,11 +157,24 @@ export default function SuggestionsReview({ suggestions }) {
       else toast.error(result.error);
     });
 
+  // Approves each as suggested (no edits), one at a time, and reports the total
+  const approveAll = () =>
+    startTransition(async () => {
+      let approved = 0;
+      for (const s of suggestions) {
+        const result = await approveSuggestion(s.id, { company: s.company, role: s.role, status: s.status });
+        if (result.ok) approved += 1;
+      }
+      const failed = suggestions.length - approved;
+      if (failed) toast.error(`Approved ${approved}; ${failed} couldn't be applied`);
+      else toast.success(`Approved ${approved} suggestion${approved === 1 ? "" : "s"}`);
+    });
+
   return (
     <Card id="review">
       <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
         <div className="space-y-1.5">
-          <CardTitle className="text-base flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-base">
             <Inbox className="h-4 w-4" /> Review suggestions
             {suggestions.length > 0 && <Badge>{suggestions.length}</Badge>}
           </CardTitle>
@@ -120,21 +184,37 @@ export default function SuggestionsReview({ suggestions }) {
           </CardDescription>
         </div>
         {suggestions.length > 1 && (
-          <Button variant="ghost" size="sm" onClick={dismissAll} disabled={pending}>
-            Dismiss all
-          </Button>
+          <div className="flex shrink-0 gap-1">
+            <Button variant="ghost" size="sm" onClick={dismissAll} disabled={pending}>
+              Dismiss all
+            </Button>
+            <Button variant="outline" size="sm" onClick={approveAll} disabled={pending}>
+              {pending && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}
+              Approve all
+            </Button>
+          </div>
         )}
       </CardHeader>
       <CardContent>
         {suggestions.length === 0 ? (
-          <p className="text-sm text-gray-400 text-center py-6">
+          <p className="py-6 text-center text-sm text-muted-foreground">
             Nothing to review. Run a scan to look for updates.
           </p>
         ) : (
-          <div className="space-y-3">
-            {suggestions.map((suggestion) => (
-              <SuggestionRow key={suggestion.id} suggestion={suggestion} />
-            ))}
+          <div className="overflow-hidden rounded-lg border">
+            <div
+              className={`${ROW_GRID} hidden border-b bg-muted/40 px-4 py-2 text-xs font-medium text-muted-foreground md:grid`}
+            >
+              <span>Application</span>
+              <span>Status</span>
+              <span>From email</span>
+              <span className="sr-only">Actions</span>
+            </div>
+            <ul className="divide-y">
+              {suggestions.map((suggestion) => (
+                <SuggestionRow key={suggestion.id} suggestion={suggestion} />
+              ))}
+            </ul>
           </div>
         )}
       </CardContent>

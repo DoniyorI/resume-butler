@@ -44,9 +44,32 @@ const createSchema = z.object({
   coverLetterId: optionalId,
 });
 
+const pay = z.coerce
+  .number()
+  .int("Use whole numbers for pay")
+  .nonnegative("Pay can't be negative")
+  .max(10_000_000, "That pay looks too high")
+  .nullable();
+
+// Pay, workplace and employment type (migration 010). Only sent when the
+// database has those columns.
+const jobDetailsSchema = z
+  .object({
+    salaryMin: pay,
+    salaryMax: pay,
+    salaryCurrency: z.string().regex(/^[A-Z]{3}$/, "Pick a currency"),
+    salaryPeriod: z.enum(["hour", "day", "week", "month", "year"]),
+    workplaceType: z.enum(["", "remote", "hybrid", "onsite"]),
+    employmentType: z.string().trim().max(40),
+  })
+  .refine((d) => d.salaryMin == null || d.salaryMax == null || d.salaryMin <= d.salaryMax, {
+    message: "The lowest pay must be at most the highest",
+  });
+
 const updateSchema = z.object({
   ...applicationFields,
   jobDescription: optionalText(50_000, "Job description"),
+  jobDetails: jobDetailsSchema.optional(),
 });
 
 function revalidateApplications(id) {
@@ -117,6 +140,14 @@ export async function updateApplication(id, input) {
         comments: fields.comments,
         job_description: fields.jobDescription,
         applied_date: fields.appliedDate,
+        ...(fields.jobDetails && {
+          salary_min: fields.jobDetails.salaryMin,
+          salary_max: fields.jobDetails.salaryMax,
+          salary_currency: fields.jobDetails.salaryCurrency,
+          salary_period: fields.jobDetails.salaryPeriod,
+          workplace_type: fields.jobDetails.workplaceType || null,
+          employment_type: fields.jobDetails.employmentType || null,
+        }),
       })
       .eq("id", applicationId)
       .eq("user_id", user.id)

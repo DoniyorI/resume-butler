@@ -4,7 +4,7 @@ import ScanEmailsButton from "@/features/applications/ScanEmailsButton";
 export default function ApplicationsHeader({ total, allTotal, filtered }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-2">
-      <div className="flex items-baseline gap-2">
+      <div className="flex items-center gap-2">
         <h1 className="text-xl font-semibold text-brand">Applications</h1>
         <span className="text-sm tabular-nums text-muted-foreground">{allTotal}</span>
         {filtered && (

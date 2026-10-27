@@ -71,8 +71,17 @@
     if (!saved) return current;
     if (!current) return saved;
     const merged = { ...current };
-    for (const field of ["company", "role", "location", "url", "description"]) {
-      if (saved[field] && (field === "description" || field === "url" || !merged[field]))
+    for (const field of [
+      "company",
+      "role",
+      "location",
+      "url",
+      "description",
+      "salary",
+      "employmentType",
+      "workplaceType",
+    ]) {
+      if (saved[field] && (["description", "url", "salary"].includes(field) || !merged[field]))
         merged[field] = saved[field];
     }
     return merged;

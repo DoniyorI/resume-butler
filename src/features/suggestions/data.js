@@ -16,6 +16,8 @@ function toSuggestion(row) {
     emailSubject: row.email_subject || "",
     emailFrom: row.email_from || "",
     emailDate: row.email_date,
+    // For a status update: the tracked application it changes, as it is now
+    current: row.application ? { status: row.application.status, role: row.application.role || "" } : null,
   };
 }
 
@@ -24,7 +26,7 @@ export async function getPendingSuggestions(supabase, userId) {
   const { data, error } = await supabase
     .from("application_suggestions")
     .select(
-      "id, kind, application_id, company, role, status, category, confidence, summary, email_subject, email_from, email_date"
+      "id, kind, application_id, company, role, status, category, confidence, summary, email_subject, email_from, email_date, application:applications(status, role)"
     )
     .eq("user_id", userId)
     .eq("state", "pending")

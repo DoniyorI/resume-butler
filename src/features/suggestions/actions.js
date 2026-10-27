@@ -75,7 +75,7 @@ async function updateApplication(supabase, userId, suggestion, edits) {
 async function findExisting(supabase, userId, fields) {
   const { data, error } = await supabase
     .from("applications")
-    .select("id, company, role, status")
+    .select("id, company, role, status, applied_date, created_at")
     .eq("user_id", userId);
   if (error) throw error;
   return findTargetApplication(data, {

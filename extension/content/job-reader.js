@@ -54,12 +54,44 @@ function postingLocation(posting) {
   return posting?.jobLocationType === "TELECOMMUTE" ? "Remote" : "";
 }
 
+// JSON-LD pay: baseSalary (or estimatedSalary) as
+// { currency, value: { minValue, maxValue, value, unitText: "YEAR" | "HOUR" | ... } }
+const PERIODS = { HOUR: "hour", DAY: "day", WEEK: "week", MONTH: "month", YEAR: "year" };
+function postingSalary(posting) {
+  const pay = [].concat(posting?.baseSalary || posting?.estimatedSalary || [])[0];
+  const value = pay?.value && typeof pay.value === "object" ? pay.value : pay;
+  const number = (x) => (Number.isFinite(Number(x)) && Number(x) > 0 ? Math.round(Number(x)) : null);
+  const min = number(value?.minValue ?? value?.value);
+  const max = number(value?.maxValue ?? value?.value);
+  if (min == null && max == null) return null;
+  const currency =
+    typeof pay?.currency === "string" && /^[A-Z]{3}$/.test(pay.currency) ? pay.currency : "USD";
+  return { min, max, currency, period: PERIODS[String(value?.unitText || "").toUpperCase()] || null };
+}
+
+// "FULL_TIME" or ["FULL_TIME", "CONTRACTOR"] -> "Full-time"
+const EMPLOYMENT = {
+  FULL_TIME: "Full-time",
+  PART_TIME: "Part-time",
+  CONTRACTOR: "Contract",
+  TEMPORARY: "Temporary",
+  INTERN: "Internship",
+  PER_DIEM: "Per diem",
+  VOLUNTEER: "Volunteer",
+};
+function postingEmploymentType(posting) {
+  const type = [].concat(posting?.employmentType || [])[0];
+  return typeof type === "string" ? EMPLOYMENT[type.toUpperCase()] || clean(type, 40) : "";
+}
+
 const textOf = (doc, selector) => (selector ? doc.querySelector(selector)?.textContent || "" : "");
 
 /**
  * The job on this page for `site` (an entry of RB_SITES), or null when the
  * page doesn't show enough to identify one.
- * Returns { site, jobId, company, role, location, url, description }.
+ * Returns { site, jobId, company, role, location, url, description, salary,
+ * employmentType, workplaceType } (salary and the types only when the posting
+ * says; the app fills gaps from the description).
  */
 globalThis.RB_readJob = function readJob(site, doc = document, location = window.location) {
   const url = new URL(location.href);
@@ -86,5 +118,8 @@ globalThis.RB_readJob = function readJob(site, doc = document, location = window
     location: clean(postingLocation(posting)) || clean(textOf(doc, site.location)),
     url: site.postingUrl ? site.postingUrl(jobId) : url.searchParams.get("token") ? url.href : postingUrl,
     description,
+    salary: postingSalary(posting),
+    employmentType: postingEmploymentType(posting),
+    workplaceType: posting?.jobLocationType === "TELECOMMUTE" ? "remote" : "",
   };
 };

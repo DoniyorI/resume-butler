@@ -32,23 +32,53 @@ function sameRole(a, b) {
 }
 
 const TERMINAL_STATUSES = ["Rejected", "Withdrew"];
+const DAY_MS = 24 * 60 * 60 * 1000;
+// Applying again to a role this long after the last time is a new hiring cycle
+export const NEW_CYCLE_DAYS = 120;
+
+const isOpen = (app) => !TERMINAL_STATUSES.includes(app.status);
+// When it was applied to; rows without a date (pending suggestions) count as now
+const appliedAt = (app) => {
+  const time = new Date(app.applied_date || app.created_at || NaN).getTime();
+  return Number.isNaN(time) ? Date.now() : time;
+};
+// Open applications first, then the most recently applied
+const mostRelevantFirst = (a, b) => Number(isOpen(b)) - Number(isOpen(a)) || appliedAt(b) - appliedAt(a);
+
+/**
+ * True when a new submission or "thanks for applying" belongs to `app`: it's
+ * still open and was applied to recently. A closed application (rejected,
+ * withdrawn) or one from months ago means this is a new hiring cycle.
+ */
+export function isSameCycle(app, now = Date.now()) {
+  return isOpen(app) && now - appliedAt(app) <= NEW_CYCLE_DAYS * DAY_MS;
+}
 
 /**
  * The tracked application an email is about, or null if it's a new one.
  * Matches the company exactly (after normalizing), then the role when both
- * sides name one, so two roles at the same company stay separate. An email
- * that names no role (common for rejections) goes to the company's only open
- * application. A confirmation for a role not tracked yet is always new.
+ * sides name one, so two roles at the same company stay separate; an exact
+ * role beats a similar one, and open, recent applications beat old ones. A
+ * confirmation for a role whose application is closed or long past starts a
+ * new cycle. An email that names no role (common for rejections) goes to the
+ * company's only open application.
  */
-export function findTargetApplication(applications, { company, role, category }) {
-  const atCompany = applications.filter((app) => normalizeCompany(app.company) === company);
+export function findTargetApplication(applications, { company, role, category, now = Date.now() }) {
+  const atCompany = applications
+    .filter((app) => normalizeCompany(app.company) === company)
+    .sort(mostRelevantFirst);
   if (atCompany.length === 0) return null;
 
-  const byRole = atCompany.find((app) => sameRole(app.role, role));
-  if (byRole) return byRole;
-  if (normalizeRole(role) && category === "application_received") return null;
+  const wanted = normalizeRole(role);
+  const exact = wanted ? atCompany.filter((app) => normalizeRole(app.role) === wanted) : [];
+  const byRole = exact.length ? exact : atCompany.filter((app) => sameRole(app.role, role));
+  if (byRole.length) {
+    const target = byRole[0];
+    return category === "application_received" && !isSameCycle(target, now) ? null : target;
+  }
+  if (wanted && category === "application_received") return null;
 
-  const open = atCompany.filter((app) => !TERMINAL_STATUSES.includes(app.status));
+  const open = atCompany.filter(isOpen);
   return open.length === 1 ? open[0] : null;
 }
 
