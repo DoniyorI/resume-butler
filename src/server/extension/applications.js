@@ -2,7 +2,7 @@ import "server-only";
 import { z } from "zod";
 import { normalizeHttpUrl } from "@/lib/safeUrl";
 import { HttpError } from "@/server/http";
-import { findTargetApplication, normalizeCompany } from "@/server/email/matching";
+import { normalizeCompany, normalizeRole } from "@/server/email/matching";
 
 // Guards against a runaway content script; real use is a few a day
 const MAX_PER_HOUR = 60;
@@ -61,15 +61,16 @@ export async function recordApplication(admin, userId, input) {
     .eq("user_id", userId);
   if (listError) throw listError;
 
-  // Same posting link first; otherwise the email matcher's rules, treating
-  // this like an "application received" so a new role at the same company stays separate
+  // The user just submitted it, so it's a new application unless it's the same
+  // posting (same link), or the same company and exactly the same role. Looser
+  // rules, like the email matcher's, would fold a new job into another one at
+  // that company, such as when the page didn't show the role.
+  const company = normalizeCompany(input.company);
+  const role = normalizeRole(input.role);
   const match =
     (url && existing.find((app) => app.portal_link === url)) ||
-    findTargetApplication(existing, {
-      company: normalizeCompany(input.company),
-      role: input.role,
-      category: "application_received",
-    });
+    (role &&
+      existing.find((app) => normalizeCompany(app.company) === company && normalizeRole(app.role) === role));
 
   if (match) {
     // Fill in what's missing; never overwrite what the user or email sync set
