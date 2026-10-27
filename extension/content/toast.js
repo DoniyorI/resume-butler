@@ -72,10 +72,10 @@ function showToast({ title, detail, warn = false, pending = false, actions = [] 
   for (const action of actions) {
     const button = document.createElement("button");
     button.textContent = action.label;
-    button.addEventListener("click", async () => {
+    button.addEventListener("click", async (event) => {
       button.disabled = true;
       const clicked = toastHost;
-      const next = await action.onClick();
+      const next = await action.onClick(event);
       if (next) showToast(next);
       // Close this notice, unless the action already replaced it with another
       else if (toastHost === clicked) removeToast();
@@ -110,7 +110,7 @@ globalThis.RB_showTracking = function showTracking(job) {
 };
 
 // The notice for what the background worker did with a submitted application
-globalThis.RB_showResult = function showResult(result, job) {
+globalThis.RB_showResult = function showResult(result, job, key) {
   const what = [job.role, job.company].filter(Boolean).join(" at ");
   switch (result?.status) {
     case "added":
@@ -153,6 +153,23 @@ globalThis.RB_showResult = function showResult(result, job) {
             label: "Connect",
             onClick: async () => {
               await sendToBackground({ type: "open-connect" });
+              return null;
+            },
+          },
+        ],
+      });
+      break;
+    case "unconfirmed":
+      showToast({
+        title: "Did you apply?",
+        detail: what,
+        actions: [
+          {
+            label: "Add",
+            onClick: async (event) => {
+              if (!event.isTrusted) return null;
+              const reply = await sendToBackground({ type: "confirm-submitted", key, job });
+              globalThis.RB_showResult(reply, job, key);
               return null;
             },
           },

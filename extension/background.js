@@ -160,19 +160,24 @@ async function noteSubmitClick(key) {
   return { ok: true };
 }
 
+async function recentlyClicked(key) {
+  const { clicks = {} } = await chrome.storage.session.get("clicks");
+  return Boolean(clicks[key]) && Date.now() - clicks[key] <= SUBMIT_CLICK_WINDOW_MS;
+}
+
 /**
- * A submission the content script saw: added automatically, no questions.
- * In a frame (Greenhouse's embedded form) it also needs a submit click seen
- * for that job in this session, so a site that merely frames a confirmation
- * page can't add jobs. Skips jobs already reported recently.
+ * A submission the content script saw. Added automatically when the user
+ * clicked submit for that job recently; otherwise (a confirmation link opened
+ * directly, or a click we missed) the page asks first, except in a frame,
+ * where it's ignored. Skips jobs already reported recently.
  */
-async function reportSubmitted(key, job, sender) {
+async function reportSubmitted(key, job, sender, { confirmed = false } = {}) {
   const reported = await getLocal("reported", {});
   const now = Date.now();
   if (reported[key] && now - reported[key] < REPORT_COOLDOWN_MS) return { status: "duplicate" };
-  if (sender.frameId) {
-    const { clicks = {} } = await chrome.storage.session.get("clicks");
-    if (!clicks[key] || now - clicks[key] > SUBMIT_CLICK_WINDOW_MS) return { status: "ignored" };
+  if (!(await recentlyClicked(key))) {
+    if (sender.frameId) return { status: "ignored" };
+    if (!confirmed) return { status: "unconfirmed" };
   }
 
   const fresh = Object.fromEntries(
@@ -220,6 +225,9 @@ const contentHandlers = {
   "job-lookup": (message) => lookupJob(message.key),
   "submit-clicked": (message) => noteSubmitClick(message.key),
   submitted: (message, sender) => reportSubmitted(message.key, message.job, sender),
+  // The user clicked "Add" on the notice for an unconfirmed submission
+  "confirm-submitted": (message, sender) =>
+    reportSubmitted(message.key, message.job, sender, { confirmed: true }),
   // content/app-bridge.js: connected, and to which account? (never the token)
   "connection-status": async (message, sender) => {
     if (!(await trustedOrigin(new URL(sender.url).origin))) return { connected: false, email: "" };
@@ -260,7 +268,7 @@ const fromPopup = (sender) => !sender.tab && sender.url?.startsWith(chrome.runti
 
 // Submissions are trusted from top-level pages, and from Greenhouse's embedded
 // form (an iframe on company sites).
-const SUBMISSION_TYPES = new Set(["submit-clicked", "submitted"]);
+const SUBMISSION_TYPES = new Set(["submit-clicked", "submitted", "confirm-submitted"]);
 function frameAllowed(type, sender) {
   if (sender.frameId === 0 || sender.frameId === undefined) return true;
   if (!SUBMISSION_TYPES.has(type)) return true;

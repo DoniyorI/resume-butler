@@ -12,6 +12,7 @@
 //   submitButton  CSS selector of the submit button
 //   successUrl    the URL after a successful submit, if the site changes it
 //   successText   text that appears after a successful submit
+//   successRoot   optional: CSS selector of where successText must appear
 //
 // Checked against live postings on 2026-10-27 (LinkedIn's signed-in Easy
 // Apply markup isn't publicly visible, so its selectors are best-effort with
@@ -71,6 +72,8 @@ globalThis.RB_SITES = [
         .trim(),
     submitButton: 'button[aria-label="Submit application"], button[aria-label*="Submit application"]',
     successUrl: null,
+    // The Easy Apply dialog, which says "Your application was sent to <company>"
+    successRoot: '[role="dialog"], .artdeco-modal',
     successText: LINKEDIN_SUCCESS_TEXT,
   },
   {

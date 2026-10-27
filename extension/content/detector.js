@@ -10,6 +10,8 @@
 //     appears that wasn't on the page before the click (Ashby, and the others
 //     as a fallback). Checking before the click keeps a job description that
 //     happens to mention applying from counting.
+// The background worker adds it automatically only if the submit button was
+// clicked for that job; otherwise the notice asks "Did you apply?" first.
 
 (() => {
   const site = globalThis.RB_SITES.find((s) => s.hosts.includes(window.location.hostname));
@@ -22,7 +24,8 @@
   const CHECK_INTERVAL_MS = 1500;
   const reportedKeys = new Set();
   let lastUrl = "";
-  let submitClicked = false;
+  // The job whose submit button was clicked, and whether the success text was already showing
+  let clickedJobId = null;
   let successTextBeforeClick = false;
 
   const send = (message) =>
@@ -31,7 +34,12 @@
     );
 
   const keyFor = (jobId) => `${site.id}:${jobId}`;
-  const successTextShowing = () => site.successText.test(document.body?.innerText || "");
+  // Only inside the site's form or dialog when it names one, so text elsewhere on the page can't count
+  const successTextShowing = () => {
+    const roots = site.successRoot ? [...document.querySelectorAll(site.successRoot)] : [document.body];
+    return roots.some((root) => site.successText.test(root?.innerText || ""));
+  };
+  const currentJobId = () => site.jobId(new URL(window.location.href));
 
   // Save what the posting says, so the confirmation page (which shows little) can use it
   function capture() {
@@ -51,8 +59,7 @@
     return merged;
   }
 
-  async function onSubmitted() {
-    const jobId = site.jobId(new URL(window.location.href));
+  async function onSubmitted(jobId = currentJobId()) {
     if (!jobId) return;
     const key = keyFor(jobId);
     if (reportedKeys.has(key)) return;
@@ -61,18 +68,20 @@
     const job = merge(await send({ type: "job-lookup", key }), globalThis.RB_readJob(site));
     if (!job?.company) return;
     const result = await send({ type: "submitted", key, job });
-    globalThis.RB_showResult(result, job);
+    globalThis.RB_showResult(result, job, key);
   }
 
   function check() {
     if (window.location.href !== lastUrl) {
       lastUrl = window.location.href;
+      // Moved to another job: a click on the last one no longer counts
+      if (clickedJobId && currentJobId() !== clickedJobId) clickedJobId = null;
       capture();
     }
     if (site.successUrl?.test(window.location.pathname)) {
       onSubmitted();
-    } else if (submitClicked && !successTextBeforeClick && successTextShowing()) {
-      onSubmitted();
+    } else if (clickedJobId && !successTextBeforeClick && successTextShowing()) {
+      onSubmitted(clickedJobId);
     }
   }
 
@@ -83,14 +92,15 @@
       // Only real clicks: the page's scripts can't fake a submission
       if (!event.isTrusted) return;
       const target = event.target instanceof Element ? event.target : null;
-      const button = target?.closest(site.submitButton) || target?.closest("button");
-      if (!button || !/submit/i.test(button.textContent || button.value || "")) return;
+      const button = target?.closest(site.submitButton);
+      if (!button || !/submit/i.test(button.textContent || button.value || button.ariaLabel || "")) return;
+      const jobId = currentJobId();
+      if (!jobId) return;
       successTextBeforeClick = successTextShowing();
-      submitClicked = true;
+      clickedJobId = jobId;
       capture();
       // Lets the background worker trust the confirmation that follows (often on a new page)
-      const jobId = site.jobId(new URL(window.location.href));
-      if (jobId) send({ type: "submit-clicked", key: keyFor(jobId) });
+      send({ type: "submit-clicked", key: keyFor(jobId) });
       const job = globalThis.RB_readJob(site);
       if (job) globalThis.RB_showTracking(job);
     },
