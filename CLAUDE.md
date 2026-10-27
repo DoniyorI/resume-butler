@@ -61,7 +61,8 @@ supabase/migrations/      SQL schema; apply in order
 
 ## Conventions
 
-- **Service role.** Only scheduled jobs use `createAdminClient()` (`@/server/supabaseAdmin`). It bypasses RLS, so every query made with it must filter by `user_id`.
+- **Extension API.** Routes under `api/extension/` authenticate with `authenticateExtension(request)` (`@/server/extension/tokens`), a bearer token, not a session. It returns the service-role client, so scope every query by the returned `userId`. The plan is in `docs/chrome-extension-plan.md`.
+- **Service role.** Only scheduled jobs and the extension API use `createAdminClient()` (`@/server/supabaseAdmin`). It bypasses RLS, so every query made with it must filter by `user_id`.
 - **Auth.** Use `getUser()` on the server, never `getSession()`, for any decision. Pages: `requirePageUser()` from `@/server/auth` (redirects). Route Handlers and Server Actions: `requireUser()` (throws a 401 `HttpError`). The user ID is `user.id`.
 - **Reads.** Fetch in Server Components with the server client (`@/lib/supabase/server`) and pass plain data to client components. Avoid `useEffect` fetching for initial data.
 - **Writes.** Use Server Actions in `features/<feature>/actions.js`, wrapped in `runAction` with input checked by `parseInput` (zod): check the user, scope queries by `user_id`, call `revalidatePath`, and return `{ ok: true, data }` or `{ ok: false, error }` with a user-safe message. Call `redirect()` outside `runAction` (it works by throwing). Don't write to Supabase directly from the browser; the browser client is only for sign-in/sign-out.
@@ -94,11 +95,14 @@ supabase/migrations/      SQL schema; apply in order
 | `POST /api/rewrite-paragraph` | Three AI rewrites of one cover letter paragraph |
 | `GET/POST/DELETE /api/email-settings` | Manage the IMAP connection (password encrypted) |
 | `POST /api/scan-emails` | Scan recent email and queue application suggestions for review |
+| `GET /api/extension/me` | Browser extension: check its token, return who it's connected as |
+| `POST /api/extension/applications` | Browser extension: add the application the user just submitted (or fill in the tracked one) |
+| `DELETE /api/extension/applications/[id]` | Browser extension: undo an addition (same day, still at Applied) |
 | `GET /api/cron/email-sync` | Daily auto-sync for users who turned it on (Vercel Cron, `Authorization: Bearer $CRON_SECRET`) |
 
 ## Database (Supabase)
 
-Key tables: `profiles`, `cv_experience` (+ `_bullets`), `cv_projects` (+ `_bullets`), `cv_education`, `cv_skills`, `cv_certifications`, `applications`, `application_status_history` (trigger-logged), `resumes` (`content` JSONB), `cover_letters` (Draft.js JSONB), `email_connections` (+ `auto_sync`), `processed_emails`, `application_suggestions`, `api_rate_limits`. Goals are `profiles.goal_period` / `goal_target`. RLS is enabled on every table.
+Key tables: `profiles`, `cv_experience` (+ `_bullets`), `cv_projects` (+ `_bullets`), `cv_education`, `cv_skills`, `cv_certifications`, `applications`, `application_status_history` (trigger-logged), `resumes` (`content` JSONB), `cover_letters` (Draft.js JSONB), `email_connections` (+ `auto_sync`), `processed_emails`, `application_suggestions`, `api_rate_limits`, `extension_tokens` (hashed; the extension's credentials). `applications.source` is `manual`, `email` or `extension`. Goals are `profiles.goal_period` / `goal_target`. RLS is enabled on every table.
 
 ## Environment Variables
 

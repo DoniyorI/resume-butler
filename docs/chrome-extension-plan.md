@@ -72,7 +72,13 @@ Inspected on 2026-10-27: only manifests, file names, config shape and which brow
 
 ### App side
 
-- **Connecting the extension:**
+- **Connecting (built, automatic):** when the extension is installed it opens `/extension?connect=1`. The page, where you're already signed in, creates a token and hands it over by itself:
+  1. The extension's content script on our site sets `<html data-resume-butler-extension="<version>">`.
+  2. The page posts `{ source: "resume-butler-app", type: "connect", token }` to its own origin (`window.postMessage`).
+  3. The script stores the token and answers `{ source: "resume-butler-extension", type: "connected", ok: true }`.
+
+  If nothing answers within 2 seconds, the page tries `externally_connectable` (when `NEXT_PUBLIC_EXTENSION_ID` is set), and finally shows the token once to paste in.
+- **Connecting the extension (details):**
   - A "Connect the extension" button in the app creates a personal API token. It's stored hashed in a new `extension_tokens` table, and the user can revoke it.
   - The app hands the token to the extension through `externally_connectable` (only our domain can talk to the extension).
   - The extension never sees your Supabase session.
@@ -88,7 +94,7 @@ Inspected on 2026-10-27: only manifests, file names, config shape and which brow
 ### Order of work
 
 1. ~~Inspect Simplify's and Jobright's manifests.~~ Done (see above).
-2. App: `extension_tokens` migration, the connect flow, and `POST /api/extension/applications`, with tests against the email matcher.
+2. ~~App: `extension_tokens` (migration 008), the connect page at `/extension`, and the API (`GET /api/extension/me`, `POST /api/extension/applications`, `DELETE /api/extension/applications/[id]` for undo).~~ Done and tested on 2026-10-27.
 3. Extension skeleton: manifest, background worker, popup with "Save this job", loaded unpacked in Chrome.
 4. Greenhouse, Lever and Ashby adapters: read the job and detect submission. Test on real postings, without submitting real applications (use the confirmation page markup, or postings you actually apply to).
 5. Generic fallback prompt.

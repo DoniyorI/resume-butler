@@ -49,6 +49,7 @@ async function createApplication(supabase, userId, suggestion, edits) {
       status: edits.status,
       applied_date: appliedDate,
       comments: suggestion.summary ? `From email: ${suggestion.summary}` : "",
+      source: "email",
     })
     .select("id")
     .single();
