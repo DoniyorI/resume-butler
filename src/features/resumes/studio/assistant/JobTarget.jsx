@@ -12,7 +12,7 @@ function jobName({ role, company }) {
   return role || company || "Pasted job description";
 }
 
-function JobForm({ target, jobOptions, onSave, onCancel }) {
+function JobForm({ target, jobOptions, onSave, onCancel, documentLabel }) {
   const [text, setText] = useState(target.applicationId ? "" : target.jobDescription);
   const [error, setError] = useState(null);
   const [pending, startTransition] = useTransition();
@@ -45,7 +45,7 @@ function JobForm({ target, jobOptions, onSave, onCancel }) {
           <span>
             <span className="block text-sm font-medium">{jobName(linked)}</span>
             <span className="block text-xs text-muted-foreground">
-              This resume is attached to it. Use its job description.
+              This {documentLabel} is attached to it. Use its job description.
             </span>
           </span>
         </button>
@@ -105,10 +105,11 @@ function JobForm({ target, jobOptions, onSave, onCancel }) {
 }
 
 /**
- * The job this resume is tailored for. Saved with the resume, so match scores
+ * The job the document (`documentLabel`: "resume" or "cover letter") is
+ * tailored for. Saved with it, so match scores
  * and AI suggestions use it without pasting it again.
  */
-export default function JobTarget({ target, jobOptions, onChange }) {
+export default function JobTarget({ target, jobOptions, onChange, documentLabel = "resume" }) {
   const hasJob = Boolean(target.jobDescription.trim());
   const [editing, setEditing] = useState(!hasJob);
   const [expanded, setExpanded] = useState(false);
@@ -122,14 +123,15 @@ export default function JobTarget({ target, jobOptions, onChange }) {
     return (
       <section className="space-y-3">
         <div>
-          <h3 className="text-sm font-semibold">Which job is this resume for?</h3>
+          <h3 className="text-sm font-semibold">Which job is this {documentLabel} for?</h3>
           <p className="text-xs text-muted-foreground">
-            The match score and AI suggestions are tailored to it. It&apos;s saved with this resume.
+            The AI is tailored to it. It&apos;s saved with this {documentLabel}.
           </p>
         </div>
         <JobForm
           target={target}
           jobOptions={jobOptions}
+          documentLabel={documentLabel}
           onSave={save}
           onCancel={hasJob ? () => setEditing(false) : null}
         />

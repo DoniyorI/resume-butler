@@ -120,7 +120,7 @@ export default function FitGauge({ fit, pdfCheck, onCheckPdf, onTighten, tighten
       )}
       {pdfCheck.status === "error" && <p className="text-xs text-destructive">{pdfCheck.error}</p>}
 
-      {result.over && (
+      {result.over && onTighten && (
         <Button
           size="sm"
           variant="outline"

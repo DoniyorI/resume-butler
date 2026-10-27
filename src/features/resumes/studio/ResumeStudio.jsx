@@ -4,6 +4,7 @@ import dynamic from "next/dynamic";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { itemBullets } from "@/features/resumes/resumeDocument";
+import { renameResume } from "@/features/resumes/actions";
 import { countResumePages, reviewBullets, tailorFromCv } from "@/features/resumes/api";
 import { useResumeDocument } from "@/features/resumes/hooks/useResumeDocument";
 import { useResumeDownload } from "@/features/resumes/hooks/useResumeDownload";
@@ -309,7 +310,7 @@ export default function ResumeStudio({ resume, masterCv, jobOptions }) {
     // itself never scrolls (each pane scrolls on its own)
     <div className="fixed inset-x-0 bottom-0 top-[73px] z-10 flex flex-col bg-background">
       <StudioToolbar
-        resumeId={resume.id}
+        rename={(newTitle) => renameResume(resume.id, newTitle)}
         title={title}
         onTitleChange={setTitle}
         saveStatus={resumeDoc.saveStatus}

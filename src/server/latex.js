@@ -292,3 +292,79 @@ ${sectionContent}
 
 \\end{document}`;
 }
+
+// Contact line of a cover letter: same look as the resume header, so the two
+// read as one application
+function letterContacts(header) {
+  const parts = [];
+  if (header.contactEmail) {
+    const mailto = SIMPLE_EMAIL.test(header.contactEmail) ? `mailto:${header.contactEmail}` : null;
+    parts.push(
+      link(mailto, `\\raisebox{-0.2\\height}\\faEnvelope\\  \\underline{${esc(header.contactEmail)}}`)
+    );
+  }
+  if (header.contactPhone) {
+    parts.push(`\\raisebox{-0.2\\height}\\faPhone\\  ${esc(header.contactPhone)}`);
+  }
+  for (const [field, icon] of [
+    ["linkedin", "faLinkedin"],
+    ["portfolio", "faGlobe"],
+  ]) {
+    if (!header[field]) continue;
+    const display = String(header[field]).replace(/^https?:\/\/(www\.)?/, "");
+    parts.push(
+      link(escUrl(header[field]), `\\raisebox{-0.2\\height}\\${icon}\\ \\underline{${esc(display)}}`)
+    );
+  }
+  return parts.join(" ~ \n    ");
+}
+
+const LETTER_PREAMBLE = `\\documentclass[letterpaper,11pt]{article}
+\\usepackage[margin=0.75in]{geometry}
+\\usepackage{fontawesome5}
+\\usepackage{xcolor}
+\\definecolor{lightblue}{RGB}{70, 130, 180}
+\\usepackage[colorlinks=true, urlcolor=lightblue]{hyperref}
+\\usepackage[english]{babel}
+\\input{glyphtounicode}
+\\pdfgentounicode=1
+\\pagestyle{empty}
+\\urlstyle{same}
+\\raggedright
+\\setlength{\\parindent}{0pt}
+\\setlength{\\parskip}{8pt}`;
+
+/**
+ * LaTeX source for a cover letter in the letter editor's shape
+ * (features/cover-letters/letterDocument.js: normalizeLetter). The editor's
+ * page (.rb-letter in globals.css) mirrors this layout.
+ */
+export function generateCoverLetterLatex(letter) {
+  const { header, recipient } = letter;
+  const date = letter.date
+    ? new Date(letter.date).toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })
+    : "";
+  const recipientLines = [recipient.name, recipient.company].filter(Boolean).map(esc);
+  const paragraphs = letter.paragraphs.filter((p) => p.trim()).map((p) => `${esc(p)}\\par`);
+
+  return `${LETTER_PREAMBLE}
+
+\\begin{document}
+
+\\begin{center}
+    {\\LARGE\\scshape ${esc(header.name || "Your Name")}} \\\\[2pt]
+    \\small
+    ${letterContacts(header)}
+\\end{center}
+\\vspace{-10pt}\\rule{\\linewidth}{0.4pt}
+
+${date ? `${esc(date)}\\par` : ""}
+${recipientLines.length ? `${recipientLines.join("\\\\\n")}\\par` : ""}
+${esc(letter.greeting)}\\par
+${paragraphs.join("\n\n")}
+
+${esc(letter.signOff)}\\\\
+${esc(header.name)}
+
+\\end{document}`;
+}

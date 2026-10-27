@@ -19,7 +19,7 @@ const NAV_LINKS = [
 ];
 
 const NAV_LINK_CLASS =
-  "block py-2 px-3 text-gray-900 rounded hover:bg-gray-100 md:hover:bg-transparent md:hover:text-green-800 md:p-0 md:dark:hover:text-green-400 dark:text-white dark:hover:bg-gray-700 dark:hover:text-white md:dark:hover:bg-transparent dark:border-gray-700";
+  "block py-2 px-3 text-gray-900 rounded hover:bg-gray-100 lg:hover:bg-transparent lg:hover:text-green-800 lg:p-0 lg:dark:hover:text-green-400 dark:text-white dark:hover:bg-gray-700 dark:hover:text-white lg:dark:hover:bg-transparent dark:border-gray-700";
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -54,12 +54,13 @@ export default function Navbar() {
           className="flex items-center space-x-3 rtl:space-x-reverse"
         >
           <Image src="/image/Logo.svg" alt="Logo" width="0" height="0" className="w-8 h-auto" />
-          {/* The name is hidden on phones so the bar stays one row (73px) and pages start below it */}
+          {/* The bar must stay one row (73px) so pages start below it: the name is
+              hidden on phones, and the links collapse into the menu below lg */}
           <span className="hidden sm:inline self-center text-md font-medium whitespace-nowrap dark:text-white">
             Resume Butler
           </span>
         </Link>
-        <div className="flex md:order-2 space-x-3 md:space-x-0 rtl:space-x-reverse">
+        <div className="flex lg:order-2 space-x-3 lg:space-x-0 rtl:space-x-reverse">
           <div className="flex space-x-2">
             <AddApplicationDialog />
             <Button
@@ -76,7 +77,7 @@ export default function Navbar() {
             onClick={toggleMenu}
             aria-expanded={menuOpen}
             aria-controls="navbar-sticky"
-            className="inline-flex items-center p-2 w-10 h-10 justify-center text-sm text-gray-500 rounded-lg md:hidden hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-200 dark:text-gray-400 dark:hover:bg-gray-700 dark:focus:ring-gray-600"
+            className="inline-flex items-center p-2 w-10 h-10 justify-center text-sm text-gray-500 rounded-lg lg:hidden hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-200 dark:text-gray-400 dark:hover:bg-gray-700 dark:focus:ring-gray-600"
           >
             <span className="sr-only">Open main menu</span>
             <svg
@@ -100,10 +101,10 @@ export default function Navbar() {
         <div
           className={`items-center justify-between ${
             menuOpen ? "block" : "hidden"
-          } w-full md:flex md:w-auto md:order-1`}
+          } w-full lg:flex lg:w-auto lg:order-1`}
           id="navbar-sticky"
         >
-          <ul className="flex flex-col p-4 md:p-0 mt-4 font-normal border border-gray-100 rounded-lg md:space-x-8 rtl:space-x-reverse md:flex-row md:mt-0 md:border-0  dark:bg-gray-800 md:dark:bg-gray-900 dark:border-gray-700">
+          <ul className="flex flex-col p-4 lg:p-0 mt-4 font-normal border border-gray-100 rounded-lg lg:space-x-6 rtl:space-x-reverse lg:flex-row lg:mt-0 lg:border-0  dark:bg-gray-800 lg:dark:bg-gray-900 dark:border-gray-700">
             {NAV_LINKS.map(({ href, label }) => (
               <li key={href}>
                 <Link href={href} className={NAV_LINK_CLASS} onClick={() => setMenuOpen(false)}>

@@ -6,15 +6,24 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Skeleton } from "@/components/ui/skeleton";
 import { rewriteBullet } from "@/features/resumes/api";
 
-// AI rewrites of one bullet (stronger, tailored, shorter); picking one replaces it
-export default function BulletRewrite({ text, context, jobDescription, onApply }) {
+// AI rewrites of one bullet (stronger, tailored, shorter); picking one replaces
+// it. `fetchVariants` swaps in another source (cover letter paragraphs), and
+// `what` names the thing being rewritten in its labels.
+export default function BulletRewrite({
+  text,
+  context,
+  jobDescription,
+  onApply,
+  fetchVariants = () => rewriteBullet({ text, context, jobDescription }),
+  what = "bullet",
+}) {
   const [open, setOpen] = useState(false);
   const [state, setState] = useState({ status: "idle", variants: [], error: null });
 
   const load = async () => {
     setState({ status: "loading", variants: [], error: null });
     try {
-      const variants = await rewriteBullet({ text, context, jobDescription });
+      const variants = await fetchVariants();
       setState({ status: "done", variants, error: null });
     } catch (error) {
       setState({ status: "error", variants: [], error: error.message });
@@ -39,8 +48,8 @@ export default function BulletRewrite({ text, context, jobDescription, onApply }
         <button
           type="button"
           disabled={empty}
-          title={empty ? "Write the bullet first" : "Rewrite with AI"}
-          aria-label="Rewrite this bullet with AI"
+          title={empty ? `Write the ${what} first` : "Rewrite with AI"}
+          aria-label={`Rewrite this ${what} with AI`}
           className="flex h-6 w-6 items-center justify-center rounded-md border border-border bg-white text-brand shadow-sm hover:bg-brand/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-40"
         >
           <Sparkles className="h-3.5 w-3.5" />
@@ -71,7 +80,7 @@ export default function BulletRewrite({ text, context, jobDescription, onApply }
           {state.status === "error" && <p className="p-2 text-sm text-destructive">{state.error}</p>}
           {state.status === "done" && state.variants.length === 0 && (
             <p className="p-2 text-sm text-muted-foreground">
-              This bullet already reads well. Try again for other options.
+              This {what} already reads well. Try again for other options.
             </p>
           )}
           {state.variants.map((variant) => (

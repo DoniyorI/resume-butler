@@ -20,10 +20,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import ViewSwitch from "@/components/shared/ViewSwitch";
-import { renameResume } from "@/features/resumes/actions";
 import { FitBadge } from "@/features/resumes/studio/FitGauge";
-import { editorViews } from "@/features/resumes/studio/editorViews";
 
 const ZOOM_STEPS = [0.5, 0.75, 1, 1.25, 1.5];
 
@@ -33,21 +30,22 @@ const SAVE_STATUS = {
   error: { Icon: AlertCircle, label: "Not saved", className: "text-destructive" },
 };
 
-// Resume name, saved when the field loses focus. An empty name goes back to the saved one.
-function TitleInput({ resumeId, title, onChange }) {
+// Document name, saved through `rename` (a Server Action returning { ok, error })
+// when the field loses focus. An empty name goes back to the saved one.
+function TitleInput({ title, onChange, rename, label }) {
   const savedRef = useRef(title);
 
   const handleBlur = async () => {
     const trimmed = title.trim();
     if (!trimmed) return onChange(savedRef.current);
     if (trimmed === savedRef.current) return;
-    const result = await renameResume(resumeId, trimmed).catch(() => ({
+    const result = await rename(trimmed).catch(() => ({
       ok: false,
       error: "Failed to rename",
     }));
     if (!result.ok) return toast.error(result.error);
     savedRef.current = trimmed;
-    toast("Resume renamed");
+    toast(`${label} renamed`);
   };
 
   return (
@@ -57,8 +55,8 @@ function TitleInput({ resumeId, title, onChange }) {
       onBlur={handleBlur}
       onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
       maxLength={200}
-      aria-label="Resume name"
-      placeholder="Untitled resume"
+      aria-label={`${label} name`}
+      placeholder={`Untitled ${label.toLowerCase()}`}
       className="min-w-0 max-w-[22rem] flex-1 truncate rounded-md bg-transparent px-1.5 py-1 text-base font-semibold hover:bg-muted focus:bg-muted focus:outline-none focus-visible:ring-2 focus-visible:ring-ring"
     />
   );
@@ -104,8 +102,23 @@ function ZoomControl({ zoom, scale, onZoom }) {
   );
 }
 
+const RESUME_DOWNLOADS = [
+  { format: "pdf", label: "PDF" },
+  { format: "tex", label: "LaTeX source (.tex, for Overleaf)" },
+];
+
+/**
+ * The editor's top bar: back, name, save status, page fit, zoom, download and
+ * (below xl) the assistant toggle. Shared by the resume and cover letter
+ * editors: `rename(title)` saves the name, `downloads` lists the formats
+ * download.download(format) accepts, and `fitBadgeClassName` hides the fit
+ * badge where the page shows its own gauge.
+ */
 export default function StudioToolbar({
-  resumeId,
+  label = "Resume",
+  rename,
+  downloads = RESUME_DOWNLOADS,
+  fitBadgeClassName = "lg:hidden",
   title,
   onTitleChange,
   saveStatus,
@@ -126,7 +139,7 @@ export default function StudioToolbar({
           <ArrowLeft className="h-4 w-4" />
         </Link>
       </Button>
-      <TitleInput resumeId={resumeId} title={title} onChange={onTitleChange} />
+      <TitleInput title={title} onChange={onTitleChange} rename={rename} label={label} />
       <span
         className={`hidden shrink-0 items-center gap-1 text-xs sm:flex ${status.className}`}
         aria-live="polite"
@@ -135,11 +148,8 @@ export default function StudioToolbar({
       </span>
 
       <div className="ml-auto flex shrink-0 items-center gap-2">
-        <span className="lg:hidden">
+        <span className={fitBadgeClassName}>
           <FitBadge fit={fit} pdfPages={pdfPages} />
-        </span>
-        <span className="hidden lg:block">
-          <ViewSwitch views={editorViews(resumeId)} current={`/resumes/${resumeId}/new`} />
         </span>
         <ZoomControl zoom={zoom} scale={scale} onZoom={onZoom} />
         <DropdownMenu>
@@ -154,15 +164,11 @@ export default function StudioToolbar({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onSelect={() => download.download("pdf")}>
-              <FileDown className="mr-2 h-4 w-4" /> PDF
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => download.download("tex")}>
-              <FileDown className="mr-2 h-4 w-4" /> LaTeX source (.tex, for Overleaf)
-            </DropdownMenuItem>
-            <DropdownMenuItem asChild className="lg:hidden">
-              <Link href={`/resumes/${resumeId}`}>Open the classic editor</Link>
-            </DropdownMenuItem>
+            {downloads.map(({ format, label: formatLabel }) => (
+              <DropdownMenuItem key={format} onSelect={() => download.download(format)}>
+                <FileDown className="mr-2 h-4 w-4" /> {formatLabel}
+              </DropdownMenuItem>
+            ))}
           </DropdownMenuContent>
         </DropdownMenu>
         <Button

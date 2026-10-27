@@ -3,7 +3,7 @@ import { z } from "zod";
 import { chatJSON } from "@/server/openai";
 import { checkRewrite, technologies } from "@/server/resume/guardrails";
 
-const REWRITE_PROMPT = `You rewrite one resume bullet point three ways. Keep the user's facts: never add or swap a technology, tool, product, industry, result or number, and don't add claims the bullet doesn't make. Where a number would help and none is given, use a placeholder like [X%] for the user to fill in. Keep the bullet's ending punctuation.
+const REWRITE_PROMPT = `You rewrite one resume bullet point three ways. Keep the user's facts: never add or swap a technology, tool, product, industry, job title, result or number, and don't add claims the bullet doesn't make. Where a number would help and none is given, use a placeholder like [X%] for the user to fill in. Keep the bullet's ending punctuation.
 
 Variants:
 - "stronger": opens with a strong action verb and leads with impact

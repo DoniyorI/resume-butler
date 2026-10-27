@@ -10,6 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { renameCoverLetter, saveCoverLetter } from "@/features/cover-letters/actions";
 import { EditableTitleHeader } from "@/features/resumes/EditableTitleHeader";
 import { SIDE_PANEL_MARGIN_CLASS } from "@/components/shared/SidePanel";
+import ViewSwitch from "@/components/shared/ViewSwitch";
 
 // Draft.js and the AI panel are client-only chunks
 const CoverLetterBodyEditor = dynamic(() => import("@/features/cover-letters/CoverLetterBodyEditor"), {
@@ -124,6 +125,13 @@ export default function CoverLetterEditor({ coverLetter }) {
             placeholder="Untitled Cover Letter"
           />
           <div className="flex items-center gap-2">
+            <ViewSwitch
+              views={[
+                { href: `/coverletters/${coverLetter.id}`, label: "Classic" },
+                { href: `/coverletters/${coverLetter.id}/new`, label: "New" },
+              ]}
+              current={`/coverletters/${coverLetter.id}`}
+            />
             <Button variant="outline" onClick={handleDownload}>
               <Download size={16} className="mr-2" /> Download
             </Button>

@@ -12,7 +12,7 @@ export const renderResumeInput = z.object({
   format: z.enum(["tex", "pdf"]).optional(),
 });
 
-async function compilePdf(latex) {
+export async function compilePdf(latex) {
   const response = await fetch(LATEX_COMPILE_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

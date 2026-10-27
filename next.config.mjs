@@ -49,6 +49,8 @@ const nextConfig = {
       // The dashboard moved to the home page; applications live at /applications
       { source: "/dash", destination: "/", permanent: true },
       { source: "/dash/new", destination: "/", permanent: true },
+      // The redesigned resume editor replaced the classic one at /resumes/[id]
+      { source: "/resumes/:id/new", destination: "/resumes/:id", permanent: true },
     ];
   },
 };
