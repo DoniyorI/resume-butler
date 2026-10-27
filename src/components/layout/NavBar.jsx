@@ -11,8 +11,8 @@ import { Button } from "@/components/ui/button";
 import AddApplicationDialog from "@/features/applications/AddApplication";
 
 const NAV_LINKS = [
-  { href: "/", label: "Applications" },
-  { href: "/dash", label: "Dashboard" },
+  { href: "/", label: "Dashboard" },
+  { href: "/applications", label: "Applications" },
   { href: "/documents", label: "Documents" },
   { href: "/profile", label: "Profile & CV" },
   { href: "/email-sync", label: "Email Sync" },
@@ -48,9 +48,14 @@ export default function Navbar() {
   return (
     <nav className="bg-white dark:bg-gray-900 fixed w-full z-20 top-0 start-0 border-b border-gray-200 dark:border-gray-600">
       <div className="max-w-screen-xl flex flex-wrap items-center justify-between mx-auto p-4">
-        <Link href="/" className="flex items-center space-x-3 rtl:space-x-reverse">
+        <Link
+          href="/"
+          aria-label="Resume Butler home"
+          className="flex items-center space-x-3 rtl:space-x-reverse"
+        >
           <Image src="/image/Logo.svg" alt="Logo" width="0" height="0" className="w-8 h-auto" />
-          <span className="self-center text-md font-medium whitespace-nowrap dark:text-white">
+          {/* The name is hidden on phones so the bar stays one row (73px) and pages start below it */}
+          <span className="hidden sm:inline self-center text-md font-medium whitespace-nowrap dark:text-white">
             Resume Butler
           </span>
         </Link>

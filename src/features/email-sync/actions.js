@@ -1,9 +1,15 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { runAction } from "@/server/actionResult";
 import { requireUser } from "@/server/auth";
-import { deleteConnection, parseConnectionInput, saveConnection } from "@/server/email/connection";
+import { z } from "zod";
+import { parseInput, runAction } from "@/server/actionResult";
+import {
+  deleteConnection,
+  parseConnectionInput,
+  saveConnection,
+  setAutoSync,
+} from "@/server/email/connection";
 import { toConnection } from "@/features/email-sync/data";
 
 export async function saveEmailConnection(input) {
@@ -27,5 +33,16 @@ export async function disconnectEmail() {
     await deleteConnection(supabase, user.id);
     revalidatePath("/email-sync");
     return null;
+  });
+}
+
+// The daily auto-sync (see /api/cron/email-sync) for the user's connection
+export async function setEmailAutoSync(enabled) {
+  return runAction("setEmailAutoSync", async () => {
+    const { supabase, user } = await requireUser();
+    const saved = await setAutoSync(supabase, user.id, parseInput(z.boolean(), enabled));
+    revalidatePath("/");
+    revalidatePath("/email-sync");
+    return toConnection(saved);
   });
 }

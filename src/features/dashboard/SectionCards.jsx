@@ -5,19 +5,19 @@ import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/ca
 function SectionCard({ icon: Icon, label, value, badge, footer }) {
   return (
     <Card className="bg-gradient-to-t from-brand/5 to-card shadow-sm">
-      <CardHeader className="space-y-1 pb-4">
+      <CardHeader className="space-y-1 p-4">
         <CardDescription className="flex items-center gap-1.5">
           <Icon className="h-4 w-4" /> {label}
         </CardDescription>
         <div className="flex flex-wrap items-center gap-2">
-          <CardTitle className="text-2xl font-semibold tabular-nums sm:text-3xl">{value}</CardTitle>
+          <CardTitle className="text-2xl font-semibold tabular-nums">{value}</CardTitle>
           {badge && (
             <Badge variant="outline" className="font-normal text-muted-foreground">
               {badge}
             </Badge>
           )}
         </div>
-        {footer && <p className="pt-1 text-sm text-muted-foreground">{footer}</p>}
+        {footer && <p className="text-xs text-muted-foreground">{footer}</p>}
       </CardHeader>
     </Card>
   );
@@ -27,7 +27,7 @@ function SectionCard({ icon: Icon, label, value, badge, footer }) {
 export default function SectionCards({ stats }) {
   const hasResponseTime = stats.avgResponseDays !== null;
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
       <SectionCard
         icon={Briefcase}
         label="Total applications"

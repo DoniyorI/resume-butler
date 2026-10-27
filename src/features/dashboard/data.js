@@ -19,6 +19,7 @@ function groupHistoryByApplication(statusHistory) {
 // No reply after this long is worth a follow-up email
 export const FOLLOW_UP_AFTER_DAYS = 14;
 const FOLLOW_UP_LIMIT = 6;
+const RECENT_LIMIT = 8;
 
 // Applications still at "Applied" (never moved on) two weeks or more after
 // applying, oldest first: the ones to nudge
@@ -89,7 +90,7 @@ function buildFlow(applications, historyByApp) {
   const index = Object.fromEntries(nodes.map((node, i) => [node.name, i]));
 
   // Nodes follow APPLICATION_STATUSES order. Keeping only forward links keeps the
-  // graph acyclic: d3-sankey throws on cycles, e.g. when a status is moved back.
+  // graph acyclic: the Sankey layout can't draw cycles, e.g. when a status is moved back.
   const links = [];
   if (Object.keys(transitions).length > 0) {
     for (const [key, value] of Object.entries(transitions)) {
@@ -115,15 +116,8 @@ function dailyCounts(applications) {
     if (app.applied_date) perDay[app.applied_date] = (perDay[app.applied_date] || 0) + 1;
   }
   const days = Object.keys(perDay).sort();
-  return {
-    labels: days.map((day) => {
-      const [, month, date] = day.split("-");
-      return `${Number(month)}/${Number(date)}`;
-    }),
-    counts: days.map((day) => perDay[day]),
-    // [{ date: "YYYY-MM-DD", count }] for charts that pick their own range
-    series: days.map((day) => ({ date: day, count: perDay[day] })),
-  };
+  // [{ date: "YYYY-MM-DD", count }]; the chart and the goal pick their own range
+  return { series: days.map((day) => ({ date: day, count: perDay[day] })) };
 }
 
 // Supabase returns at most 1,000 rows per request, so page through with range()
@@ -148,7 +142,8 @@ export async function getDashboardStats(supabase, userId) {
         .from("applications")
         .select("id, company, role, status, applied_date")
         .eq("user_id", userId)
-        .order("applied_date", { ascending: false })
+        .order("applied_date", { ascending: false, nullsFirst: false })
+        .order("created_at", { ascending: false })
         .order("id")
     ),
     fetchAll(() =>
@@ -211,5 +206,33 @@ export async function getDashboardStats(supabase, userId) {
     daily: dailyCounts(applications),
     flow: buildFlow(applications, historyByApp),
     followUps: followUps(applications, historyByApp),
+    // Newest first (the query's order), for the dashboard's mini table
+    recent: applications.slice(0, RECENT_LIMIT).map((app) => ({
+      id: app.id,
+      company: app.company || "Unknown company",
+      role: app.role || "",
+      status: app.status,
+      appliedDate: app.applied_date,
+    })),
+  };
+}
+
+// The user's first name and application goal ({ period: "day" | "week",
+// target } or null). The goal columns come from migration 007; without them
+// the dashboard just shows no goal.
+export async function getGoalAndName(supabase, userId) {
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("first_name, goal_period, goal_target")
+    .eq("id", userId)
+    .maybeSingle();
+  if (error) {
+    console.warn("Could not load the goal:", error.message);
+    return { firstName: "", goal: null };
+  }
+  return {
+    firstName: data?.first_name || "",
+    goal:
+      data?.goal_period && data?.goal_target ? { period: data.goal_period, target: data.goal_target } : null,
   };
 }

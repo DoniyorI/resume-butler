@@ -51,7 +51,7 @@ const updateSchema = z.object({
 
 function revalidateApplications(id) {
   revalidatePath("/");
-  revalidatePath("/dash");
+  revalidatePath("/applications");
   if (id) revalidatePath(`/applications/${id}`);
 }
 
@@ -226,12 +226,12 @@ export async function deleteApplicationAndReturn(id) {
     if (data.length === 0) throw new HttpError(404, "Application not found");
 
     revalidatePath("/");
-    revalidatePath("/dash");
+    revalidatePath("/applications");
     return { id: applicationId };
   });
 
   if (!result.ok) return result;
-  redirect("/");
+  redirect("/applications");
 }
 
 export async function duplicateApplication(id) {

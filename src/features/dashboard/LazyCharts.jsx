@@ -3,23 +3,19 @@
 import dynamic from "next/dynamic";
 import { Skeleton } from "@/components/ui/skeleton";
 
-// The chart libraries measure the DOM, so they only render in the browser
-const chartSkeleton = (height) =>
-  function ChartSkeleton() {
-    return <Skeleton className="w-full" style={{ height }} />;
+// Recharts measures the DOM, so the charts render in the browser only
+const cardSkeleton = (height) =>
+  function ChartCardSkeleton() {
+    return <Skeleton className="w-full rounded-xl" style={{ height }} />;
   };
 
-export const StatusPieChart = dynamic(
-  () => import("@/features/dashboard/Charts").then((mod) => mod.StatusPieChart),
-  { ssr: false, loading: chartSkeleton(260) }
-);
+const load = (name, height) =>
+  dynamic(() => import("@/features/dashboard/Charts").then((mod) => mod[name]), {
+    ssr: false,
+    loading: cardSkeleton(height),
+  });
 
-export const DailyApplicationsChart = dynamic(
-  () => import("@/features/dashboard/Charts").then((mod) => mod.DailyApplicationsChart),
-  { ssr: false, loading: chartSkeleton(220) }
-);
-
-export const SankeyDiagram = dynamic(() => import("@/features/dashboard/SankeyDiagram"), {
-  ssr: false,
-  loading: chartSkeleton(250),
-});
+export const ApplicationsOverTime = load("ApplicationsOverTime", 360);
+export const StatusBreakdown = load("StatusBreakdown", 420);
+export const Pipeline = load("Pipeline", 330);
+export const ApplicationFlow = load("ApplicationFlow", 410);

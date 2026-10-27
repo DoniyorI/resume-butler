@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { disconnectEmail, saveEmailConnection } from "@/features/email-sync/actions";
 import LocalDateTime from "@/components/shared/LocalDateTime";
+import AutoSyncToggle from "@/features/email-sync/AutoSyncToggle";
 import ScanOptions from "@/features/email-sync/ScanOptions";
 
 const DEFAULT_HOST = "imap.gmail.com";
@@ -31,6 +32,10 @@ function ConnectedState({ connection, scanning, onScan, onDisconnect, scanOption
             )}
           </p>
         </div>
+      </div>
+
+      <div className="rounded-lg border p-3">
+        <AutoSyncToggle connection={connection} />
       </div>
 
       <ScanOptions value={scanOptions} onChange={onScanOptionsChange} disabled={scanning} />

@@ -15,6 +15,9 @@ export function toConnection(row) {
     imapHost: row.imap_host,
     imapPort: row.imap_port,
     lastScanAt: row.last_scan_at,
+    autoSync: Boolean(row.auto_sync),
+    lastAutoSyncAt: row.last_auto_sync_at,
+    lastAutoSyncError: row.last_auto_sync_error,
   };
 }
 

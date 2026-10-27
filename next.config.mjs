@@ -46,6 +46,9 @@ const nextConfig = {
       { source: "/resumes", destination: "/documents", permanent: true },
       { source: "/coverletters", destination: "/documents", permanent: true },
       { source: "/profile/new", destination: "/profile", permanent: false },
+      // The dashboard moved to the home page; applications live at /applications
+      { source: "/dash", destination: "/", permanent: true },
+      { source: "/dash/new", destination: "/", permanent: true },
     ];
   },
 };

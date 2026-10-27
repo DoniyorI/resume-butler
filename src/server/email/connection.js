@@ -11,7 +11,7 @@ import { HttpError } from "@/server/http";
 
 // Everything except app_password. Never select "*" for anything sent to the browser.
 export const PUBLIC_CONNECTION_COLUMNS =
-  "id, imap_host, imap_port, email_address, is_active, last_scan_at, created_at";
+  "id, imap_host, imap_port, email_address, is_active, last_scan_at, created_at, auto_sync, last_auto_sync_at, last_auto_sync_error";
 
 export const connectionInputSchema = z.object({
   email_address: z.string().trim().email().max(254),
@@ -108,6 +108,19 @@ export async function encryptStoredPassword(supabase, userId, password) {
     .update({ app_password: encryptSecret(password) })
     .eq("user_id", userId);
   if (error) console.error("Could not encrypt legacy email password:", error);
+}
+
+// Turn the daily auto-sync on or off. Returns the public columns.
+export async function setAutoSync(supabase, userId, enabled) {
+  const { data, error } = await supabase
+    .from("email_connections")
+    .update({ auto_sync: enabled, ...(enabled ? { last_auto_sync_error: null } : {}) })
+    .eq("user_id", userId)
+    .select(PUBLIC_CONNECTION_COLUMNS)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) throw new HttpError(400, "Connect your email first");
+  return data;
 }
 
 export async function markScanned(supabase, userId) {

@@ -23,10 +23,12 @@ Node 24.x (see `engines` in package.json).
 ```
 src/
   app/                    Routes only; pages stay thin
-    (app)/                Signed-in app. layout.js checks the user on the server and renders the nav
+    (app)/                Signed-in app. layout.js checks the user on the server and renders the nav.
+                          page.jsx (/) is the dashboard; the applications table is /applications
     (auth)/               login, register, forgot-password (no nav)
     (marketing)/          about, contact (public)
     api/*/route.js        Route Handlers (uploads, downloads, AI, email scan, future extension API)
+    api/cron/*            Scheduled jobs (vercel.json crons), authorized by CRON_SECRET
     auth/callback/        Exchanges OAuth / email-link codes for a session
   features/<feature>/     UI and logic per feature: applications, ats, auth, contact,
                           cover-letters and resumes (editors; resumes/studio is the new resume
@@ -47,7 +49,9 @@ src/
     http.js               HttpError, parseJson, errorResponse for Route Handlers
     openai.js, rateLimit.js, crypto.js, latex.js
     ats/                  ATS scoring (scoreResume)
-    email/                IMAP client, classification, matching, connection settings, syncEmailsForUser
+    email/                IMAP client, classification, matching, connection settings, syncEmailsForUser,
+                          autoSync (the daily job)
+    supabaseAdmin.js      Service-role client for jobs with no signed-in user (bypasses RLS)
     resume/               loadCv, tailorResume, generateResume, coverLetter, suggestBullets,
                           rewriteBullet, guardrails (blocks AI edits that add or swap facts),
                           parseResume, renderResume
@@ -57,6 +61,7 @@ supabase/migrations/      SQL schema; apply in order
 
 ## Conventions
 
+- **Service role.** Only scheduled jobs use `createAdminClient()` (`@/server/supabaseAdmin`). It bypasses RLS, so every query made with it must filter by `user_id`.
 - **Auth.** Use `getUser()` on the server, never `getSession()`, for any decision. Pages: `requirePageUser()` from `@/server/auth` (redirects). Route Handlers and Server Actions: `requireUser()` (throws a 401 `HttpError`). The user ID is `user.id`.
 - **Reads.** Fetch in Server Components with the server client (`@/lib/supabase/server`) and pass plain data to client components. Avoid `useEffect` fetching for initial data.
 - **Writes.** Use Server Actions in `features/<feature>/actions.js`, wrapped in `runAction` with input checked by `parseInput` (zod): check the user, scope queries by `user_id`, call `revalidatePath`, and return `{ ok: true, data }` or `{ ok: false, error }` with a user-safe message. Call `redirect()` outside `runAction` (it works by throwing). Don't write to Supabase directly from the browser; the browser client is only for sign-in/sign-out.
@@ -85,11 +90,12 @@ supabase/migrations/      SQL schema; apply in order
 | `POST /api/parse-resume` | Parse an uploaded PDF/.txt resume into the master CV |
 | `POST /api/download-resume` | Render a resume to LaTeX and compile to PDF (latex.ytotech.com) |
 | `GET/POST/DELETE /api/email-settings` | Manage the IMAP connection (password encrypted) |
-| `POST /api/scan-emails` | Scan recent email, classify job emails, create/update applications |
+| `POST /api/scan-emails` | Scan recent email and queue application suggestions for review |
+| `GET /api/cron/email-sync` | Daily auto-sync for users who turned it on (Vercel Cron, `Authorization: Bearer $CRON_SECRET`) |
 
 ## Database (Supabase)
 
-Key tables: `profiles`, `cv_experience` (+ `_bullets`), `cv_projects` (+ `_bullets`), `cv_education`, `cv_skills`, `cv_certifications`, `applications`, `application_status_history` (trigger-logged), `resumes` (`content` JSONB), `cover_letters` (Draft.js JSONB), `email_connections`, `processed_emails`, `api_rate_limits`. RLS is enabled on every table.
+Key tables: `profiles`, `cv_experience` (+ `_bullets`), `cv_projects` (+ `_bullets`), `cv_education`, `cv_skills`, `cv_certifications`, `applications`, `application_status_history` (trigger-logged), `resumes` (`content` JSONB), `cover_letters` (Draft.js JSONB), `email_connections` (+ `auto_sync`), `processed_emails`, `application_suggestions`, `api_rate_limits`. Goals are `profiles.goal_period` / `goal_target`. RLS is enabled on every table.
 
 ## Environment Variables
 
@@ -99,4 +105,6 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=
 OPENAI_API_KEY=
 APP_ENCRYPTION_KEY=   # base64 32 bytes: openssl rand -base64 32 (server-only)
 OPENAI_MODEL=         # optional; defaults to gpt-4o-mini
+SUPABASE_SERVICE_ROLE_KEY=  # server-only; the daily email sync job
+CRON_SECRET=          # Vercel sends it as a Bearer token to /api/cron/*
 ```

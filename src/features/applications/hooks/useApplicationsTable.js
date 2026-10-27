@@ -1,17 +1,12 @@
 import { useState } from "react";
-import {
-  getCoreRowModel,
-  getFilteredRowModel,
-  getSortedRowModel,
-  useReactTable,
-} from "@tanstack/react-table";
+import { getCoreRowModel, useReactTable } from "@tanstack/react-table";
 import { applicationColumns } from "@/features/applications/columns";
 
-// Sorting, filtering, visibility and selection for one server-loaded page.
+// Column visibility and row selection for one server-loaded page. Filtering,
+// sorting and paging happen on the server from the URL; sort and onSort are
+// handed to the headers through the table meta.
 // Rows are keyed by application id so a selection survives data refreshes.
-export function useApplicationsTable(applications) {
-  const [sorting, setSorting] = useState([]);
-  const [columnFilters, setColumnFilters] = useState([]);
+export function useApplicationsTable(applications, { sort, onSort }) {
   const [columnVisibility, setColumnVisibility] = useState({});
   const [rowSelection, setRowSelection] = useState({});
 
@@ -19,13 +14,13 @@ export function useApplicationsTable(applications) {
     data: applications,
     columns: applicationColumns,
     getRowId: (row) => row.id,
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
     getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    state: { sorting, columnFilters, columnVisibility, rowSelection },
+    manualSorting: true,
+    manualFiltering: true,
+    manualPagination: true,
+    meta: { sort, onSort },
+    state: { columnVisibility, rowSelection },
   });
 }

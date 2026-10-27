@@ -307,7 +307,7 @@ export default function ResumeStudio({ resume, masterCv, jobOptions }) {
   return (
     // Fixed under the nav bar so the editor fills the window and the page
     // itself never scrolls (each pane scrolls on its own)
-    <div className="fixed inset-x-0 bottom-0 top-[65px] z-10 flex flex-col bg-background">
+    <div className="fixed inset-x-0 bottom-0 top-[73px] z-10 flex flex-col bg-background">
       <StudioToolbar
         resumeId={resume.id}
         title={title}

@@ -1,55 +1,81 @@
-import { Suspense } from "react";
-import { redirect } from "next/navigation";
+import Link from "next/link";
+import { ArrowRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { requirePageUser } from "@/server/auth";
-import ApplicationTable from "@/features/applications/ApplicationTable";
-import ApplicationTableSkeleton from "@/features/applications/ApplicationTableSkeleton";
-import { APPLICATIONS_PAGE_SIZE, getApplicationsPage } from "@/features/applications/data";
-import SuggestionsBanner from "@/features/suggestions/SuggestionsBanner";
+import { getConnection } from "@/server/email/connection";
+import { getDashboardStats, getGoalAndName } from "@/features/dashboard/data";
+import FollowUps from "@/features/dashboard/FollowUps";
+import GoalCard from "@/features/dashboard/GoalCard";
+import RecentApplications from "@/features/dashboard/RecentApplications";
+import SyncCard from "@/features/dashboard/SyncCard";
+import SectionCards from "@/features/dashboard/SectionCards";
+import {
+  ApplicationFlow,
+  ApplicationsOverTime,
+  Pipeline,
+  StatusBreakdown,
+} from "@/features/dashboard/LazyCharts";
+import { toConnection } from "@/features/email-sync/data";
 import { getPendingSummary } from "@/features/suggestions/data";
 
-export const metadata = { title: "Applications" };
+export const metadata = { title: "Dashboard" };
 
-// ?page=2 is the second page; anything invalid falls back to the first
-function pageIndexFrom(searchParams) {
-  const page = Number.parseInt(searchParams?.page, 10);
-  return Number.isFinite(page) && page > 1 ? page - 1 : 0;
+// The email connection fails soft so the dashboard still loads if it can't be read
+async function loadConnection(supabase, userId) {
+  try {
+    return toConnection(await getConnection(supabase, userId));
+  } catch (error) {
+    console.warn("Could not load the email connection:", error.message);
+    return null;
+  }
 }
 
-async function ApplicationsList({ pageIndex }) {
+// The home page: today's to-dos first (goal, email updates, follow-ups),
+// then the newest applications, then the trends
+export default async function DashboardPage() {
   const { supabase, user } = await requirePageUser();
-  const [{ applications, total }, pendingSuggestions] = await Promise.all([
-    getApplicationsPage(supabase, user.id, pageIndex),
+  const [stats, { firstName, goal }, connection, pending] = await Promise.all([
+    getDashboardStats(supabase, user.id),
+    getGoalAndName(supabase, user.id),
+    loadConnection(supabase, user.id),
     getPendingSummary(supabase, user.id),
   ]);
 
-  // Past the last page (e.g. after deleting every row on it): go to the last real page
-  if (applications.length === 0 && pageIndex > 0) {
-    const lastPage = Math.max(1, Math.ceil(total / APPLICATIONS_PAGE_SIZE));
-    redirect(lastPage > 1 ? `/?page=${lastPage}` : "/");
-  }
-
   return (
-    <>
-      <SuggestionsBanner count={pendingSuggestions.count} latestAt={pendingSuggestions.latestAt} />
-      <ApplicationTable
-        applications={applications}
-        total={total}
-        page={pageIndex}
-        pageSize={APPLICATIONS_PAGE_SIZE}
-      />
-    </>
-  );
-}
+    <div className="flex w-full flex-col gap-4 px-4 pb-10 pt-[85px] md:px-6">
+      <div className="flex flex-wrap items-end justify-between gap-2">
+        <div>
+          <h1 className="text-xl font-semibold">{firstName ? `Welcome back, ${firstName}` : "Dashboard"}</h1>
+          <p className="text-sm text-muted-foreground">Where your job search stands today</p>
+        </div>
+        <Button asChild variant="outline" size="sm">
+          <Link href="/applications">
+            All applications <ArrowRight className="ml-1 h-3.5 w-3.5" />
+          </Link>
+        </Button>
+      </div>
 
-export default function ApplicationsPage({ searchParams }) {
-  const pageIndex = pageIndexFrom(searchParams);
+      <SectionCards stats={stats} />
 
-  return (
-    <div className="flex flex-col w-full min-h-screen py-16 px-10 my-10">
-      <h1 className="text-2xl font-semibold text-brand">Your Applications</h1>
-      <Suspense key={pageIndex} fallback={<ApplicationTableSkeleton />}>
-        <ApplicationsList pageIndex={pageIndex} />
-      </Suspense>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <GoalCard goal={goal} series={stats.daily.series} />
+        <SyncCard connection={connection} pendingCount={pending.count} />
+        <FollowUps followUps={stats.followUps} className="md:col-span-2 xl:col-span-1" />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+        <RecentApplications items={stats.recent} total={stats.total} className="xl:col-span-2" />
+        <Pipeline funnel={stats.funnel} total={stats.total} />
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+        <div className="xl:col-span-2">
+          <ApplicationsOverTime series={stats.daily.series} />
+        </div>
+        <StatusBreakdown pie={stats.pie} total={stats.total} />
+      </div>
+
+      <ApplicationFlow flow={stats.flow} />
     </div>
   );
 }

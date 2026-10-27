@@ -40,9 +40,9 @@ export default function BulkActions({ ids, onDone }) {
 
   return (
     <>
-      <span className="text-xs text-gray-500">{ids.length} selected</span>
+      <span className="text-xs tabular-nums text-muted-foreground">{ids.length} selected</span>
       <Select value="" onValueChange={handleStatus} disabled={isPending}>
-        <SelectTrigger className="w-[140px] h-9 text-xs">
+        <SelectTrigger className="h-8 w-[130px] text-xs">
           <SelectValue placeholder="Set status..." />
         </SelectTrigger>
         <SelectContent>
@@ -58,7 +58,7 @@ export default function BulkActions({ ids, onDone }) {
       <Button
         variant="outline"
         size="sm"
-        className="text-red-600 h-9"
+        className="h-8 text-red-600"
         onClick={handleDelete}
         disabled={isPending}
       >

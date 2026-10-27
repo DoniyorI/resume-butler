@@ -10,7 +10,7 @@ export default function NotFound() {
       <h1 className="text-2xl font-semibold">We couldn&apos;t find that page</h1>
       <p className="text-gray-600">It may have been moved or deleted.</p>
       <Button asChild className="bg-brand hover:bg-brand/90">
-        <Link href="/">Back to your applications</Link>
+        <Link href="/">Back to your dashboard</Link>
       </Button>
     </main>
   );

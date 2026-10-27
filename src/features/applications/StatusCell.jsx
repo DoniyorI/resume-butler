@@ -2,6 +2,7 @@
 
 import { useOptimistic, useTransition } from "react";
 import { toast } from "sonner";
+import { ChevronDown } from "lucide-react";
 import { APPLICATION_STATUSES } from "@/lib/constants";
 import {
   DropdownMenu,
@@ -29,8 +30,16 @@ export default function StatusCell({ row }) {
     <div className="flex justify-start">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" className="outline-none select-none -ml-3">
-            <Badge variant={status.toLowerCase()}>{status}</Badge>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="group -ml-1.5 h-7 select-none gap-0.5 px-1.5 outline-none"
+            aria-label={`Status: ${status}. Change status`}
+          >
+            <Badge variant={status.toLowerCase()} className="whitespace-nowrap px-2 py-0">
+              {status}
+            </Badge>
+            <ChevronDown className="h-3 w-3 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 group-data-[state=open]:opacity-100" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="text-sm">

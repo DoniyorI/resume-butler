@@ -19,7 +19,7 @@ const editsSchema = z.object({
 
 function revalidateAfterReview() {
   revalidatePath("/");
-  revalidatePath("/dash");
+  revalidatePath("/applications");
   revalidatePath("/email-sync");
 }
 

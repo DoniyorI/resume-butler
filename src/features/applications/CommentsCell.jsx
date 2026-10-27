@@ -28,11 +28,23 @@ export default function CommentsCell({ row }) {
 
   if (draft !== null) {
     return (
-      <Textarea value={draft} onChange={(e) => setDraft(e.target.value)} onBlur={handleBlur} autoFocus />
+      <Textarea
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={handleBlur}
+        className="min-h-[60px] text-xs"
+        autoFocus
+      />
     );
   }
 
   return (
-    <div onDoubleClick={startEditing}>{comments || <span className="text-gray-300">No Comment</span>}</div>
+    <div
+      onDoubleClick={startEditing}
+      className="max-w-[360px] cursor-text truncate rounded px-2 py-1 hover:bg-muted"
+      title={comments ? `${comments}\n\nDouble-click to edit` : "Double-click to add a comment"}
+    >
+      {comments || <span className="text-muted-foreground/50">Add a comment</span>}
+    </div>
   );
 }

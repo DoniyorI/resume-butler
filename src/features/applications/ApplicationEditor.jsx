@@ -117,7 +117,7 @@ export default function ApplicationEditor({ application, statusHistory, resumeCo
     <div className="max-w-4xl mx-auto py-20 px-6">
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={() => router.push("/")}>
+          <Button variant="ghost" size="sm" onClick={() => router.push("/applications")}>
             <ArrowLeft size={16} className="mr-1" /> Back
           </Button>
           <div>

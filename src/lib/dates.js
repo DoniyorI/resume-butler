@@ -18,3 +18,9 @@ export function formatMonthYear(value, { month = "long" } = {}) {
   const date = parseDate(value);
   return date ? date.toLocaleDateString("en-US", { month, year: "numeric" }) : String(value);
 }
+
+// "Oct 26, 2026" for a stored date or a Date; "" when there's no valid date
+export function formatShortDate(value) {
+  const date = value instanceof Date ? value : parseDate(value);
+  return date ? date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "";
+}
