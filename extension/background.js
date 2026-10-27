@@ -255,8 +255,20 @@ async function openConnect(origin) {
 
 const fromPopup = (sender) => !sender.tab && sender.url?.startsWith(chrome.runtime.getURL(""));
 
+// Submissions are trusted from top-level pages, and from Greenhouse's embedded
+// form (an iframe on company sites). The user's confirmation is accepted only
+// from a top-level page, where no other site can overlay the button.
+const SUBMISSION_TYPES = new Set(["submit-clicked", "submitted"]);
+function frameAllowed(type, sender) {
+  if (sender.frameId === 0 || sender.frameId === undefined) return true;
+  if (type === "confirm-submitted") return false;
+  if (!SUBMISSION_TYPES.has(type)) return true;
+  const url = new URL(sender.url);
+  return url.hostname === "boards.greenhouse.io" && url.pathname.startsWith("/embed/");
+}
+
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (sender.id !== chrome.runtime.id) return false;
+  if (sender.id !== chrome.runtime.id || !frameAllowed(message?.type, sender)) return false;
   const handler = (fromPopup(sender) ? popupHandlers : contentHandlers)[message?.type];
   if (!handler) return false;
   Promise.resolve(handler(message, sender))

@@ -25,6 +25,8 @@ globalThis.RB_SITES = [
   {
     id: "greenhouse",
     hosts: ["job-boards.greenhouse.io", "boards.greenhouse.io"],
+    // Companies embed the application form in an iframe on their own site
+    isEmbeddedForm: (url) => url.hostname === "boards.greenhouse.io" && url.pathname.startsWith("/embed/"),
     // /<board>/jobs/<id> on job boards; ?token=<id> on embedded forms
     jobId: (url) => url.pathname.match(/\/jobs\/(\d+)/)?.[1] || url.searchParams.get("token") || null,
     title: ".job__title h1, h1.app-title, h1",

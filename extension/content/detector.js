@@ -14,6 +14,10 @@
 (() => {
   const site = globalThis.RB_SITES.find((s) => s.hosts.includes(window.location.hostname));
   if (!site) return;
+  // Only the top-level page, or Greenhouse's embedded form, which companies
+  // run in an iframe on their own careers pages (see isEmbeddedForm in sites.js)
+  const framed = window !== window.top;
+  if (framed && !site.isEmbeddedForm?.(new URL(window.location.href))) return;
 
   const CHECK_INTERVAL_MS = 1500;
   const reportedKeys = new Set();
@@ -57,6 +61,8 @@
     const job = merge(await send({ type: "job-lookup", key }), globalThis.RB_readJob(site));
     if (!job?.company) return;
     const result = await send({ type: "submitted", key, job });
+    // Asking "Did you just apply?" inside a frame could be overlaid by the framing site
+    if (result?.status === "needs-confirmation" && framed) return;
     globalThis.RB_showResult(result, job, key);
   }
 
@@ -76,6 +82,8 @@
   document.addEventListener(
     "click",
     (event) => {
+      // Only real clicks: the page's scripts can't fake a submission
+      if (!event.isTrusted) return;
       const target = event.target instanceof Element ? event.target : null;
       const button = target?.closest(site.submitButton) || target?.closest("button");
       if (!button || !/submit/i.test(button.textContent || button.value || "")) return;
