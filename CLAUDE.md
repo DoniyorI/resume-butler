@@ -31,9 +31,8 @@ src/
     api/cron/*            Scheduled jobs (vercel.json crons), authorized by CRON_SECRET
     auth/callback/        Exchanges OAuth / email-link codes for a session
   features/<feature>/     UI and logic per feature: applications, ats, auth, contact,
-                          cover-letters and resumes (editors: resumes/studio is the resume editor;
-                          cover-letters/studio is the new letter editor at /coverletters/[id]/new,
-                          beside the classic one), cv (data + actions only), dashboard,
+                          cover-letters and resumes (the editors live in each one's studio/ folder
+                          and share resumes/studio's page canvas and toolbar), cv (data + actions only), dashboard,
                           documents (resume + cover letter library), email-sync, profile (profile and
                           master CV page), suggestions
     actions.js            Server Actions for that feature ("use server")
@@ -42,7 +41,7 @@ src/
   components/
     ui/                   shadcn/ui primitives only (kebab-case files)
     layout/               NavBar, Footer, PublicHeader
-    shared/               App-wide widgets (ErrorState, LocalDateTime, SidePanel, ViewSwitch)
+    shared/               App-wide widgets (ErrorState, LocalDateTime)
   lib/                    Code safe on client and server: constants, dates, safeUrl, redirects, postJson, supabase clients
   server/                 Server-only code (`import "server-only"`), reusable by actions, routes, cron and the extension:
     auth.js               getCurrentUser (cached per request), requirePageUser, requireUser

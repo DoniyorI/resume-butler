@@ -51,6 +51,7 @@ const nextConfig = {
       { source: "/dash/new", destination: "/", permanent: true },
       // The redesigned resume editor replaced the classic one at /resumes/[id]
       { source: "/resumes/:id/new", destination: "/resumes/:id", permanent: true },
+      { source: "/coverletters/:id/new", destination: "/coverletters/:id", permanent: true },
     ];
   },
 };

@@ -37,7 +37,7 @@ export default function AssistantPanel({ tab, onTabChange, onClose, layout, job,
   const hasJob = Boolean(job.target.jobDescription.trim());
 
   return (
-    <Tabs value={tab} onValueChange={onTabChange} className="flex h-full min-h-0 flex-col">
+    <Tabs value={tab} onValueChange={onTabChange} className="flex h-full min-h-0 w-full min-w-0 flex-col">
       <div className="flex items-center gap-2 border-b px-3 py-2">
         <TabsList className="h-9 flex-1">
           <TabsTrigger value="tailor" className="flex-1 text-xs">

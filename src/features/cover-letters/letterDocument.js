@@ -1,8 +1,8 @@
 // Shape of cover_letters.content (JSONB), shared by the editors, their Server
 // Actions, data.js and the PDF renderer:
 // { header, date, recipient, greeting, body, signOff, target }
-// - body is Draft.js raw content (the classic editor's format); the letter
-//   editor reads it as paragraphs and writes paragraphs back as blocks.
+// - body is stored as Draft.js raw content ({ blocks: [{ text }] }), the format
+//   letters were first saved in; the editor reads and writes it as paragraphs.
 // - target is the job the letter is for, as on resumes.
 
 export const HEADER_FIELDS = ["name", "contactEmail", "contactPhone", "linkedin", "portfolio"];
@@ -30,15 +30,9 @@ export function paragraphsFromDraft(raw) {
   return blocks.map((block) => text(block?.text).trim()).filter(Boolean);
 }
 
-// Paragraphs -> Draft.js raw content, with a blank block between paragraphs
-// so the classic editor shows them spaced as before
+// Paragraphs -> Draft.js raw content, one block per paragraph
 export function paragraphsToDraft(paragraphs) {
-  const blocks = [];
-  paragraphs.forEach((paragraph, index) => {
-    if (index > 0) blocks.push(draftBlock(`gap${index}`, ""));
-    blocks.push(draftBlock(`p${index}`, paragraph));
-  });
-  return { blocks, entityMap: {} };
+  return { blocks: paragraphs.map((paragraph, index) => draftBlock(`p${index}`, paragraph)), entityMap: {} };
 }
 
 function draftBlock(key, value) {
@@ -57,7 +51,7 @@ function normalizeTarget(target) {
 
 /**
  * Stored content -> the letter editor's document. `fallbackHeader` fills
- * empty header fields (from the profile), as the classic editor did.
+ * empty header fields (from the profile).
  */
 export function normalizeLetter(content, fallbackHeader = {}) {
   const source = parseStoredContent(content);

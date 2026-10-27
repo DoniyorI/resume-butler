@@ -1,16 +1,28 @@
 import { notFound } from "next/navigation";
+import { Source_Serif_4 } from "next/font/google";
+import { requirePageUser } from "@/server/auth";
 import { getCoverLetterForEditor } from "@/features/cover-letters/data";
-import CoverLetterEditor from "@/features/cover-letters/CoverLetterEditor";
+import { getJobOptions } from "@/features/resumes/data";
+import LetterStudio from "@/features/cover-letters/studio/LetterStudio";
+
+// The page's typeface; .rb-paper reads it from --font-paper
+const paperFont = Source_Serif_4({ subsets: ["latin"], variable: "--font-paper", display: "swap" });
 
 export async function generateMetadata({ params }) {
   const coverLetter = await getCoverLetterForEditor(params.coverLetterId);
   return { title: coverLetter?.title || "Cover Letter" };
 }
 
-// getCoverLetterForEditor checks the user (requirePageUser) and scopes the query to them
+// The cover letter editor: the editable letter page and the tailoring assistant
 export default async function CoverLetterEditorPage({ params }) {
+  const { supabase, user } = await requirePageUser();
   const coverLetter = await getCoverLetterForEditor(params.coverLetterId);
   if (!coverLetter) notFound();
+  const jobOptions = await getJobOptions(supabase, user.id, { coverLetterId: coverLetter.id });
 
-  return <CoverLetterEditor coverLetter={coverLetter} />;
+  return (
+    <div className={paperFont.variable}>
+      <LetterStudio coverLetter={coverLetter} jobOptions={jobOptions} />
+    </div>
+  );
 }

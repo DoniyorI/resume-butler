@@ -25,18 +25,15 @@ const contentSchema = z.object({
     portfolio: headerField,
   }),
   date: z.string().datetime().nullable(),
-  // The letter editor's fields; optional so the classic editor's saves keep them
-  recipient: z.object({ name: z.string().max(200), company: z.string().max(200) }).optional(),
-  greeting: z.string().max(200).optional(),
-  signOff: z.string().max(200).optional(),
-  target: z
-    .object({
-      jobDescription: z.string().max(50_000),
-      applicationId: z.string().uuid().nullable(),
-      company: z.string().max(200),
-      role: z.string().max(200),
-    })
-    .optional(),
+  recipient: z.object({ name: z.string().max(200), company: z.string().max(200) }),
+  greeting: z.string().max(200),
+  signOff: z.string().max(200),
+  target: z.object({
+    jobDescription: z.string().max(50_000),
+    applicationId: z.string().uuid().nullable(),
+    company: z.string().max(200),
+    role: z.string().max(200),
+  }),
 });
 
 // Writes `content` over the stored content, keeping keys it doesn't include
@@ -111,18 +108,7 @@ export async function deleteCoverLetter(coverLetterId) {
   });
 }
 
-// The classic editor's Save button: title plus { body, header, date }
-export async function saveCoverLetter(coverLetterId, { title, content }) {
-  return runAction("Error saving cover letter", async () => {
-    const { supabase, user } = await requireUser();
-    const id = parseInput(idSchema, coverLetterId);
-    const newTitle = parseInput(titleSchema, title);
-    const merged = await mergeContent(supabase, user.id, id, parseInput(contentSchema, content));
-    return updateCoverLetter(supabase, user.id, id, { title: newTitle, content: merged });
-  });
-}
-
-// Autosave for the letter editor. Like the resume autosave it skips
+// Autosave for the editor. Like the resume autosave it skips
 // revalidatePath, which would re-render the page after every pause in typing.
 export async function saveCoverLetterContent(coverLetterId, content) {
   return runAction("Error saving cover letter", async () => {

@@ -72,9 +72,8 @@ const asText = (value, max) => (typeof value === "string" ? value.trim().slice(0
 
 /**
  * Draft a cover letter body from the user's master CV. Returns
- * { paragraphs, highlights, unsupported, body }: `unsupported` lists
- * technologies the letter names that the CV doesn't (to check before using
- * it), and `body` is the paragraphs as one text for the classic editor.
+ * { paragraphs, highlights, unsupported }: `unsupported` lists technologies
+ * the letter names that the CV doesn't, to check before using it.
  */
 export async function generateCoverLetter(
   supabase,
@@ -101,5 +100,5 @@ export async function generateCoverLetter(
   const cvTech = technologies(JSON.stringify(cv));
   const unsupported = [...technologies(paragraphs.join(" "))].filter((skill) => !cvTech.has(skill));
 
-  return { paragraphs, highlights, unsupported, body: paragraphs.join("\n\n") };
+  return { paragraphs, highlights, unsupported };
 }

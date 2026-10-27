@@ -33,7 +33,7 @@ const contentSchema = z.object({
   order: z
     .array(z.object({ id: z.enum(SECTION_IDS), title: z.string().max(100), hidden: z.boolean().optional() }))
     .max(SECTION_IDS.length),
-  // Optional so the classic editor, which doesn't send it, keeps the stored one
+  // Optional so a save without it keeps the stored one
   target: targetSchema.optional(),
 });
 
