@@ -28,6 +28,8 @@ const securityHeaders = [
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
+  // Pages opened from here (or that open this site) can't reach this window
+  { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
 ];
 
 /** @type {import('next').NextConfig} */

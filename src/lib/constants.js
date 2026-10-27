@@ -29,3 +29,6 @@ export const DEFAULT_STATUS = "Applied";
 
 // Keep in sync with the "brand" color in tailwind.config.js (for charts and other JS-drawn UI)
 export const BRAND_COLOR = "#559F87";
+
+// New passwords (sign-up and reset): at least this many characters
+export const MIN_PASSWORD_LENGTH = 8;

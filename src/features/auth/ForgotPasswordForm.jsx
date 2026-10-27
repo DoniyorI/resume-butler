@@ -23,8 +23,13 @@ export default function ForgotPasswordForm() {
 
   const onSubmit = async (data) => {
     const result = await sendPasswordReset({ email: data.email });
+    // The same answer whether or not an account exists, so this page can't be
+    // used to find out who has one
     form.setError("formMessage", {
-      message: result.ok ? "A reset link has been sent to your email." : result.error,
+      type: result.ok ? "sent" : "failed",
+      message: result.ok
+        ? "If an account uses that email, a reset link is on its way. Open it in this browser."
+        : result.error,
     });
   };
 
@@ -51,7 +56,16 @@ export default function ForgotPasswordForm() {
               Send Reset Link
             </Button>
             {form.formState.errors.formMessage && (
-              <p className="text-red-500">{form.formState.errors.formMessage.message}</p>
+              <p
+                role="status"
+                className={
+                  form.formState.errors.formMessage.type === "sent"
+                    ? "text-sm text-gray-700"
+                    : "text-sm text-red-600"
+                }
+              >
+                {form.formState.errors.formMessage.message}
+              </p>
             )}
           </form>
         </Form>

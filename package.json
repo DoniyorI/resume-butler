@@ -37,7 +37,7 @@
     "imap": "^0.8.19",
     "lottie-react": "^2.4.0",
     "lucide-react": "^0.364.0",
-    "mailparser": "3.9.32",
+    "mailparser": "3.12.4",
     "next": "^14.2.35",
     "pdf2json": "^4.0.2",
     "react": "^18.2.0",

@@ -13,6 +13,7 @@ import dynamic from "next/dynamic";
 const EmblaCarousel = dynamic(() => import("@/features/auth/AuthCarousel"), { ssr: false });
 
 import { signUp } from "@/features/auth/actions";
+import { MIN_PASSWORD_LENGTH } from "@/lib/constants";
 import GoogleAuthButton from "@/features/auth/GoogleAuthButton";
 
 export default function RegisterForm() {
@@ -68,10 +69,13 @@ export default function RegisterForm() {
               <Input
                 id="password"
                 type="password"
+                autoComplete="new-password"
+                minLength={MIN_PASSWORD_LENGTH}
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
+              <p className="mt-1 text-xs text-muted-foreground">At least {MIN_PASSWORD_LENGTH} characters.</p>
             </div>
             <div>
               <Label htmlFor="confirm-password">Confirm Password</Label>

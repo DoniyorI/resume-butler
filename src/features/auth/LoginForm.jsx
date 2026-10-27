@@ -2,7 +2,7 @@
 import { toast } from "sonner";
 import Link from "next/link";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 
@@ -22,6 +22,13 @@ export default function LoginForm() {
   const [password, setPassword] = useState("");
   const [pending, setPending] = useState(false);
   const router = useRouter();
+
+  // /auth/callback sends failed sign-in and reset links here with ?error=auth.
+  // Read after mounting: the page is static, so the query isn't known at build time.
+  const [linkFailed, setLinkFailed] = useState(false);
+  useEffect(() => {
+    setLinkFailed(new URLSearchParams(window.location.search).get("error") === "auth");
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -49,12 +56,22 @@ export default function LoginForm() {
           <div className="text-center space-y-2">
             <h1 className="text-3xl font-bold">Login</h1>
           </div>
+          {linkFailed && (
+            <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+              That link has expired or was already used. Sign in, or{" "}
+              <Link href="/forgot-password" className="underline">
+                request a new reset link
+              </Link>
+              .
+            </p>
+          )}
           <form className="space-y-4" onSubmit={handleSubmit}>
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 type="email"
+                autoComplete="email"
                 placeholder="info@resumebutler.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -71,6 +88,7 @@ export default function LoginForm() {
               <Input
                 id="password"
                 type="password"
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
