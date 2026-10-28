@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 import { format, isValid } from "date-fns";
-import { Calendar as CalendarIcon, FileText, Loader2 } from "lucide-react";
+import { Calendar as CalendarIcon, FileText, Loader2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -119,8 +119,11 @@ export default function AddApplicationDialog() {
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button className="text-[#188665] font-medium hover:bg-green-100" variant="outline">
-          New Application
+        <Button size="sm" className="h-9 gap-1.5 bg-brand px-3 font-medium text-white hover:bg-brand/90">
+          <Plus className="h-4 w-4" />
+          {/* Just the icon on narrow phones, where the header has little room */}
+          <span className="hidden min-[400px]:inline">New application</span>
+          <span className="sr-only min-[400px]:hidden">New application</span>
         </Button>
       </DialogTrigger>
       <DialogContent className="lg:min-w-[60vw]">

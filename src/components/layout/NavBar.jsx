@@ -1,111 +1,183 @@
 "use client";
-import React, { useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
-import { signOut } from "@/features/auth/actions";
 
-import Link from "next/link";
+import { useEffect, useState } from "react";
 import Image from "next/image";
-
-import { LogOut } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { LogOut, Menu, Puzzle, UserRound, X } from "lucide-react";
+import { signOut } from "@/features/auth/actions";
 import AddApplicationDialog from "@/features/applications/AddApplication";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
+// `short` is used between md and xl, where the full labels don't fit in one row
 const NAV_LINKS = [
-  { href: "/", label: "Dashboard" },
-  { href: "/applications", label: "Applications" },
-  { href: "/documents", label: "Documents" },
-  { href: "/profile", label: "Profile & CV" },
-  { href: "/email-sync", label: "Email Sync" },
+  { href: "/", label: "Dashboard", short: "Home" },
+  { href: "/applications", label: "Applications", short: "Applications" },
+  { href: "/documents", label: "Documents", short: "Documents" },
+  { href: "/profile", label: "Profile & CV", short: "Profile" },
+  { href: "/email-sync", label: "Email sync", short: "Email" },
 ];
 
-const NAV_LINK_CLASS =
-  "block py-2 px-3 text-gray-900 rounded hover:bg-gray-100 lg:hover:bg-transparent lg:hover:text-green-800 lg:p-0 lg:dark:hover:text-green-400 dark:text-white dark:hover:bg-gray-700 dark:hover:text-white lg:dark:hover:bg-transparent dark:border-gray-700";
+// The current section: "/" only on the dashboard, the rest by prefix
+const isActive = (pathname, href) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
 
-export default function Navbar() {
+// "doniyor.ismatilloev@gmail.com" -> "DI"
+function initials(email) {
+  const name = (email || "").split("@")[0];
+  const parts = name.split(/[._-]+/).filter(Boolean);
+  return ((parts[0]?.[0] || "") + (parts[1]?.[0] || parts[0]?.[1] || "")).toUpperCase() || "?";
+}
+
+function AccountMenu({ email }) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          aria-label="Account"
+          className="flex h-9 w-9 items-center justify-center rounded-full bg-brand/10 text-xs font-semibold text-brand ring-offset-2 transition-colors hover:bg-brand/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+        >
+          {email ? initials(email) : <UserRound className="h-4 w-4" />}
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-60">
+        {email && (
+          <>
+            <DropdownMenuLabel className="font-normal">
+              <p className="text-xs text-muted-foreground">Signed in as</p>
+              <p className="truncate text-sm font-medium">{email}</p>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+          </>
+        )}
+        <DropdownMenuItem asChild>
+          <Link href="/profile">
+            <UserRound className="mr-2 h-4 w-4" /> Profile & CV
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/extension">
+            <Puzzle className="mr-2 h-4 w-4" /> Browser extension
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        {/* Signs out on the server, which clears the session cookies and goes to /login */}
+        <form action={signOut}>
+          <DropdownMenuItem asChild>
+            <button type="submit" className="w-full text-red-600 focus:text-red-700">
+              <LogOut className="mr-2 h-4 w-4" /> Sign out
+            </button>
+          </DropdownMenuItem>
+        </form>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+/**
+ * The signed-in app's header. It stays 73px tall at every width: pages and
+ * the editors are laid out below it (pt-[85px], top-[73px]). Links show in
+ * the bar from md up, in a menu below that. `email` is the signed-in account,
+ * shown in the account menu.
+ */
+export default function Navbar({ email }) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const toggleMenu = () => setMenuOpen(!menuOpen);
   const pathname = usePathname();
 
-  // The nav stays mounted across pages, so close the mobile menu on every
-  // navigation (also covers links outside the menu, like the logo)
+  // The nav stays mounted across pages, so close the menu on every navigation
   useEffect(() => {
     setMenuOpen(false);
   }, [pathname]);
 
   return (
-    <nav className="bg-white dark:bg-gray-900 fixed w-full z-20 top-0 start-0 border-b border-gray-200 dark:border-gray-600">
-      <div className="max-w-screen-xl flex flex-wrap items-center justify-between mx-auto p-4">
-        <Link
-          href="/"
-          aria-label="Resume Butler home"
-          className="flex items-center space-x-3 rtl:space-x-reverse"
-        >
-          <Image src="/image/Logo.svg" alt="Logo" width="0" height="0" className="w-8 h-auto" />
-          {/* The bar must stay one row (73px) so pages start below it: the name is
-              hidden on phones, and the links collapse into the menu below lg */}
-          <span className="hidden sm:inline self-center text-md font-medium whitespace-nowrap dark:text-white">
+    <header className="fixed inset-x-0 top-0 z-20 border-b bg-white/85 backdrop-blur supports-[backdrop-filter]:bg-white/75">
+      <div className="mx-auto flex h-[72px] max-w-screen-2xl items-center gap-3 px-4 md:px-6">
+        <Link href="/" aria-label="Resume Butler home" className="flex shrink-0 items-center gap-2.5">
+          <Image src="/image/Logo.svg" alt="" width={32} height={36} className="h-8 w-auto" />
+          <span className="hidden text-[15px] font-semibold tracking-tight sm:inline md:hidden lg:inline">
             Resume Butler
           </span>
         </Link>
-        <div className="flex lg:order-2 space-x-3 lg:space-x-0 rtl:space-x-reverse">
-          <div className="flex space-x-2">
-            <AddApplicationDialog />
-            {/* Signs out on the server, which clears the session cookies and goes to /login */}
-            <form action={signOut}>
-              <Button
-                type="submit"
-                variant="outline"
-                aria-label="Sign out"
-                className="bg-red-100 hover:bg-red-300 focus:ring-4 focus:outline-none focus:ring-blue-300  rounded-lg text-sm px-4 py-2 text-center"
-              >
-                <LogOut size={14} strokeWidth={2.25} className="text-black" />
-              </Button>
-            </form>
-          </div>
 
+        <nav aria-label="Main" className="ml-2 hidden min-w-0 md:block lg:ml-6">
+          <ul className="flex items-center gap-0.5">
+            {NAV_LINKS.map(({ href, label, short }) => {
+              const active = isActive(pathname, href);
+              return (
+                <li key={href}>
+                  <Link
+                    href={href}
+                    aria-current={active ? "page" : undefined}
+                    className={cn(
+                      "whitespace-nowrap rounded-md px-2.5 py-1.5 text-sm transition-colors",
+                      active
+                        ? "bg-gray-100 font-medium text-gray-900"
+                        : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                    )}
+                  >
+                    <span className="xl:hidden">{short}</span>
+                    <span className="hidden xl:inline">{label}</span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
+
+        <div className="ml-auto flex items-center gap-2">
+          <AddApplicationDialog />
+          <AccountMenu email={email} />
           <Button
-            variant="outline"
-            onClick={toggleMenu}
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 md:hidden"
+            onClick={() => setMenuOpen((open) => !open)}
             aria-expanded={menuOpen}
-            aria-controls="navbar-sticky"
-            className="inline-flex items-center p-2 w-10 h-10 justify-center text-sm text-gray-500 rounded-lg lg:hidden hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-200 dark:text-gray-400 dark:hover:bg-gray-700 dark:focus:ring-gray-600"
+            aria-controls="mobile-nav"
+            aria-label={menuOpen ? "Close menu" : "Open menu"}
           >
-            <span className="sr-only">Open main menu</span>
-            <svg
-              className="w-5 h-5"
-              aria-hidden="true"
-              xmlns="http://www.w3.org/2000/svg"
-              fill="none"
-              viewBox="0 0 17 14"
-            >
-              <path
-                stroke="currentColor"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M1 1h15M1 7h15M1 13h15"
-              />
-            </svg>
+            {menuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </Button>
         </div>
-
-        <div
-          className={`items-center justify-between ${
-            menuOpen ? "block" : "hidden"
-          } w-full lg:flex lg:w-auto lg:order-1`}
-          id="navbar-sticky"
-        >
-          <ul className="flex flex-col p-4 lg:p-0 mt-4 font-normal border border-gray-100 rounded-lg lg:space-x-6 rtl:space-x-reverse lg:flex-row lg:mt-0 lg:border-0  dark:bg-gray-800 lg:dark:bg-gray-900 dark:border-gray-700">
-            {NAV_LINKS.map(({ href, label }) => (
-              <li key={href}>
-                <Link href={href} className={NAV_LINK_CLASS} onClick={() => setMenuOpen(false)}>
-                  {label}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </div>
       </div>
-    </nav>
+
+      {/* Phones: the same links, below the bar */}
+      {menuOpen && (
+        <nav
+          id="mobile-nav"
+          aria-label="Main"
+          className="border-t bg-white px-4 pb-4 pt-2 shadow-sm md:hidden"
+        >
+          <ul className="flex flex-col gap-0.5">
+            {NAV_LINKS.map(({ href, label }) => {
+              const active = isActive(pathname, href);
+              return (
+                <li key={href}>
+                  <Link
+                    href={href}
+                    aria-current={active ? "page" : undefined}
+                    className={cn(
+                      "block rounded-md px-3 py-2.5 text-sm",
+                      active ? "bg-gray-100 font-medium text-gray-900" : "text-gray-700 hover:bg-gray-50"
+                    )}
+                  >
+                    {label}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
+      )}
+    </header>
   );
 }
