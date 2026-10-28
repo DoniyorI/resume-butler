@@ -42,8 +42,6 @@ const appliedAt = (app) => {
   const time = new Date(app.applied_date || app.email_date || app.created_at || NaN).getTime();
   return Number.isNaN(time) ? Date.now() : time;
 };
-// Open applications first, then the most recently applied
-const mostRelevantFirst = (a, b) => Number(isOpen(b)) - Number(isOpen(a)) || appliedAt(b) - appliedAt(a);
 
 /**
  * True when a new submission or "thanks for applying" belongs to `app`: it's
@@ -63,32 +61,24 @@ export function isSameCycle(app, now = Date.now()) {
  * new cycle. An email that names no role (common for rejections) goes to the
  * company's only open application.
  */
-export function findTargetApplication(
-  applications,
-  { company, role, category, emailDate, now = Date.now() }
-) {
-  if (!company) return null;
+export function decideEmailApplication(applications, { company, role, category, emailDate, now = Date.now() }) {
+  if (!company) return { kind: "new", reason: "no_company" };
   const eventAt = Math.min(parseEmailDate(emailDate)?.getTime() ?? now, now);
   const endOfEventDay = (Math.floor(eventAt / DAY_MS) + 1) * DAY_MS;
-  const atCompany = applications
-    .filter((app) => normalizeCompany(app.company) === company && appliedAt(app) < endOfEventDay)
-    .sort(mostRelevantFirst);
-  if (atCompany.length === 0) return null;
-
-  const eligible = (target) =>
-    target && (category !== "application_received" || isSameCycle(target, eventAt)) ? target : null;
+  const atCompany = applications.filter(app => normalizeCompany(app.company) === company && appliedAt(app) < endOfEventDay);
   const wanted = normalizeRole(role);
-  if (wanted) {
-    const exact = atCompany.filter((app) => normalizeRole(app.role) === wanted);
-    if (exact.length) return eligible(exact[0]);
-    const partial = atCompany.filter((app) => sameRole(app.role, role));
-    // A shortened title is usable only if it identifies one distinct role.
-    const roles = new Set(partial.map((app) => normalizeRole(app.role)));
-    return roles.size === 1 ? eligible(partial[0]) : null;
-  }
+  const exact = wanted ? atCompany.filter(app => normalizeRole(app.role) === wanted) : [];
+  let candidates = exact.length ? exact : wanted ? atCompany.filter(app => sameRole(app.role, role)) : atCompany.filter(isOpen);
+  if (category === "application_received") candidates = candidates.filter(app => isSameCycle(app, eventAt));
+  else if (candidates.some(isOpen)) candidates = candidates.filter(isOpen);
+  if (candidates.length > 1) return { kind: "ambiguous", candidateIds: candidates.map(app => app.id), reason: "multiple_candidates" };
+  if (candidates.length === 1) return { kind: "matched", applicationId: candidates[0].id, reason: wanted ? "company_role" : "company_only" };
+  return { kind: "new", reason: "no_matching_application" };
+}
 
-  const open = atCompany.filter(isOpen);
-  return open.length === 1 ? eligible(open[0]) : null;
+export function findTargetApplication(applications, event) {
+  const decision = decideEmailApplication(applications, event);
+  return decision.kind === "matched" ? applications.find(app => app.id === decision.applicationId) : null;
 }
 
 // Date headers come from the sender and may be malformed; return null instead of throwing

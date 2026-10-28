@@ -16,6 +16,7 @@ export async function GET(request) {
       .maybeSingle();
     if (error) throw error;
     return NextResponse.json({
+      userId,
       name: [data?.first_name, data?.last_name].filter(Boolean).join(" "),
       email: data?.email || "",
     });

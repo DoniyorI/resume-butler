@@ -96,3 +96,14 @@ test("email status changes preserve terminal states and accepted offers", () => 
   assert.equal(shouldUpdateStatus("Applied", "Interviewed"), true);
   assert.equal(shouldUpdateStatus("Interviewed", "Rejected"), true);
 });
+
+test("two exact-title applications cannot be resolved by recency", () => {
+  assert.equal(match([application(), application({ id: "second", applied_date: "2026-10-21" })]), null);
+});
+test("a partial title matching two copies of one role remains ambiguous", () => {
+  assert.equal(match([application(), application({ id: "second" })], { role: "Engineer" }), null);
+});
+test("an ineligible old confirmation does not hide a current candidate", () => {
+  const recent = application({ id: "recent" });
+  assert.equal(match([application({ applied_date: "2025-01-01" }), recent], { category: "application_received" }), recent);
+});

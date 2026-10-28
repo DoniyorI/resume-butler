@@ -31,6 +31,7 @@ export function database(seed = {}) {
     lt(key, value) { this.filters.push((row) => row[key] < value); return this; }
     order(key, options = {}) { this.sort = { key, ...options }; return this; }
     limit(count) { this.count = count; return this; }
+    range(from, to) { this.bounds = [from, to]; return this; }
     insert(value) { this.operation = "insert"; this.values = Array.isArray(value) ? value : [value]; return this; }
     upsert(value, options = {}) { this.operation = "upsert"; this.values = [value]; this.conflict = options.onConflict; return this; }
     update(value) { this.operation = "update"; this.value = value; return this; }
@@ -69,6 +70,7 @@ export function database(seed = {}) {
         });
       }
       if (this.count != null) selected = selected.slice(0, this.count);
+      if (this.bounds) selected = selected.slice(this.bounds[0], this.bounds[1] + 1);
       const projected = selected.map((row) => this.columns && this.columns !== "*"
         ? Object.fromEntries(this.columns.split(",").map((key) => [key.trim(), row[key.trim()]]))
         : structuredClone(row));

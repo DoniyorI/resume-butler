@@ -16,6 +16,7 @@ After changing files here, click the reload button on the extension's card in `c
 |---|---|
 | `manifest.json` | Permissions: `storage`, `alarms`, `tabs`, `scripting` (to add the scripts to tabs already open on install or update), `webRequest` (to see LinkedIn's Easy Apply submit request succeed: its URL and status only), and only the app and the supported job sites |
 | `background.js` | Holds the connection, sends applications to the app (`/api/extension/*`), retries when offline, undo |
+| `ingestionQueue.js` | Serializes durable queue writes; preserves event UUID, captured payload/date, account and app origin until acknowledgment |
 | `content/app-bridge.js` | On the app: marks the page as having the extension and receives the token (no copy and paste) |
 | `content/sites.js` | Per-site rules: how to read the job and recognise a submitted application |
 | `content/job-reader.js` | Reads company, role, location and description (JSON-LD first, then the site's selectors) |
@@ -30,6 +31,12 @@ Security: popup-only actions (status, manual add, disconnect) answer only the ex
 The plan, including what comes next (more sites, autofill, the Web Store), is in `docs/chrome-extension-plan.md`.
 
 ## Known gaps
+
+Version **0.2.5** requires database migration **012**. Each queued submission keeps the same event UUID and original payload across retries. Different employer boards never share a queue identity just because their posting numbers match. Queues belong to an account and app origin; switching accounts cannot replay another account's work. Older unscoped items require explicit assignment in the popup. Reconnect restores retry scheduling.
+
+When multiple applications could match, the submission is saved for review at **Applications → Submissions to match**. Choose an existing opening or explicitly create a separate one. Nothing is preselected. Resolving it completes the original event, so a queued retry returns the same result. Reload the unpacked extension after updating its files.
+
+Permanent validation/payload conflicts are retained as blocked queue entries rather than retried indefinitely. The popup reports them; an item-level repair/discard UI remains future work. The automated worker tests use Chrome/storage/network boundaries; they do not submit actual employer forms.
 
 - Detecting the submission is only tested against the sites' confirmation wording and URLs, not a real submitted application yet. Apply to one real job on each site to confirm.
 - **Disconnect** in the popup forgets the token in this browser; to revoke it everywhere, use **Disconnect** on the app's Browser extension page.

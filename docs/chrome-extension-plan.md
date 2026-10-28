@@ -106,6 +106,10 @@ Inspected on 2026-10-27: only manifests, file names, config shape and which brow
 
 ## Decisions
 
+### Application identity and recovery — October 28, 2026
+
+Version 0.2.5 adds account/origin-bound durable submission events and migration 012's atomic recording. Supported posting identity includes the employer board namespace. Matching prefers an exact posting identity; conflicting known openings stay separate. Multiple weak candidates become a persisted review item in Applications. An explicit choice completes the same event; retries preserve UUID/date/payload and cannot revive a deleted application. Legacy queue assignment checks the account shown in the popup, and reconnect/browser startup restores retries. See [RB-01 verification](application-identity-verification.md) for the tested scope and remaining limits.
+
 - ~~Straight into the tracker, or through the review queue?~~ Straight in after a real submit click, with undo; a confirmation page reached without a click asks "Did you apply?" first.
 - ~~Which sites first?~~ LinkedIn Easy Apply, Greenhouse, Lever and Ashby. Workday next.
 - Still open: is autofill in scope, or just tracking and "tailor my resume"?

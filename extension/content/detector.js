@@ -50,7 +50,11 @@
       }
     });
 
-  const keyFor = (jobId) => `${site.id}:${jobId}`;
+  const keyFor = (jobId, at = window.location) => {
+    const url = new URL(at.href || at);
+    const board = site.id === "greenhouse" ? (url.searchParams.get("for") || url.pathname.split("/").filter(Boolean)[0]) : url.hostname;
+    return `${site.id}:${board}:${jobId}`;
+  };
   // Shown in the page's DevTools console, to see why something was or wasn't tracked
   const log = (...args) => console.debug("[Resume Butler]", ...args);
   // Only inside the site's form or dialog when it names one, so text elsewhere on the page can't count
@@ -90,7 +94,7 @@
   // `at`: the confirmation's URL, when the page is only passing through it
   async function onSubmitted(jobId = currentJobId(), at = window.location) {
     if (!jobId) return;
-    const key = keyFor(jobId);
+    const key = keyFor(jobId, at);
     if (reportedKeys.has(key)) return;
     reportedKeys.add(key);
 

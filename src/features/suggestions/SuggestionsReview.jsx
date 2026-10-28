@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 import { ArrowRight, Check, Inbox, Loader2, Pencil, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,7 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import LocalDateTime from "@/components/shared/LocalDateTime";
 import { APPLICATION_STATUSES } from "@/lib/constants";
 import { CATEGORY_LABELS } from "@/lib/emailCategories";
-import { approveSuggestion, dismissAllSuggestions, dismissSuggestion } from "@/features/suggestions/actions";
+import MatchTargetPicker from "@/features/suggestions/MatchTargetPicker";
+import { approveSuggestion, resolveSuggestion, dismissAllSuggestions, dismissSuggestion } from "@/features/suggestions/actions";
 
 // Columns on wide screens: what it is, the status to set, the email it came from, actions.
 // Narrow screens stack the same cells.
@@ -25,6 +27,7 @@ function SuggestionRow({ suggestion, onDone }) {
   const [editing, setEditing] = useState(false);
   const [pending, startTransition] = useTransition();
   const isUpdate = suggestion.kind === "update";
+  const router = useRouter();
 
   const run = (action, successMessage) =>
     startTransition(async () => {
@@ -32,7 +35,7 @@ function SuggestionRow({ suggestion, onDone }) {
       if (result.ok) {
         toast.success(successMessage);
         onDone?.();
-      } else toast.error(result.error);
+      } else { toast.error(result.error); router.refresh(); }
     });
 
   const approve = () =>
@@ -146,6 +149,42 @@ function SuggestionRow({ suggestion, onDone }) {
   );
 }
 
+function MatchingSuggestion({ suggestion }) {
+  const [status, setStatus] = useState(suggestion.status);
+  const [resolved, setResolved] = useState(false);
+  if (resolved) return null;
+  return (
+    <li className="space-y-4 bg-muted/15 px-4 py-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 space-y-1">
+          <div className="flex flex-wrap items-center gap-2 text-sm font-medium">
+            <span>{suggestion.company} · {suggestion.role || "Untitled role"}</span>
+            <Badge variant="outline" className="font-normal">Needs matching</Badge>
+          </div>
+          <p className="text-xs text-muted-foreground">{suggestion.emailSubject || "No subject"} · {suggestion.emailFrom}</p>
+          {suggestion.summary && <p className="max-w-2xl text-sm text-muted-foreground">{suggestion.summary}</p>}
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">Proposed status</span>
+          <Select value={status} onValueChange={setStatus}>
+            <SelectTrigger aria-label="Proposed status" className="h-8 w-36"><SelectValue /></SelectTrigger>
+            <SelectContent>{APPLICATION_STATUSES.map(value => <SelectItem key={value} value={value}>{value}</SelectItem>)}</SelectContent>
+          </Select>
+        </div>
+      </div>
+      <MatchTargetPicker candidates={suggestion.candidates} onResolve={async choice => {
+        const result = await resolveSuggestion(suggestion.id, { ...choice, company: suggestion.company, role: suggestion.role, status });
+        if (result.ok) setResolved(true);
+        return result;
+      }} />
+      <Button variant="ghost" size="sm" className="h-7 px-0 text-xs text-muted-foreground" onClick={async () => {
+        const result = await dismissSuggestion(suggestion.id);
+        if (result.ok) setResolved(true); else toast.error(result.error);
+      }}>Dismiss this email</Button>
+    </li>
+  );
+}
+
 // Applications detected by email scans, waiting for the user to approve or dismiss
 export default function SuggestionsReview({ suggestions }) {
   const [pending, startTransition] = useTransition();
@@ -158,14 +197,15 @@ export default function SuggestionsReview({ suggestions }) {
     });
 
   // Approves each as suggested (no edits), one at a time, and reports the total
+  const safeSuggestions = suggestions.filter(suggestion => !suggestion.needsMatching);
   const approveAll = () =>
     startTransition(async () => {
       let approved = 0;
-      for (const s of suggestions) {
+      for (const s of safeSuggestions) {
         const result = await approveSuggestion(s.id, { company: s.company, role: s.role, status: s.status });
         if (result.ok) approved += 1;
       }
-      const failed = suggestions.length - approved;
+      const failed = safeSuggestions.length - approved;
       if (failed) toast.error(`Approved ${approved}; ${failed} couldn't be applied`);
       else toast.success(`Approved ${approved} suggestion${approved === 1 ? "" : "s"}`);
     });
@@ -188,9 +228,9 @@ export default function SuggestionsReview({ suggestions }) {
             <Button variant="ghost" size="sm" onClick={dismissAll} disabled={pending}>
               Dismiss all
             </Button>
-            <Button variant="outline" size="sm" onClick={approveAll} disabled={pending}>
+            <Button variant="outline" size="sm" onClick={approveAll} disabled={pending || safeSuggestions.length === 0}>
               {pending && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}
-              Approve all
+              {safeSuggestions.length === suggestions.length ? "Approve all" : "Approve matched"}
             </Button>
           </div>
         )}
@@ -212,7 +252,7 @@ export default function SuggestionsReview({ suggestions }) {
             </div>
             <ul className="divide-y">
               {suggestions.map((suggestion) => (
-                <SuggestionRow key={suggestion.id} suggestion={suggestion} />
+                suggestion.needsMatching ? <MatchingSuggestion key={suggestion.id} suggestion={suggestion} /> : <SuggestionRow key={suggestion.id} suggestion={suggestion} />
               ))}
             </ul>
           </div>

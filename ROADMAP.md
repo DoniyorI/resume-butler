@@ -15,12 +15,13 @@ The app uses Next.js + Supabase, server-owned auth/data access, a Master CV, res
 - [x] Master CV, resume import/selection, AI suggestions/rewrites, cover letters and PDF export.
 - [x] Extension tracking for LinkedIn Easy Apply, Greenhouse, Lever and Ashby; saved pay/workplace/employment details.
 - [x] Email review queue and optional daily IMAP scans; locking, retries, hiring-cycle protections and transactional approval implemented locally.
-- [x] Supabase migrations 009–011 applied and synthetic concurrency/isolation checks recorded.
+- [x] Supabase migrations 009–012 applied and synthetic concurrency/isolation checks recorded.
+- [x] RB-01: posting identity, account-bound retry receipts and explicit matching for ambiguous email/extension events. [Verification and limits](docs/application-identity-verification.md).
 - [x] Real-PDF overflow checks, honest page-fit feedback and quiet editor saving implemented locally.
 - [x] Local/default model updated to GPT-6 Luna; task overrides remain available.
 - [x] Job-seeker/competitor research and this delivery roadmap prepared.
 
-Checked items describe existence of the recorded work, **not a claim that every local source change is deployed**. The previous verification milestone was 90 tests, clean lint and an isolated build; rerun the relevant checks at the start of implementation. CSV currently exports loaded rows, not a complete account backup. The larger scoring/sections/onboarding/extension redesign remains planned.
+Checked items describe existence of the recorded work, **not a claim that every local source change is deployed**. RB-01 verification: 152 tests, clean lint, an isolated production build, 32 disposable PostgreSQL assertions, live RPC concurrency/isolation and desktop/mobile browser checks. CSV currently exports loaded rows, not a complete account backup. The larger scoring/sections/onboarding/extension redesign remains planned.
 
 ## Phase A — Streamline applications without new AI
 
@@ -40,7 +41,7 @@ Checked items describe existence of the recorded work, **not a claim that every 
 | A9 | Fix rule-based document checks and PDF readability | RB-03 plus deterministic PDF checks | Blank/hidden content cannot inflate checks; show what exported text actually contains |
 | A10 | Make records portable and progress understandable | RB-12A/RB-14A | Complete export and descriptive counts/rates, without AI advice or hiring predictions |
 
-A1 has a detailed draft plan. Other items get bounded plans when reached. A3's existing AI compatibility is maintained through adapters, but new custom-section AI selection belongs in Phase B. A2 can select a working resume before applying; A4 adds verified/frozen submission binding. External Gmail setup waits do not block A9/A10. Optional small fixes can move earlier when they unblock daily use; record the reason here.
+A1 is implemented and verified; A2 is next. Other items get bounded plans when reached. A3's existing AI compatibility is maintained through adapters, but new custom-section AI selection belongs in Phase B. A2 can select a working resume before applying; A4 adds verified/frozen submission binding. External Gmail setup waits do not block A9/A10. Optional small fixes can move earlier when they unblock daily use; record the reason here.
 
 ## Phase B — Analyze before applying, then improve the application
 
@@ -61,17 +62,17 @@ References and proposed panel behavior are in [Career Ops and local persona revi
 
 Guided first-login onboarding for other users (RB-05), target-company alerts (RB-13), broader career/mobile polish, public launch, Chrome Web Store distribution, CAPTCHA and commercial billing are retained as later work. Basic ownership, privacy and data integrity apply from the start. Public rollout work does not lead the personal-use queue.
 
-Statuses: all Phase A/B product work is **planned** unless specifically recorded as verified in the baseline above. A prepared design is not an implemented feature. Stable RB identifiers are retained for cross-references; the A/B tables above supersede their former numeric execution order.
+Statuses: RB-01 / A1 is verified; other Phase A/B product work is **planned** unless specifically recorded as verified in the baseline above. A prepared design is not an implemented feature. Stable RB identifiers are retained for cross-references; the A/B tables above supersede their former numeric execution order.
 
-## Start here: RB-01
+## Completed first milestone: RB-01
 
 [Design and exact behavior](docs/superpowers/specs/2026-10-28-application-identity-design.md) · [Five-task implementation plan](docs/superpowers/plans/2026-10-28-application-identity.md).
 
-- [ ] 1. Normalize posting identity and prove different openings remain separate.
-- [ ] 2. Make ambiguous email/pending matches explicit instead of selecting a same-title row.
-- [ ] 3. Add atomic ingestion receipts, safe approval and explicit resolution through a new migration.
-- [ ] 4. Preserve stable event IDs and account-bound extension queues across retries.
-- [ ] 5. Add minimal match recovery, run synthetic browser/SQL checks and record review evidence.
+- [x] 1. Normalize posting identity and prove different openings remain separate.
+- [x] 2. Make ambiguous email/pending matches explicit instead of selecting a same-title row.
+- [x] 3. Add atomic ingestion receipts, safe approval and explicit resolution through a new migration.
+- [x] 4. Preserve stable event IDs and account-bound extension queues across retries.
+- [x] 5. Add minimal match recovery, run synthetic browser/SQL checks and record review evidence.
 
 **Acceptance:** same company/title with different posting IDs stays separate; retries do not duplicate or revive deleted applications; ambiguous emails require a decision; concurrent writes and account changes remain safe. Next is A2 extension capture/save-for-later; exact submitted PDF preservation follows in A4 (RB-02).
 

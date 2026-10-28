@@ -43,7 +43,7 @@ Requirements: Node.js 24.x, a Supabase project, and an OpenAI API key.
    CRON_SECRET=                 # any long random string; Vercel Cron sends it
    NEXT_PUBLIC_EXTENSION_ID=    # optional: the published extension's ID
    ```
-3. **Database**: in the Supabase SQL editor, run each file in `supabase/migrations/` in order, `001` to `011`, as its own query. Each should report success.
+3. **Database**: in the Supabase SQL editor, run each file in `supabase/migrations/` in order, `001` to `012`, as its own query. Each should report success. Migration 012 is required for identity-safe extension recording and email approval; missing functions leave work queued for retry.
 4. **Auth settings** in Supabase:
    - Authentication → URL Configuration: set **Site URL** to your production origin (for example, `https://resume-butler.vercel.app`; use `http://localhost:3000` for a local-only project).
    - Add `http://localhost:3000/**` to **Redirect URLs** for local development. For production, add `<your site>/auth/callback` and the glob pattern `<your site>/auth/callback\?next=**`, replacing `<your site>` with your production origin. The backslash makes `?` literal; `**` accepts the `next` value, including paths and encoded slashes. The app uses these query strings for email confirmation (`next=/profile`), password reset (`next=/reset-password`) and Google sign-in. See [Supabase's redirect URL rules](https://supabase.com/docs/guides/auth/redirect-urls).

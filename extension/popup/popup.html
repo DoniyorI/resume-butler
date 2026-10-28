@@ -12,7 +12,7 @@
     </header>
 
     <section id="disconnected" hidden>
-      <p class="lead">Connect to add the jobs you apply to on Greenhouse, Lever and Ashby to your tracker.</p>
+      <p class="lead">Connect to add the jobs you apply to on LinkedIn, Greenhouse, Lever and Ashby to your tracker.</p>
       <button id="connect" class="primary" type="button">Connect to Resume Butler</button>
       <button id="connect-local" class="link" type="button" hidden>Connect to localhost:3000 instead</button>
     </section>
@@ -28,11 +28,17 @@
         <p id="record-result" class="muted" role="status"></p>
       </div>
       <p id="no-job" class="muted" hidden>
-        Open a job on Greenhouse, Lever or Ashby. When you submit an application there, it's added to your
+        Open a job on LinkedIn, Greenhouse, Lever or Ashby. When you submit an application there, it's added to your
         tracker.
       </p>
 
-      <p id="queued" class="muted" hidden></p>
+      <section id="queue-review" class="card sync-card" hidden>
+        <p class="label">Submission sync</p>
+        <p id="queued" class="muted" role="status"></p>
+        <a id="review-matches" class="review-link" href="#" target="_blank" rel="noopener" hidden>Review in Resume Butler →</a>
+        <p id="legacy-note" class="muted" hidden>Older queued items have no account attached. Assign them only if these are your applications.</p>
+        <button id="adopt-legacy" class="link" type="button" hidden></button>
+      </section>
 
       <div id="recent-wrap" hidden>
         <p class="label">Recently added</p>

@@ -1,102 +1,55 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { mock, test } from "node:test";
-import { database } from "./helpers/database.mjs";
-
-const userId = "00000000-0000-4000-8000-000000000010";
-let db;
-mock.module("@/server/auth", { namedExports: { requireUser: async () => ({ supabase: db, user: { id: userId } }) } });
+let response, args;
+const supabase = {
+  rpc: async (name, input) => { args = { name, ...input }; return response; },
+  from: () => { throw new Error("Approval must not use non-transactional writes"); },
+};
+mock.module("@/server/auth", { namedExports: { requireUser: async () => ({ supabase, user: { id: randomUUID() } }) } });
 mock.module("next/cache", { namedExports: { revalidatePath() {} } });
-const { approveSuggestion } = await import("@/features/suggestions/actions");
-const fields = { company: "Acme", role: "Backend Engineer", status: "Applied" };
-
-function setup(application = {}, suggestion = {}) {
-  const row = {
-    id: randomUUID(), user_id: userId, state: "pending", kind: "new", application_id: null,
-    category: "application_received", email_date: new Date().toISOString(), summary: "Synthetic confirmation", ...fields, ...suggestion,
-  };
-  db = database({
-    applications: [{ id: randomUUID(), user_id: userId, ...fields, applied_date: "2026-10-20", ...application }],
-    application_suggestions: [row],
+const { approveSuggestion, resolveSuggestion } = await import("@/features/suggestions/actions");
+const fields = { company: "Acme", role: "Backend Engineer", status: "Interviewed" };
+test("approval delegates validated fields to the identity-safe atomic RPC", async () => {
+  const id = randomUUID(), applicationId = randomUUID();
+  response = { data: applicationId, error: null };
+  assert.deepEqual(await approveSuggestion(id, fields), { ok: true, data: { applicationId } });
+  assert.deepEqual(args, { name: "approve_application_suggestion", p_suggestion_id: id, p_company: "Acme", p_role: "Backend Engineer", p_status: "Interviewed", p_identity_version: 1 });
+});
+for (const code of ["PGRST202", "42883", "55000", "P0002", "42501"]) {
+  test(`approval error ${code} never falls back to unsafe direct writes`, async () => {
+    response = { data: null, error: { code } };
+    assert.equal((await approveSuggestion(randomUUID(), fields)).ok, false);
   });
-  return row;
 }
-
-test("approving a reapplication preserves the rejected application and creates a new cycle", async () => {
-  const suggestion = setup({ status: "Rejected" });
-  const result = await approveSuggestion(suggestion.id, fields);
-  assert.equal(result.ok, true);
-  assert.equal(db.tables.applications.length, 2);
-  assert.equal(db.tables.applications[0].status, "Rejected");
-  assert.notEqual(result.data.applicationId, db.tables.applications[0].id);
+test("invalid suggestion fields are rejected before reaching storage", async () => {
+  args = null;
+  assert.equal((await approveSuggestion("not-a-uuid", fields)).ok, false);
+  assert.equal(args, null);
 });
-
-test("approving a reapplication preserves an old open hiring cycle", async () => {
-  const suggestion = setup({ applied_date: "2025-01-01" });
-  const result = await approveSuggestion(suggestion.id, fields);
-  assert.equal(result.ok, true);
-  assert.equal(db.tables.applications.length, 2);
+test("an invalid RPC result cannot report approval", async () => {
+  response = { data: "not-a-uuid", error: null };
+  assert.equal((await approveSuggestion(randomUUID(), fields)).ok, false);
 });
-
-test("stale email approval cannot overwrite a newer offer", async () => {
-  const suggestion = setup({ status: "Offered" });
-  Object.assign(db.tables.application_suggestions[0], { kind: "update", application_id: db.tables.applications[0].id });
-  const result = await approveSuggestion(suggestion.id, { ...fields, status: "Rejected" });
+test("durable matching transition refreshes review without reporting approval", async () => {
+  response = { data: null, error: null };
+  const result = await approveSuggestion(randomUUID(), fields);
   assert.equal(result.ok, false);
-  assert.equal(db.tables.applications[0].status, "Offered");
-  assert.equal(db.tables.application_suggestions[0].state, "pending");
+  assert.match(result.error, /matching/i);
 });
+// Real SQL status/cycle/ambiguity tests: scripts/qa-application-identity-sql.mjs.
 
-test("a deleted update target is reported rather than recreated", async () => {
-  const suggestion = setup({}, { kind: "update", application_id: randomUUID() });
-  db.tables.applications = [];
-  const result = await approveSuggestion(suggestion.id, { ...fields, status: "Interviewed" });
+test("explicit email matching supplies one owned target choice to the atomic resolver", async () => {
+  const id = randomUUID(), applicationId = randomUUID();
+  response = { data: applicationId, error: null };
+  assert.equal((await resolveSuggestion(id, { ...fields, applicationId, createNew: false })).ok, true);
+  assert.equal(args.name, "resolve_application_suggestion");
+  assert.equal(args.p_target_application_id, applicationId);
+  assert.equal(args.p_create_new, false);
+});
+test("matching rejects contradictory target/create-new choices", async () => {
+  args = null;
+  const result = await resolveSuggestion(randomUUID(), { ...fields, applicationId: randomUUID(), createNew: true });
   assert.equal(result.ok, false);
-  assert.equal(db.tables.applications.length, 0);
-});
-
-test("an existing recent application is reused and may advance", async () => {
-  const suggestion = setup();
-  const existingId = db.tables.applications[0].id;
-  const result = await approveSuggestion(suggestion.id, { ...fields, status: "Interviewed" });
-  assert.equal(result.ok, true);
-  assert.equal(result.data.applicationId, existingId);
-  assert.equal(db.tables.applications.length, 1);
-  assert.equal(db.tables.applications[0].status, "Interviewed");
-});
-
-test("another user's suggestion cannot be approved", async () => {
-  const suggestion = setup({}, { user_id: "another-user" });
-  const result = await approveSuggestion(suggestion.id, fields);
-  assert.equal(result.ok, false);
-  assert.equal(db.tables.application_suggestions[0].state, "pending");
-});
-
-test("an installed atomic approval RPC supplies the application result", async () => {
-  const suggestion = setup();
-  const committed = randomUUID();
-  db.rpc = async (name, args) => {
-    assert.equal(name, "approve_application_suggestion");
-    assert.equal(args.p_suggestion_id, suggestion.id);
-    return { data: committed, error: null };
-  };
-  const result = await approveSuggestion(suggestion.id, fields);
-  assert.equal(result.ok, true);
-  assert.equal(result.data.applicationId, committed);
-  assert.equal(db.tables.application_suggestions[0].state, "pending", "the RPC owns resolution; no second client-side write");
-});
-
-test("an atomic approval conflict cannot fall back to non-transactional writes", async () => {
-  const suggestion = setup();
-  db.rpc = async () => ({ data: null, error: { code: "55000" } });
-  const result = await approveSuggestion(suggestion.id, { ...fields, status: "Interviewed" });
-  assert.equal(result.ok, false);
-  assert.equal(db.tables.applications[0].status, "Applied");
-});
-
-test("approval of a new edited title deduplicates exact roles only", async () => {
-  const suggestion = setup();
-  const result = await approveSuggestion(suggestion.id, { ...fields, role: "Engineer" });
-  assert.equal(result.ok, true);
-  assert.equal(db.tables.applications.length, 2);
+  assert.equal(args, null);
 });

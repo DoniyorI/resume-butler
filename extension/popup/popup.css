@@ -168,3 +168,9 @@ footer a {
 footer .link {
   margin-top: 0;
 }
+
+.sync-card { background: #f8faf9; border-color: #d6e5de; }
+.review-link { display: inline-block; margin-top: 8px; color: #326f5a; font-weight: 600; text-decoration: none; }
+.review-link:hover { text-decoration: underline; }
+#legacy-note { margin-top: 8px; font-size: 12px; }
+[hidden] { display: none !important; }

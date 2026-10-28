@@ -118,7 +118,7 @@ src/
   lib/                       Safe on client and server: constants, dates, redirects, safeUrl,
                              salary, jobDetails, emailCategories, postJson, utils, supabase clients
   server/                    Server-only ("server-only" import), reusable by actions, routes, cron, extension
-supabase/migrations/         SQL schema, applied in order (001–011)
+supabase/migrations/         SQL schema, applied in order (001–012)
 extension/                   Chrome extension (see its README)
 docs/                        This file, the extension plan
 public/image/                Logo, illustrations, Lottie animations
@@ -329,6 +329,7 @@ Migrations (`supabase/migrations/`, apply in order in the SQL editor):
 | `009_auth_rate_limits.sql` | Auth rate limits |
 | `010_job_details.sql` | Pay range, workplace, employment type, source site |
 | `011_email_sync_integrity.sql` | Expiring scan leases, auto-sync attempt ordering, transactional suggestion approval |
+| `012_application_identity.sql` | Posting identities, atomic extension receipts/replay, explicit match resolution and approval revalidation |
 
 Naming: database fields are snake_case; each `data.js` maps rows to camelCase at the boundary.
 
@@ -365,7 +366,7 @@ Scan (button, /api/scan-emails)  or  daily cron (/api/cron/email-sync → runAut
   └─ The user approves or dismisses in SuggestionsReview (approveSuggestion writes the application)
 ```
 
-- **Matching** (`matching.js`): normalized company equality, exact roles preferred, shortened titles accepted only when one distinct role matches. Explicit different roles never fall back to unrelated applications. Role-less messages require one open application. Confirmation matching and new-suggestion approval preserve closed/older-than-120-day cycles. Email dates exclude newer reapplications. See [matching and reliability details](email-sync-reliability.md).
+- **Matching** (`matching.js`): normalized company equality, exact roles preferred, shortened titles accepted only when one application row matches. Multiple rows with the same title require a choice. Explicit different roles never fall back to unrelated applications. Role-less messages require one open application. Email dates exclude newer reapplications. Migration 012 rechecks role/date/current-cycle eligibility during approval under the same per-user transaction lock as extension ingestion. Newly ambiguous approvals persist candidate IDs and become actionable review items. See [matching and reliability details](email-sync-reliability.md).
 - **Auto-sync** (`autoSync.js`): Vercel Cron at 12:00 UTC daily (`vercel.json`), service-role client scoped by user, users with `auto_sync` on. Migration 011 orders by oldest attempt; older schemas fall back to oldest success. New inboxes start only in the first 20 seconds, with a shared 50-second work budget. Errors/deferred work preserve the last successful watermark and set `last_auto_sync_error`. A 300-message transport cap requires narrower manual date ranges; first/long-gap cron scans look back at most seven days. Migration 011 also supplies cross-instance leases and atomic approval; compatibility paths provide fewer concurrency guarantees.
 
 ## Chrome extension

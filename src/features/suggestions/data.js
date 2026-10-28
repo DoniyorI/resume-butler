@@ -13,6 +13,8 @@ function toSuggestion(row) {
     category: row.category,
     confidence: row.confidence,
     summary: row.summary || "",
+    needsMatching: Boolean(row.match_reason),
+    candidates: row.candidates || [],
     emailSubject: row.email_subject || "",
     emailFrom: row.email_from || "",
     emailDate: row.email_date,
@@ -26,14 +28,21 @@ export async function getPendingSuggestions(supabase, userId) {
   const { data, error } = await supabase
     .from("application_suggestions")
     .select(
-      "id, kind, application_id, company, role, status, category, confidence, summary, email_subject, email_from, email_date, application:applications(status, role)"
+      "*, application:applications(status, role)"
     )
     .eq("user_id", userId)
     .eq("state", "pending")
     .order("email_date", { ascending: false, nullsFirst: false })
     .limit(PENDING_LIMIT);
   if (error) throw error;
-  return data.map(toSuggestion);
+  const ids = [...new Set(data.flatMap(row => row.match_candidate_ids || []))];
+  const candidates = new Map();
+  for (let start = 0; start < ids.length; start += 100) {
+    const result = await supabase.from("applications").select("id,company,role,status,applied_date,portal_link").eq("user_id", userId).in("id", ids.slice(start, start + 100));
+    if (result.error) throw result.error;
+    for (const row of result.data) candidates.set(row.id, { id: row.id, company: row.company, role: row.role, status: row.status, appliedDate: row.applied_date, url: row.portal_link });
+  }
+  return data.map(row => toSuggestion({ ...row, candidates: (row.match_candidate_ids || []).map(id => candidates.get(id)).filter(Boolean) }));
 }
 
 // How many suggestions are waiting, and when the newest arrived (so a dismissed

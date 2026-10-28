@@ -50,7 +50,7 @@ function renderRecent(recent) {
   $("recent-wrap").hidden = recent.length === 0;
 }
 
-async function renderJob() {
+async function renderJob(connection) {
   const job = await currentTabJob();
   $("job").hidden = !job;
   $("no-job").hidden = Boolean(job);
@@ -59,16 +59,17 @@ async function renderJob() {
   $("job-company").textContent = [job.company, job.location].filter(Boolean).join(", ");
   $("record").onclick = async () => {
     $("record").disabled = true;
-    const result = await send({ type: "record", job });
+    const result = await send({ type: "record", job, account: { userId: connection.userId, origin: connection.origin } });
     const messages = {
       added: "Added to your tracker.",
       updated: "Already in your tracker; updated with this posting.",
-      queued: "Saved. It will be added when you're back online.",
+      queued: "Saved safely. Waiting to sync.",
+      "needs-matching": "Saved for review. Choose the application in Resume Butler.",
       "not-connected": "Connect first.",
     };
     $("record-result").textContent =
       messages[result?.status] || result?.error || "Couldn't add it. Try again.";
-    if (result?.status === "added") render();
+    if (["added", "needs-matching", "queued"].includes(result?.status)) render();
     else $("record").disabled = false;
   };
 }
@@ -90,10 +91,23 @@ async function render() {
   $("account").textContent = connection.name || connection.email || "your account";
   $("account").title = connection.email || "";
   $("open-app").href = connection.origin + "/";
-  $("queued").hidden = !status.queued;
-  $("queued").textContent = `${status.queued} waiting to sync. They'll be added when you're back online.`;
+  $("queue-review").hidden = !(status.queued || status.legacy);
+  $("queued").textContent = status.needsMatching ? `${status.needsMatching} submission${status.needsMatching === 1 ? "" : "s"} need matching.`
+    : status.blocked ? "A submission needs your attention before it can sync."
+    : status.queued ? `${status.queued} saved safely, waiting to sync.` : "";
+  $("review-matches").hidden = !(status.needsMatching || status.blocked);
+  $("review-matches").href = connection.origin + "/applications#matching";
+  $("legacy-note").hidden = !status.legacy;
+  $("adopt-legacy").hidden = !status.legacy;
+  $("adopt-legacy").textContent = `Assign ${status.legacy || ""} older queued item${status.legacy === 1 ? "" : "s"} to this account`;
+  $("adopt-legacy").onclick = async () => {
+    $("adopt-legacy").disabled = true;
+    const result = await send({ type: "adopt-legacy", account: { userId: connection.userId, origin: connection.origin } });
+    if (result?.ok) await render();
+    else { $("queued").textContent = result?.error || "Couldn't assign the items. Try again."; $("adopt-legacy").disabled = false; }
+  };
   renderRecent(status.recent || []);
-  await renderJob();
+  await renderJob(connection);
 }
 
 $("connect").addEventListener("click", () => send({ type: "open-connect" }).then(() => window.close()));

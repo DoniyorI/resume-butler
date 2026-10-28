@@ -176,3 +176,33 @@ test("slow persistence defers remaining classified emails before the route expir
   assert.equal(result.deferred, 1);
   assert.equal(db.tables.processed_emails.length, 1);
 });
+
+test("an ambiguous same-title email stays retryable without a guessed update", async () => {
+  const db = setup();
+  db.tables.applications = ["one", "two"].map(id => ({ id, user_id: userId, company: "Acme", role: "Backend Engineer", status: "Applied", applied_date: "2026-10-20" }));
+  messages = [message("ambiguous", {}, { category: "interview" })];
+  const result = await syncEmailsForUser(db, userId);
+  assert.equal(result.suggestions, 1);
+  assert.equal(db.tables.application_suggestions[0].match_reason, "multiple_candidates");
+  assert.deepEqual(db.tables.application_suggestions[0].match_candidate_ids, ["one", "two"]);
+  assert.ok(db.tables.applications.every(app => app.status === "Applied"));
+});
+test("ambiguous pending new suggestions are not merged by title alone", async () => {
+  const db = setup();
+  db.tables.application_suggestions = ["one", "two"].map(id => ({ id, user_id: userId, kind: "new", state: "pending", company: "Acme", role: "Backend Engineer", status: "Applied", email_date: new Date().toISOString() }));
+  messages = [message("pending-ambiguous", {}, { category: "interview" })];
+  const result = await syncEmailsForUser(db, userId);
+  assert.equal(result.suggestions, 1);
+  assert.ok(db.tables.application_suggestions.filter(item => ["one", "two"].includes(item.id)).every(item => item.status === "Applied"));
+  assert.equal(db.tables.application_suggestions[2].match_reason, "pending_candidates");
+});
+
+test("an unresolved email stays retryable when identity columns are not installed", async () => {
+  const db = setup();
+  db.tables.applications = ["one", "two"].map(id => ({ id, user_id: userId, company: "Acme", role: "Backend Engineer", status: "Applied", applied_date: "2026-10-20" }));
+  db.fail("application_suggestions", "insert", { code: "42703", message: "Identity migration missing" });
+  messages = [message("ambiguous-schema", {}, { category: "interview" })];
+  const result = await syncEmailsForUser(db, userId);
+  assert.equal(result.deferred, 1);
+  assert.equal(db.tables.processed_emails.length, 0);
+});

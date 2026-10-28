@@ -8,7 +8,7 @@
 
 **Tech Stack:** JavaScript, current Next.js App Router, Zod, Supabase/Postgres RPC/RLS, Manifest V3, Node 24 `node:test`, Playwright and dedicated fictional QA accounts.
 
-**Spec:** [RB-01 design](../specs/2026-10-28-application-identity-design.md). Status: implementation-ready draft for review; no tasks below have been executed. Part of [the program plan](2026-10-28-job-search-improvements.md).
+**Spec:** [RB-01 design](../specs/2026-10-28-application-identity-design.md). Status: implemented and verified October 28, 2026; see [execution evidence and limits](../../application-identity-verification.md). The detailed checklists below retain the original planned verification scope; the evidence report describes exactly what ran. Part of [the program plan](2026-10-28-job-search-improvements.md).
 
 ## Global Constraints
 
@@ -129,4 +129,4 @@ Keep existing extension successful HTTP body `{ application, created }` and 201/
 
 Identity equivalence/conflict and cycle rules map to Task 1; email ambiguity and pending merge behavior to Task 2; atomicity/RLS/receipt replay and missing migrations to Task 3; account ownership/retry/legacy client behavior to Task 4; user recovery/staleness and full verification to Task 5. The same `MatchDecision` names are used across tasks. Exact PDF artifacts and thread-based email matching remain explicitly assigned to later milestones.
 
-A fresh builder check identified the need for a persisted extension-specific unresolved event and completion path. The design and Tasks 3–5 now specify committed review receipts, source-specific authenticated resolution, temporary-input cleanup and replay of the resolved original UUID. This is a planning correction, not an implemented feature.
+A fresh builder check identified the need for a persisted extension-specific unresolved event and completion path. Tasks 3–5 now implement committed review receipts, source-specific authenticated resolution, temporary-input cleanup and replay of the resolved original UUID. Final review found seven material edge cases; each was corrected with regression evidence recorded in the verification report.

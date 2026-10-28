@@ -3,10 +3,11 @@ import { CATEGORY_STATUS, MIN_CONFIDENCE, classifyEmail, isCandidateEmail } from
 import { encryptStoredPassword, getConnectionCredentials, markScanned } from "@/server/email/connection";
 import { fetchEmails } from "@/server/email/imapClient";
 import { isAllowedImapHost } from "@/server/email/imapHosts";
-import { findTargetApplication, normalizeCompany, shouldUpdateStatus } from "@/server/email/matching";
+import { decideEmailApplication, normalizeCompany, shouldUpdateStatus } from "@/server/email/matching";
 import { resolveScanOptions } from "@/server/email/scanOptions";
 import { HttpError } from "@/server/http";
 import { withEmailSyncLock } from "@/server/email/syncLock";
+import { readOwnedPages } from "@/server/applications/readOwnedPages";
 
 // Each candidate email is one model call; run several at a time so a full
 // scan fits in the route's 60 seconds
@@ -25,25 +26,15 @@ async function loadProcessedIds(supabase, userId, messageIds) {
 }
 
 async function loadApplications(supabase, userId) {
-  const { data, error } = await supabase
-    .from("applications")
-    .select("id, company, role, status, applied_date, created_at")
-    .eq("user_id", userId);
-  if (error) throw error;
-  return data;
+  return readOwnedPages(supabase, userId, "applications", "id, company, role, status, applied_date, created_at");
 }
 
 // Pending suggestions, so a scan extends them instead of suggesting the same
 // application twice ("Thanks for applying" followed by a rejection becomes one
 // new application with the latest status)
 async function loadPendingSuggestions(supabase, userId) {
-  const { data, error } = await supabase
-    .from("application_suggestions")
-    .select("id, kind, application_id, company, role, status, email_date, created_at")
-    .eq("user_id", userId)
-    .eq("state", "pending");
-  if (error) throw error;
-  return data;
+  const legacyColumns = "id, kind, application_id, company, role, status, email_date, created_at";
+  return readOwnedPages(supabase, userId, "application_suggestions", legacyColumns + ", match_reason, match_candidate_ids", { pending: true, legacyColumns });
 }
 
 async function recordProcessed(supabase, record) {
@@ -82,16 +73,25 @@ function planSuggestion(classification, { categories, applications, pending, ema
   const company = normalizeCompany(classification.company);
   if (!company) return { outcome: "ignored:no_company" };
 
+  const unresolved = (candidateIds, reason) => ({
+    outcome: "suggested",
+    suggestion: { kind: "new", application_id: null, company: classification.company, role: classification.role || "", status, match_reason: reason, match_candidate_ids: candidateIds },
+  });
   const match = { company, role: classification.role, category: classification.category, emailDate };
-  const target = findTargetApplication(applications, match);
+  const decision = decideEmailApplication(applications, match);
+  if (decision.kind === "ambiguous") return unresolved(decision.candidateIds, decision.reason);
+  const target = decision.kind === "matched" ? applications.find(app => app.id === decision.applicationId) : null;
 
-  // A pending suggestion about the same application: advance it, or skip
-  const pendingTarget = target
-    ? pending.find((p) => p.kind === "update" && p.application_id === target.id)
-    : findTargetApplication(
-        pending.filter((p) => p.kind === "new"),
-        match
-      );
+  const pendingCandidates = target
+    ? pending.filter(p => p.kind === "update" && p.application_id === target.id)
+    : pending.filter(p => p.kind === "new" && !p.match_reason);
+  const pendingDecision = target
+    ? pendingCandidates.length > 1 ? { kind: "ambiguous" }
+      : pendingCandidates.length ? { kind: "matched", applicationId: pendingCandidates[0].id } : { kind: "new" }
+    : decideEmailApplication(pendingCandidates, match);
+  if (pendingDecision.kind === "ambiguous") return unresolved([], "pending_candidates");
+  const pendingTarget = pendingDecision.kind === "matched"
+    ? pendingCandidates.find(p => p.id === pendingDecision.applicationId) : null;
   if (pendingTarget) {
     return shouldUpdateStatus(pendingTarget.status, status)
       ? { outcome: "merged", merge: { target: pendingTarget, status } }
@@ -213,6 +213,12 @@ async function scanEmailsForUser(supabase, userId, options) {
       emailDate: processed.email_date,
     });
 
+    if (outcome === "deferred:ambiguous") {
+      results.deferred++;
+      results.details.push({ subject: email.subject.slice(0, 100), company: classification.company, role: classification.role || "", category: classification.category, status: null, outcome });
+      continue;
+    }
+
     if (suggestion || merge) {
       const details = {
         category: classification.category,
@@ -244,6 +250,11 @@ async function scanEmailsForUser(supabase, userId, options) {
             .select("id")
             .single();
       if (error) {
+        if (suggestion?.match_reason && ["42703", "PGRST204"].includes(error.code)) {
+          results.deferred++;
+          results.details.push({ subject: email.subject.slice(0, 100), company: classification.company, role: classification.role || "", category: classification.category, status: null, outcome: "deferred:ambiguous" });
+          continue;
+        }
         // The suggestion may have committed before a previous processed-log write
         // failed. Its unique message ID is durable evidence of ingestion, even
         // after the user has approved or dismissed it.
@@ -261,7 +272,7 @@ async function scanEmailsForUser(supabase, userId, options) {
         continue;
       }
       if (suggestion) {
-        pending.push(saved);
+        pending.push({ ...saved, match_reason: suggestion.match_reason, match_candidate_ids: suggestion.match_candidate_ids });
         results.suggestions++;
       } else {
         merge.target.status = merge.status;

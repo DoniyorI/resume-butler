@@ -146,7 +146,17 @@ globalThis.RB_showResult = function showResult(result, job, key) {
       });
       break;
     case "queued":
-      showToast({ title: "Saved for Resume Butler", detail: "Adding it when you're back online" });
+      showToast({ title: "Saved for Resume Butler", detail: "Saved safely, waiting to sync" });
+      break;
+    case "needs-matching":
+      showToast({
+        title: "Saved for review",
+        detail: "Choose which application this submission belongs to.",
+        actions: [{ label: "Review", onClick: async () => {
+          await sendToBackground({ type: "open-review" });
+          return { title: "Saved for review", detail: "Continue in Resume Butler." };
+        } }],
+      });
       break;
     case "not-connected":
       showToast({

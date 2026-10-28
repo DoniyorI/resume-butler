@@ -1,4 +1,6 @@
 import { Suspense } from "react";
+import { getUnresolvedExtensionEvents } from "@/features/applications/ingestionReview";
+import ExtensionMatchReview from "@/features/applications/ExtensionMatchReview";
 import { redirect } from "next/navigation";
 import { requirePageUser } from "@/server/auth";
 import ApplicationsHeader from "@/features/applications/ApplicationsHeader";
@@ -18,9 +20,10 @@ export const metadata = { title: "Applications" };
 
 async function ApplicationsList({ params }) {
   const { supabase, user } = await requirePageUser();
-  const [{ applications, total, allTotal, statusCounts }, pendingSuggestions] = await Promise.all([
+  const [{ applications, total, allTotal, statusCounts }, pendingSuggestions, unmatched] = await Promise.all([
     getApplicationsPage(supabase, user.id, params),
     getPendingSummary(supabase, user.id),
+    getUnresolvedExtensionEvents(supabase),
   ]);
 
   // Past the last page (e.g. after deleting every row on it): go to the last
@@ -34,6 +37,7 @@ async function ApplicationsList({ params }) {
     <>
       <ApplicationsHeader total={total} allTotal={allTotal} filtered={hasActiveFilters(params)} />
       <SuggestionsBanner count={pendingSuggestions.count} latestAt={pendingSuggestions.latestAt} />
+      <ExtensionMatchReview events={unmatched} />
       <ApplicationTable
         applications={applications}
         total={total}

@@ -47,7 +47,11 @@ The date header and extracted company/title are imperfect evidence. Matching doe
 
 Migrations **009, 010 and 011 are now applied** to the configured Resume Butler project (`tlmabncoijnuxymxohgu`) through its authenticated SQL Editor. Each ran in a transaction and reported success. A metadata query confirmed auth limits, job-detail columns, scan-lock functions and atomic approval are present. These were manual SQL Editor migrations, consistent with this project's setup; the dashboard's CLI migration-history display is not the source of truth for this rollout.
 
-Before 011 is applied in another environment, missing RPCs use process-local scan exclusion and guarded application writes. Those compatibility paths do **not** provide cross-instance exclusion or transactional approval. The connected project now passes real RPC checks. The application source changes remain uncommitted and undeployed; the new behavior is verified locally against this database.
+The earlier 011 rollout retained compatibility approval writes. RB-01 removes that fallback: missing identity-safe approval functions now return a retryable setup error and leave suggestions pending. Scan-lock compatibility still has fewer cross-instance guarantees. The earlier source work was committed and deployed as `617ee97`; later RB-01 deployment is recorded separately.
+
+### Application identity rollout (012)
+
+Migration **012** is now installed in the connected project. Multiple same-title rows require an explicit choice rather than selecting the newest row. Approval rechecks current role/date/cycle eligibility; ambiguity discovered at approval persists candidate metadata so the UI can recover. Extension receipts, account/origin-bound queues and source-specific matching review use the same per-user lock. No classifier or model changes were made. See [RB-01 verification](application-identity-verification.md) for local/live tests and remaining limits.
 
 `scripts/verify-email-integrity-qa.mjs` passed against real PostgreSQL through authenticated Supabase API clients. It checked lease contention, token ownership, tenant isolation, simultaneous approval of one suggestion, retained hiring cycles and rollback of a stale rejection against a newer offer. It retained the old Atlas application and created exactly one new cycle. Anonymous callers, direct lock-table access and authenticated access to the service-only auth-limit function are also checked. Mutations target only the recorded synthetic account; temporary manual status edits are restored.
 

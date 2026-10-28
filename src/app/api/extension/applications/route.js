@@ -11,6 +11,9 @@ export async function POST(request) {
     const { admin, userId } = await authenticateExtension(request);
     const input = await parseJson(request, recordApplicationInput, { maxBytes: 120_000 });
     const result = await recordApplication(admin, userId, input);
+    if (result.status === "needs_matching") {
+      return NextResponse.json({ error: "Choose which application this submission belongs to.", code: "needs_matching", eventId: result.eventId }, { status: 409 });
+    }
     // So the dashboard and table show it next time they load
     revalidatePath("/");
     revalidatePath("/applications");
