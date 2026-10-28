@@ -95,16 +95,17 @@ Inspected on 2026-10-27: only manifests, file names, config shape and which brow
 ### Order of work
 
 1. ~~Inspect Simplify's and Jobright's manifests.~~ Done (see above).
-2. ~~App: `extension_tokens` (migration 008), the connect page at `/extension`, and the API (`GET /api/extension/me`, `POST /api/extension/applications`, `DELETE /api/extension/applications/[id]` for undo).~~ Done and tested on 2026-10-27.
+2. ~~App: `extension_tokens` (migration 008), the connect page (now `/extension/connect`, one step), and the API (`GET /api/extension/me`, `POST /api/extension/applications`, `DELETE /api/extension/applications/[id]` for undo).~~ Done and tested on 2026-10-27.
 3. ~~Extension skeleton: manifest, background worker, popup, auto-connect.~~ Built in `extension/` (see its README).
 4. ~~Greenhouse, Lever and Ashby: read the job and detect submission.~~ Built; the readers are checked on live postings. Still to confirm with one real application per site. Test on real postings, without submitting real applications (use the confirmation page markup, or postings you actually apply to).
-5. ~~LinkedIn Easy Apply.~~ Built (detects "Your application was sent"); the signed-in selectors still need one real Easy Apply to confirm.
+5. ~~LinkedIn Easy Apply.~~ Built and confirmed on real Easy Apply submissions. LinkedIn's new server-driven Easy Apply has no stable markup, so it's confirmed by its submit request succeeding (`webRequest`, URL and status only), with the "Submit application" click and the brief `/jobs/view/<id>/post-apply/` page as backups.
+5a. ~~Job details.~~ The posting's pay range, workplace and employment type (JSON-LD, else parsed from the description) and the site are saved with the application (migration 010).
 6. Workday adapter, and a generic detector for other sites. Workday is the hardest: multi-step, dynamic pages.
 7. Autofill from the Master CV. This is the biggest piece and optional; tracking works without it.
 8. Chrome Web Store listing: privacy policy, screenshots, review.
 
-## Open decisions
+## Decisions
 
-- Straight into the tracker, or through the review queue? (Recommended: straight in, with undo.)
-- Which sites first, if not Greenhouse, Lever and Ashby?
-- Is autofill in scope, or just tracking and "tailor my resume"?
+- ~~Straight into the tracker, or through the review queue?~~ Straight in after a real submit click, with undo; a confirmation page reached without a click asks "Did you apply?" first.
+- ~~Which sites first?~~ LinkedIn Easy Apply, Greenhouse, Lever and Ashby. Workday next.
+- Still open: is autofill in scope, or just tracking and "tailor my resume"?

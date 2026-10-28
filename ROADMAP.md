@@ -8,28 +8,39 @@ A job application platform where users build a comprehensive CV once, then gener
 
 ## Current State (October 2026)
 
-Phases 0–7 below are largely complete: the Django + Firebase stack was replaced by Next.js + Supabase, and the CV page, application detail page, resume builder, LaTeX export, ATS scanner, AI suggestions, dashboard and IMAP email sync all exist.
+Phases 0–7 below are complete. The Django + Firebase stack was replaced by Next.js + Supabase, and since then:
 
-The **foundations refactor** (branch `refactor/foundations`) then:
+- **Foundations**: auth on the server (middleware + route group layouts), data loading in Server Components, writes in Server Actions, code organized into `src/features`, `src/server` and route groups
+- **Security**: auth on every API route, input caps, per-user and per-IP rate limits, generic errors, XSS and LaTeX-injection fixes, encrypted email passwords, security headers, no Supabase client in the browser, working password reset limited to fresh recovery sessions
+- **Editors**: resume and cover letter "studios" with a page that matches the PDF, live one-page fit, tailoring, guarded AI rewrites
+- **Dashboard** as the home page: stats, goals and streaks, follow-ups, charts
+- **Email sync** with a review queue (nothing changes without approval) and an optional daily auto-sync (Vercel Cron)
+- **Chrome extension**: one-step connect, automatic tracking on LinkedIn Easy Apply, Greenhouse, Lever and Ashby, job details (pay, workplace, type) kept with each application
+- **Hiring cycles**: a reapplication to a closed or old application starts a new one
 
-- Hardened security: auth on every API route, input caps, per-user rate limits, generic errors, XSS and LaTeX-injection fixes, encrypted email passwords, security headers, Next.js 14.2.x
-- Moved auth to the server (middleware + route group layouts) and data loading to Server Components, with writes in Server Actions
-- Organized code into `src/features/<feature>`, `src/server` (server-only services) and route groups; removed the dead Django backend and unused packages
+The full map is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md); conventions are in CLAUDE.md.
 
-See CLAUDE.md for the structure and conventions.
+### Now
+
+- [ ] Merge the Next.js 16.4 / React 19 upgrade (branch `claude/keen-roentgen-b7b6a5`) once the signed-in checks pass
+- [ ] Apply migrations 009 (auth rate limits) and 010 (job details) in Supabase
+- [ ] CAPTCHA (Supabase Turnstile) on sign-in and sign-up
+- [ ] Error monitoring (`instrumentation.js` / Vercel or Sentry) and per-section error boundaries
+- [ ] Decide the email page's name ("Email Sync" today)
 
 ### Next: Gmail connection
 
 - [ ] "Connect Gmail" with Google OAuth (replaces IMAP app passwords); store refresh tokens encrypted in a table with no client access
-- [ ] Incremental sync with the Gmail `historyId`; run it in the background (Gmail push via Pub/Sub, or a cron job) instead of only on "Scan Emails"
-- [ ] Review queue: detected new applications and status changes wait for the user's approval
+- [ ] Incremental sync with the Gmail `historyId`, via Gmail push (Pub/Sub) or the existing daily cron
+- [x] Review queue: detected new applications and status changes wait for the user's approval
 - [ ] Plan for Google verification: `gmail.readonly` is a restricted scope (app verification + annual security assessment); `gmail.metadata` may be enough to start
 
-### Later: Chrome extension
+### Later: extension
 
-- [ ] Versioned extension API (`/api/v1/...`) calling the same `src/server` services
-- [ ] Bearer-token auth (Supabase access token), CORS limited to the extension ID, per-user rate limits
+- [x] Token-based extension API (`/api/extension/*`) calling the same `src/server` services, with per-user limits
+- [ ] Workday and more job sites; a generic detector for other sites
 - [ ] Tailor a resume from the job posting the user is viewing; treat scraped page text as untrusted
+- [ ] Publish to the Chrome Web Store
 
 ---
 
