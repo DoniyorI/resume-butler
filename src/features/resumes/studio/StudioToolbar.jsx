@@ -1,7 +1,7 @@
 "use client";
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { toast } from "sonner";
+import { createTitleSave } from "@/features/resumes/titleSave";
 import {
   AlertCircle,
   ArrowLeft,
@@ -31,28 +31,42 @@ const SAVE_STATUS = {
 };
 
 // Document name, saved through `rename` (a Server Action returning { ok, error })
-// when the field loses focus. An empty name goes back to the saved one.
-function TitleInput({ title, onChange, rename, label }) {
-  const savedRef = useRef(title);
-
-  const handleBlur = async () => {
-    const trimmed = title.trim();
-    if (!trimmed) return onChange(savedRef.current);
-    if (trimmed === savedRef.current) return;
-    const result = await rename(trimmed).catch(() => ({
-      ok: false,
-      error: "Failed to rename",
-    }));
-    if (!result.ok) return toast.error(result.error);
-    savedRef.current = trimmed;
-    toast(`${label} renamed`);
-  };
+// after a short pause or on blur. An empty name returns to the saved one.
+function TitleInput({ title, onChange, rename, label, onSaveState }) {
+  const callbacks = useRef({ rename, title });
+  callbacks.current = { rename, title };
+  const saver = useRef(null);
+  const timer = useRef(null);
+  useEffect(() => {
+    const instance = createTitleSave({
+      initial: callbacks.current.title,
+      save: value => callbacks.current.rename(value),
+      onState: onSaveState,
+      onRevert: onChange,
+    });
+    saver.current = instance;
+    const warnIfUnsaved = event => { if (instance.hasUnsaved()) event.preventDefault(); };
+    window.addEventListener("beforeunload", warnIfUnsaved);
+    return () => {
+      window.removeEventListener("beforeunload", warnIfUnsaved);
+      clearTimeout(timer.current);
+      void instance.flush();
+      instance.dispose();
+      saver.current = null;
+    };
+  }, [onChange, onSaveState]);
+  useEffect(() => {
+    saver.current?.update(title);
+    clearTimeout(timer.current);
+    if (title.trim()) timer.current = setTimeout(() => { void saver.current?.flush(); }, 800);
+    return () => clearTimeout(timer.current);
+  }, [title]);
 
   return (
     <input
       value={title}
-      onChange={(e) => onChange(e.target.value)}
-      onBlur={handleBlur}
+      onChange={(e) => { saver.current?.update(e.target.value); onChange(e.target.value); }}
+      onBlur={() => { clearTimeout(timer.current); void saver.current?.flush(); }}
       onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
       maxLength={200}
       aria-label={`${label} name`}
@@ -122,6 +136,7 @@ export default function StudioToolbar({
   title,
   onTitleChange,
   saveStatus,
+  saveError,
   zoom,
   scale,
   onZoom,
@@ -130,7 +145,10 @@ export default function StudioToolbar({
   pdfPages,
   onToggleAssistant,
 }) {
-  const status = SAVE_STATUS[saveStatus];
+  const [titleState, setTitleState] = useState({ status: "saved", error: null });
+  const mergedStatus = saveStatus === "error" || titleState.status === "error" ? "error"
+    : saveStatus === "saving" || titleState.status === "saving" ? "saving" : "saved";
+  const status = SAVE_STATUS[mergedStatus];
 
   return (
     <div className="flex h-14 shrink-0 items-center gap-2 border-b bg-background px-3 md:px-4">
@@ -139,9 +157,11 @@ export default function StudioToolbar({
           <ArrowLeft className="h-4 w-4" />
         </Link>
       </Button>
-      <TitleInput title={title} onChange={onTitleChange} rename={rename} label={label} />
+      <TitleInput title={title} onChange={onTitleChange} rename={rename} label={label} onSaveState={setTitleState} />
       <span
         className={`hidden shrink-0 items-center gap-1 text-xs sm:flex ${status.className}`}
+        role="status"
+        title={titleState.error || saveError || undefined}
         aria-live="polite"
       >
         <status.Icon className={`h-3.5 w-3.5 ${status.spin ? "animate-spin" : ""}`} /> {status.label}

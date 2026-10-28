@@ -50,6 +50,14 @@ export default function ScanResults({ results }) {
           </div>
         </div>
 
+        {results.deferred > 0 && (
+          <p className="mb-4 rounded border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900" role="status">
+            {results.deferred} emails have not been processed. {results.truncated > 0
+              ? "This mailbox window exceeds the scan limit. Choose a smaller date range to recover older messages."
+              : "Run the scan again to continue."}
+          </p>
+        )}
+
         {results.details?.length > 0 && (
           <div className="space-y-2 max-h-64 overflow-y-auto">
             {results.details.map((d, i) => {

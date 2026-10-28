@@ -42,7 +42,7 @@ export async function renderResume(supabase, userId, { resumeId, format }) {
 
   const latex = generateLatex(resume.content || {});
   const pdf = format === "tex" ? null : await compilePdf(latex);
-  return { title: resume.title, latex, pdf };
+  return { title: resume.title, latex, pdf, content: resume.content || {} };
 }
 
 /**

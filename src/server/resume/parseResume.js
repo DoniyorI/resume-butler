@@ -160,7 +160,7 @@ async function saveSkills(supabase, userId, skills) {
 export async function parseResume(supabase, userId, { buffer, fileName }) {
   const resumeText = await extractResumeText(buffer, fileName);
 
-  const raw = await chatJSON({ system: PARSE_PROMPT, user: resumeText });
+  const raw = await chatJSON({ task: "import", system: PARSE_PROMPT, user: resumeText });
   const parsed = {
     education: records(raw.education, LIMITS.education),
     experience: records(raw.experience, LIMITS.experience),

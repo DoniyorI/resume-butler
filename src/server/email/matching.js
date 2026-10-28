@@ -28,7 +28,7 @@ export function normalizeRole(role) {
 function sameRole(a, b) {
   const left = normalizeRole(a);
   const right = normalizeRole(b);
-  return Boolean(left && right) && (left === right || left.includes(right) || right.includes(left));
+  return Boolean(left && right) && (` ${left} `.includes(` ${right} `) || ` ${right} `.includes(` ${left} `));
 }
 
 const TERMINAL_STATUSES = ["Rejected", "Withdrew"];
@@ -39,7 +39,7 @@ export const NEW_CYCLE_DAYS = 120;
 const isOpen = (app) => !TERMINAL_STATUSES.includes(app.status);
 // When it was applied to; rows without a date (pending suggestions) count as now
 const appliedAt = (app) => {
-  const time = new Date(app.applied_date || app.created_at || NaN).getTime();
+  const time = new Date(app.applied_date || app.email_date || app.created_at || NaN).getTime();
   return Number.isNaN(time) ? Date.now() : time;
 };
 // Open applications first, then the most recently applied
@@ -63,23 +63,32 @@ export function isSameCycle(app, now = Date.now()) {
  * new cycle. An email that names no role (common for rejections) goes to the
  * company's only open application.
  */
-export function findTargetApplication(applications, { company, role, category, now = Date.now() }) {
+export function findTargetApplication(
+  applications,
+  { company, role, category, emailDate, now = Date.now() }
+) {
+  if (!company) return null;
+  const eventAt = Math.min(parseEmailDate(emailDate)?.getTime() ?? now, now);
+  const endOfEventDay = (Math.floor(eventAt / DAY_MS) + 1) * DAY_MS;
   const atCompany = applications
-    .filter((app) => normalizeCompany(app.company) === company)
+    .filter((app) => normalizeCompany(app.company) === company && appliedAt(app) < endOfEventDay)
     .sort(mostRelevantFirst);
   if (atCompany.length === 0) return null;
 
+  const eligible = (target) =>
+    target && (category !== "application_received" || isSameCycle(target, eventAt)) ? target : null;
   const wanted = normalizeRole(role);
-  const exact = wanted ? atCompany.filter((app) => normalizeRole(app.role) === wanted) : [];
-  const byRole = exact.length ? exact : atCompany.filter((app) => sameRole(app.role, role));
-  if (byRole.length) {
-    const target = byRole[0];
-    return category === "application_received" && !isSameCycle(target, now) ? null : target;
+  if (wanted) {
+    const exact = atCompany.filter((app) => normalizeRole(app.role) === wanted);
+    if (exact.length) return eligible(exact[0]);
+    const partial = atCompany.filter((app) => sameRole(app.role, role));
+    // A shortened title is usable only if it identifies one distinct role.
+    const roles = new Set(partial.map((app) => normalizeRole(app.role)));
+    return roles.size === 1 ? eligible(partial[0]) : null;
   }
-  if (wanted && category === "application_received") return null;
 
   const open = atCompany.filter(isOpen);
-  return open.length === 1 ? open[0] : null;
+  return open.length === 1 ? eligible(open[0]) : null;
 }
 
 // Date headers come from the sender and may be malformed; return null instead of throwing

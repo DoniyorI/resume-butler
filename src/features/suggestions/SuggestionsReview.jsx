@@ -99,7 +99,7 @@ function SuggestionRow({ suggestion, onDone }) {
       {/* The email behind it */}
       <div className="min-w-0 text-xs" title={suggestion.summary || undefined}>
         <p className="truncate text-sm text-foreground">{suggestion.emailSubject || "No subject"}</p>
-        <p className="mt-0.5 flex min-w-0 items-center gap-1.5 text-muted-foreground">
+        <div className="mt-0.5 flex min-w-0 items-center gap-1.5 text-muted-foreground">
           <Badge variant="outline" className="shrink-0 px-1.5 py-0 text-[11px] font-normal">
             {CATEGORY_LABELS[suggestion.category] || suggestion.category}
           </Badge>
@@ -109,7 +109,7 @@ function SuggestionRow({ suggestion, onDone }) {
               · <LocalDateTime value={suggestion.emailDate} format="date" />
             </span>
           )}
-        </p>
+        </div>
       </div>
 
       <div className="flex items-center justify-end gap-1">

@@ -82,6 +82,7 @@ export async function generateCoverLetter(
 ) {
   const cv = cvSummary(await loadCv(supabase, userId));
   const answer = await chatJSON({
+    task: "writing",
     system: coverLetterPrompt({ tone, length }),
     user: `Company: ${companyName || "the company"}\nRole: ${role || "see the job description"}\n\nJob description:\n${jobDescription}\n\nCandidate CV:\n${JSON.stringify(cv)}`,
     temperature: 0.6,

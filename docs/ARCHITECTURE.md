@@ -53,14 +53,14 @@ Core principle: **the user's own words and facts**. AI may pick, reorder and rew
 | Forms | react-hook-form + zod in a few forms; most forms use plain state | zod is the validation layer everywhere on the server |
 | Dates | date-fns, plus `@/lib/dates` helpers | Plain `YYYY-MM-DD` dates are read as local dates |
 | Database and auth | Supabase: Postgres with row-level security, Supabase Auth (email/password, Google OAuth), `@supabase/ssr` | Server-side client only; no Supabase client ships to the browser |
-| AI | OpenAI chat completions, `gpt-4o-mini` by default (`OPENAI_MODEL` overrides) | JSON-mode responses via `chatJSON` |
+| AI | OpenAI chat completions, `gpt-6-luna` by default (`OPENAI_MODEL` overrides) | JSON-mode responses via `chatJSON` |
 | PDF | LaTeX generated on the server, compiled by the YtoTech LaTeX-on-HTTP service (`latex.ytotech.com`) | Falls back to returning the `.tex` source |
 | Email | `imap` + `mailparser` | Read-only IMAP over TLS to an allowlist of hosts |
 | Resume import | `pdf2json` | PDF or `.txt`, then the AI structures it |
 | Contact form | EmailJS (browser SDK) | Public, client-side IDs |
 | Extension | Chrome Manifest V3, plain JS, no build step | `extension/` |
-| Hosting | Vercel (Hobby plan), Vercel Cron | `maxDuration` must stay ≤ 60 seconds |
-| Tooling | ESLint (`next/core-web-vitals`), Prettier | No automated test suite |
+| Hosting | Vercel (Hobby plan), Vercel Cron | Hobby maximum: 300 seconds with Fluid Compute, 60 without; scan and cron routes explicitly use 60 |
+| Tooling | ESLint (`next/core-web-vitals`), Prettier, Node 24 test runner | Email/AI regression suite via `npm test` |
 | Runtime | Node.js 24.x | `engines` in package.json |
 
 ## How a request flows
@@ -118,7 +118,7 @@ src/
   lib/                       Safe on client and server: constants, dates, redirects, safeUrl,
                              salary, jobDetails, emailCategories, postJson, utils, supabase clients
   server/                    Server-only ("server-only" import), reusable by actions, routes, cron, extension
-supabase/migrations/         SQL schema, applied in order (001–010)
+supabase/migrations/         SQL schema, applied in order (001–011)
 extension/                   Chrome extension (see its README)
 docs/                        This file, the extension plan
 public/image/                Logo, illustrations, Lottie animations
@@ -178,8 +178,8 @@ Redirects in `next.config.mjs`: `/cv` → `/profile`, `/resumes` and `/coverlett
 ### Resume studio (`features/resumes`)
 - **Content model** (`resumeDocument.js`): `resumes.content` JSONB `{ header, education, experience, projects, skills, order, target }`. `order` lists sections `{ id, title, hidden }`; `target` is the job `{ jobDescription, applicationId, company, role }`.
 - **Layout** (`ResumeStudio`): toolbar (`StudioToolbar`: title, fit gauge, download), outline (`OutlinePanel`: drag to reorder sections, hide them), the editable page (`PaperCanvas`, `paper/*`: inline editing on a page styled like the PDF), and the assistant (`AssistantPanel`).
-- **Autosave** (`useResumeDocument`): debounced, serialized saves through `saveResumeContent`; status saved / saving / error.
-- **One-page fit** (`FitGauge`): measures the on-screen page, calibrated to the LaTeX output (see `.rb-paper` in `globals.css`), and can confirm with the compiled PDF's page count (`/api/resume-pages`).
+- **Autosave** (`useResumeDocument`, `useLetterDocument`): debounced, serialized saves with quiet Saved / Saving / Not saved feedback in the shared toolbar, including document-name writes. Failure details are available on the indicator. Routine renames and additions do not toast; unsaved content and names retain close-tab protection.
+- **One-page fit** (`FitGauge`, pure decisions in `features/resumes/pageFit.js`): browser usage is an estimate. Target 90–100% is green; underfill and unverified overflow are amber. On resume overflow, a compiled PDF check (`/api/resume-pages`) starts automatically after a 1.5-second pause, with a 30-second automatic cooldown, bounded per-content caching and manual retry on failure. A server SHA-256 fingerprint must match the current printed content before confirmation. The real page count overrides the estimate: one page is labeled explicitly, multiple pages are red. The canvas boundary is labeled estimated. Screen typography is calibrated to LaTeX (see `.rb-paper`), but the percent is not a measurement of the PDF itself.
 - **Assistant** (`studio/assistant/*`): `JobTarget` (pick an application's job description or paste one), `MatchCard` (ATS score via `/api/ats-score`, re-scored shortly after each edit by `useJobMatch`), `TailorPicks` (`/api/tailor-resume` picks master CV entries that fit; previewed, then applied), `ReviewList` (`/api/suggest-bullets` with focus "match" or "concise"), `CvLibrary` (add entries from the master CV), `BulletRewrite` (`/api/rewrite-bullet`: stronger, tailored, shorter variants).
 - **Download** (`useResumeDownload`, `/api/download-resume`): PDF, or `.tex` if compiling fails.
 - `/api/generate-resume` creates a new resume from the master CV entries that best fit a job.
@@ -328,12 +328,13 @@ Migrations (`supabase/migrations/`, apply in order in the SQL editor):
 | `008_extension.sql` | `extension_tokens`, `applications.source` |
 | `009_auth_rate_limits.sql` | Auth rate limits |
 | `010_job_details.sql` | Pay range, workplace, employment type, source site |
+| `011_email_sync_integrity.sql` | Expiring scan leases, auto-sync attempt ordering, transactional suggestion approval |
 
 Naming: database fields are snake_case; each `data.js` maps rows to camelCase at the boundary.
 
 ## AI
 
-- One entry point, `chatJSON` in `src/server/openai.js` (OpenAI chat completions, JSON mode, `gpt-4o-mini` unless `OPENAI_MODEL` is set).
+- One entry point, `chatJSON` in `src/server/openai.js` (OpenAI chat completions, JSON mode, `gpt-6-luna` unless configured). Task overrides: `OPENAI_EMAIL_MODEL`, `OPENAI_WRITING_MODEL`, `OPENAI_SELECTION_MODEL`, `OPENAI_IMPORT_MODEL`; each falls back to `OPENAI_MODEL`. Email requests use a strict JSON schema and runtime validation. See [model evaluation and rollout advice](email-sync-reliability.md#current-ai-models-and-recommendation).
 - **Uses**: email classification, resume tailoring (pick entries), bullet suggestions and rewrites, paragraph rewrites, cover letter drafts, resume import.
 - **Untrusted output**: every response is validated and capped before use. Tailoring keeps only ids that exist; import caps rows and text; suggestions go through `checkRewrite` (`guardrails.js`), which rejects any variant that adds or swaps a technology or drops a fact (a number, a name) from the original. Paragraph rewrites get the technology check.
 - **Cost control**: per-user rate limits on every AI route; a no-AI pre-filter before email classification; ATS scoring needs no AI.
@@ -364,8 +365,8 @@ Scan (button, /api/scan-emails)  or  daily cron (/api/cron/email-sync → runAut
   └─ The user approves or dismisses in SuggestionsReview (approveSuggestion writes the application)
 ```
 
-- **Matching** (`matching.js`): the company must match exactly after normalizing (so "Meta" never updates "Metabase"). An exact role beats a similar one, and open, recent applications beat old ones. A confirmation for a role whose application is closed (Rejected or Withdrew) or older than 120 days (`NEW_CYCLE_DAYS`) starts a new application, for a new hiring cycle. A rejection that names no role goes to the company's only open application.
-- **Auto-sync** (`autoSync.js`): Vercel Cron at 12:00 UTC daily (`vercel.json`), service-role client, users with `auto_sync` on, oldest-synced first. New inboxes start only in the first 20 seconds of the 60-second budget; whoever isn't reached goes first the next day. Errors are stored in `last_auto_sync_error`.
+- **Matching** (`matching.js`): normalized company equality, exact roles preferred, shortened titles accepted only when one distinct role matches. Explicit different roles never fall back to unrelated applications. Role-less messages require one open application. Confirmation matching and new-suggestion approval preserve closed/older-than-120-day cycles. Email dates exclude newer reapplications. See [matching and reliability details](email-sync-reliability.md).
+- **Auto-sync** (`autoSync.js`): Vercel Cron at 12:00 UTC daily (`vercel.json`), service-role client scoped by user, users with `auto_sync` on. Migration 011 orders by oldest attempt; older schemas fall back to oldest success. New inboxes start only in the first 20 seconds, with a shared 50-second work budget. Errors/deferred work preserve the last successful watermark and set `last_auto_sync_error`. A 300-message transport cap requires narrower manual date ranges; first/long-gap cron scans look back at most seven days. Migration 011 also supplies cross-instance leases and atomic approval; compatibility paths provide fewer concurrency guarantees.
 
 ## Chrome extension
 
@@ -400,7 +401,7 @@ Full details in [extension/README.md](../extension/README.md) and [docs/chrome-e
 ## Deployment and operations
 
 - **Vercel**, Hobby plan, auto-deploys from `main` (commit status shows the deploy). Personal project: changes are pushed straight to `main`, no PRs.
-- **Limits**: `maxDuration` ≤ 60 seconds on any route, or every deploy fails.
+- **Limits**: Hobby supports a maximum duration of 300 seconds with Fluid Compute, or 60 seconds without it. The scan and cron routes explicitly set `maxDuration = 60`. Check the project's Functions settings before raising limits; its Fluid Compute setting is not recorded in the repository. See [README deployment setup](../README.md#deploying-to-vercel) and [Vercel's limits](https://vercel.com/docs/functions/limitations).
 - **Cron**: `vercel.json` runs `/api/cron/email-sync` daily at 12:00 UTC; Vercel sends `CRON_SECRET` as a bearer token.
 - **Environment variables**:
 
@@ -408,20 +409,20 @@ Full details in [extension/README.md](../extension/README.md) and [docs/chrome-e
 |---|---|
 | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase clients (public) |
 | `SUPABASE_SERVICE_ROLE_KEY` | Service-role client: cron, extension API, auth rate limits (server only) |
-| `OPENAI_API_KEY`, `OPENAI_MODEL` (optional) | AI features |
+| `OPENAI_API_KEY`, `OPENAI_MODEL` and task-specific `OPENAI_*_MODEL` overrides (optional) | AI features |
 | `APP_ENCRYPTION_KEY` | Encrypting stored email passwords (`openssl rand -base64 32`) |
 | `CRON_SECRET` | Authorizes Vercel Cron |
 | `NEXT_PUBLIC_EXTENSION_ID` (optional) | Lets the connect page also use `externally_connectable` |
 
-- **Supabase settings**: Redirect URLs must include `<site>/auth/callback` for every origin (production and `http://localhost:3000`). Recommended: minimum password length 8, CAPTCHA (Turnstile) on auth.
+- **Supabase settings**: Follow [README auth setup](../README.md#getting-started) for the production Site URL, local and production redirect patterns (including `/auth/callback?next=…`), Google provider configuration and minimum password length 8. Keep CAPTCHA protection disabled until the forms and Server Actions support challenge tokens.
 - **Logs**: Vercel runtime logs (errors are logged with a context string by `errorResponse` and `runAction`). There's no error monitoring service yet.
 
 ## Known gaps and decisions
 
-- **No automated tests.** Verification is lint, a production build and browser checks.
+- **Email/AI regression tests** run with `npm test` under Node 24. Add relevant browser checks and an isolated production build. Database RPC execution and real mailbox provider behavior need integration coverage; see [email-sync-reliability.md](email-sync-reliability.md).
 - **Next.js 14 is end of life** with known advisories; the 16.4 upgrade is on a branch (below).
 - **CSP still allows inline scripts**; a nonce-based CSP needs dynamic rendering and is best done after the upgrade.
-- **Sign-in has no CAPTCHA**, so a per-email limit can be used to lock an account out; Supabase Turnstile would solve it.
+- **CAPTCHA integration is pending.** Sign-in, sign-up and password-reset forms must collect challenge tokens and pass `options.captchaToken` in their Supabase auth calls before protection is enabled. Enabling the dashboard toggle alone would block those flows. See [ROADMAP.md](../ROADMAP.md).
 - **Gmail OAuth** (instead of IMAP app passwords) is planned; see [ROADMAP.md](../ROADMAP.md).
 - **Unused schema**: `resumes.latex_content`, `resumes.ats_score`, `resume_items`, `resume_suggestions`, `applications.parsed_requirements` are from the original design.
 - **The email page's name** ("Email Sync") is under discussion.

@@ -23,8 +23,8 @@ export function useEmailScan() {
       }
     } catch (error) {
       if (error.message?.includes("No email connection")) {
-        toast("Connect your email first in Email Sync settings", {
-          action: { label: "Email Sync", onClick: () => router.push("/email-sync") },
+        toast("Connect your email first in Inbox", {
+          action: { label: "Open Inbox", onClick: () => router.push("/email-sync") },
         });
       } else {
         toast.error(error.message);

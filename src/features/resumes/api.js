@@ -18,8 +18,11 @@ export function tailorFromCv({ jobDescription }) {
   return postJson("/api/tailor-resume", { jobDescription });
 }
 
-// Pages in the compiled PDF of the saved resume
+// Page count plus the fingerprint of the saved content actually compiled.
+export function checkResumePages({ resumeId }) {
+  return postJson("/api/resume-pages", { resumeId });
+}
+
 export async function countResumePages({ resumeId }) {
-  const data = await postJson("/api/resume-pages", { resumeId });
-  return data.pages;
+  return (await checkResumePages({ resumeId })).pages;
 }

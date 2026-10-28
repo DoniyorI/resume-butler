@@ -94,6 +94,7 @@ export async function tailorResume(supabase, userId, { jobDescription }) {
   }
 
   const answer = await chatJSON({
+    task: "selection",
     system: TAILOR_PROMPT,
     user: `Job description:\n${jobDescription}\n\nMaster CV:\n${describeCv(cv)}`,
     temperature: 0.2,

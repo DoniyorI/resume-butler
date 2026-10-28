@@ -5,9 +5,11 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { itemBullets } from "@/features/resumes/resumeDocument";
 import { renameResume } from "@/features/resumes/actions";
-import { countResumePages, reviewBullets, tailorFromCv } from "@/features/resumes/api";
+import { checkResumePages, reviewBullets, tailorFromCv } from "@/features/resumes/api";
 import { useResumeDocument } from "@/features/resumes/hooks/useResumeDocument";
 import { useResumeDownload } from "@/features/resumes/hooks/useResumeDownload";
+import { useAutomaticPdfFit } from "@/features/resumes/hooks/useAutomaticPdfFit";
+import { printableResumeKey, hashPdfContentKey } from "@/features/resumes/pdfContentKey";
 import AssistantPanel from "@/features/resumes/studio/AssistantPanel";
 import { pageFit } from "@/features/resumes/studio/FitGauge";
 import PaperCanvas, { PAGE_CONTENT_PX } from "@/features/resumes/studio/PaperCanvas";
@@ -82,8 +84,17 @@ export default function ResumeStudio({ resume, masterCv, jobOptions }) {
   const [picking, setPicking] = useState(false);
   const [hoveredId, setHoveredId] = useState(null);
   const [pinnedId, setPinnedId] = useState(null);
-  // The compiled PDF's page count, valid until the next edit (content changes)
-  const [pdfCheck, setPdfCheck] = useState({ status: "idle", pages: null, content: null, error: null });
+  const contentKey = useMemo(() => printableResumeKey(resumeDoc.content), [resumeDoc.content]);
+  const compilePages = useCallback(async (key) => {
+    const expectedKey = await hashPdfContentKey(key);
+    const result = await checkResumePages({ resumeId: resume.id });
+    if (result.contentKey !== expectedKey) throw new Error("The resume changed while the PDF was being built. Check it again.");
+    return result.pages;
+  }, [resume.id]);
+  const { pdfCheck, checkPdf } = useAutomaticPdfFit({
+    contentKey, over: pageFit(fit).over, flush: resumeDoc.flush, compile: compilePages,
+  });
+  const pdfPages = pdfCheck.status === "done" ? pdfCheck.pages : null;
 
   const { sections, target } = resumeDoc;
   const jobDescription = target.jobDescription;
@@ -246,7 +257,6 @@ export default function ResumeStudio({ resume, masterCv, jobOptions }) {
     showSection("skills");
     if (lines.length === 0) {
       resumeDoc.addItem("skills", { header: "Skills", skills: keyword });
-      toast(`Added "${keyword}" to Skills`);
       return;
     }
     const last = lines[lines.length - 1];
@@ -254,13 +264,11 @@ export default function ResumeStudio({ resume, masterCv, jobOptions }) {
     resumeDoc.updateItem("skills", lines.length - 1, {
       skills: current ? `${current}, ${keyword}` : keyword,
     });
-    toast(`Added "${keyword}" to ${last.header || "Skills"}`);
   };
 
   const addFromCv = (sectionId, item) => {
     resumeDoc.addItem(sectionId, item);
     showSection(sectionId);
-    toast(`Added to ${sectionOf(sectionId)?.title || "the resume"}`);
   };
 
   const removeItem = (sectionId, index) =>
@@ -274,23 +282,6 @@ export default function ResumeStudio({ resume, masterCv, jobOptions }) {
   };
 
   const onMeasure = useCallback((next) => setFit(next), []);
-
-  const pdfPages =
-    pdfCheck.status === "done" && pdfCheck.content === resumeDoc.resumeContent ? pdfCheck.pages : null;
-
-  const checkPdf = async () => {
-    const content = resumeDoc.resumeContent;
-    setPdfCheck({ status: "checking", pages: null, content: null, error: null });
-    try {
-      // The PDF is built from the saved resume; the save toast explains a failure
-      if (!(await resumeDoc.flush()))
-        return setPdfCheck({ status: "idle", pages: null, content: null, error: null });
-      const pages = await countResumePages({ resumeId: resume.id });
-      setPdfCheck({ status: "done", pages, content, error: null });
-    } catch (error) {
-      setPdfCheck({ status: "error", pages: null, content: null, error: error.message });
-    }
-  };
 
   const outline = (
     <OutlinePanel
@@ -314,6 +305,7 @@ export default function ResumeStudio({ resume, masterCv, jobOptions }) {
         title={title}
         onTitleChange={setTitle}
         saveStatus={resumeDoc.saveStatus}
+        saveError={resumeDoc.saveError}
         zoom={zoom}
         scale={scale}
         onZoom={setZoom}

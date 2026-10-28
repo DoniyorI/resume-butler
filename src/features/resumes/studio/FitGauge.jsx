@@ -1,48 +1,32 @@
 import { CheckCircle2, FileSearch, Loader2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { LINE_PX } from "@/features/resumes/studio/PaperCanvas";
-
-// Within this many lines of the page end the estimate can't call it either
-// way (the PDF's typeface wraps a little differently), so it says so
-const NEAR_LINES = 1;
-
-/**
- * How full the one page is, from PaperCanvas's measurement, and what to tell
- * the user. `pdfPages` is the page count of the compiled PDF when it was
- * checked since the last edit, which beats the estimate.
- * state: "fits" | "near" | "over" | "pdf-fits" | "pdf-over"
- */
-export function pageFit({ usedPx, limitPx }, pdfPages = null) {
-  const ratio = limitPx ? (usedPx / limitPx) * 100 : 0;
-  const spare = (limitPx - usedPx) / LINE_PX;
-  const lines = Math.max(1, Math.round(Math.abs(spare)));
-  let state = spare < -NEAR_LINES ? "over" : spare <= NEAR_LINES ? "near" : "fits";
-  if (pdfPages) state = pdfPages === 1 ? "pdf-fits" : "pdf-over";
-  const percent = state === "over" ? Math.max(101, Math.round(ratio)) : Math.min(100, Math.round(ratio));
-  return { percent, state, lines, over: state === "over" || state === "pdf-over" };
-}
+import { pageFit } from "@/features/resumes/pageFit";
+export { pageFit } from "@/features/resumes/pageFit";
 
 const TONE = {
-  fits: { text: "", fill: "bg-brand/70", badge: "bg-brand/10 text-brand" },
-  "pdf-fits": { text: "", fill: "bg-brand/70", badge: "bg-brand/10 text-brand" },
-  near: { text: "text-amber-600", fill: "bg-amber-400/80", badge: "bg-amber-50 text-amber-700" },
-  over: { text: "text-red-600", fill: "bg-red-400/80", badge: "bg-red-50 text-red-700" },
-  "pdf-over": { text: "text-red-600", fill: "bg-red-400/80", badge: "bg-red-50 text-red-700" },
+  green: { text: "text-brand", fill: "bg-brand/70", badge: "bg-brand/10 text-brand" },
+  amber: { text: "text-amber-600", fill: "bg-amber-400/80", badge: "bg-amber-50 text-amber-700" },
+  red: { text: "text-red-600", fill: "bg-red-400/80", badge: "bg-red-50 text-red-700" },
+  neutral: { text: "text-muted-foreground", fill: "bg-muted", badge: "bg-muted text-muted-foreground" },
 };
 
-function describe({ state, lines }, pdfPages) {
+function describe({ state, lines, percent, measured }, pdfPages) {
   switch (state) {
     case "pdf-fits":
-      return ["Fits on one page", "Checked against the PDF"];
+      return ["Fits on one page", measured
+        ? `PDF checked. Editor estimate: ${percent}% of the page.`
+        : "Checked against the PDF"];
     case "pdf-over":
       return [`The PDF is ${pdfPages} pages`, "Checked against the PDF"];
-    case "near":
-      return ["Right at the limit", "Within a line of the page end. Check the PDF to be sure."];
+    case "fits":
+      return ["Good page usage", "Estimated 90–100% filled. Check the PDF to confirm."];
     case "over":
-      return ["Runs onto page 2", `About ${lines} ${lines === 1 ? "line" : "lines"} too long`];
+      return ["Check the PDF for page fit", `Editor estimate: about ${lines} extra ${lines === 1 ? "line" : "lines"}. PDF layout can differ.`];
+    case "unmeasured":
+      return ["Measuring page usage", "Waiting for the page layout"];
     default:
-      return ["Fits on one page", `Room for about ${lines} more ${lines === 1 ? "line" : "lines"}`];
+      return ["Room for relevant detail", `Aim for 90–100% without adding filler. About ${lines} ${lines === 1 ? "line" : "lines"} available.`];
   }
 }
 
@@ -51,10 +35,10 @@ export function FitBadge({ fit, pdfPages }) {
   const result = pageFit(fit, pdfPages);
   return (
     <span
-      className={cn("rounded-full px-2 py-0.5 text-xs font-medium tabular-nums", TONE[result.state].badge)}
+      className={cn("rounded-full px-2 py-0.5 text-xs font-medium tabular-nums", TONE[result.tone].badge)}
       title={describe(result, pdfPages).join(". ")}
     >
-      {result.state === "pdf-over" ? `${pdfPages} pages` : `${result.percent}% of page`}
+      {result.state === "pdf-over" ? `${pdfPages} pages` : result.state === "pdf-fits" ? "1 page · checked" : result.state === "unmeasured" ? "Measuring…" : `~${result.percent}% of page`}
     </span>
   );
 }
@@ -67,7 +51,7 @@ export function FitBadge({ fit, pdfPages }) {
 export default function FitGauge({ fit, pdfCheck, onCheckPdf, onTighten, tightening, canTighten }) {
   const result = pageFit(fit, pdfCheck.pages);
   const [title, detail] = describe(result, pdfCheck.pages);
-  const tone = TONE[result.state];
+  const tone = TONE[result.tone];
   const checked = result.state.startsWith("pdf-");
 
   return (
@@ -92,7 +76,7 @@ export default function FitGauge({ fit, pdfCheck, onCheckPdf, onTighten, tighten
         </div>
         <div className="min-w-0">
           <p className={cn("text-2xl font-semibold tabular-nums leading-none", tone.text)}>
-            {result.state === "pdf-over" ? `${pdfCheck.pages} pages` : `${result.percent}%`}
+            {result.state === "pdf-over" ? `${pdfCheck.pages} pages` : result.state === "pdf-fits" ? "1 page" : result.state === "unmeasured" ? "…" : `~${result.percent}%`}
           </p>
           <p className="mt-1 text-sm font-medium">{title}</p>
           <p className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -105,8 +89,8 @@ export default function FitGauge({ fit, pdfCheck, onCheckPdf, onTighten, tighten
       {!checked && (
         <Button
           size="sm"
-          variant={result.state === "near" ? "outline" : "ghost"}
-          className={cn("w-full", result.state !== "near" && "h-8 text-xs text-muted-foreground")}
+          variant="outline"
+          className="w-full h-8 text-xs"
           onClick={onCheckPdf}
           disabled={pdfCheck.status === "checking"}
         >

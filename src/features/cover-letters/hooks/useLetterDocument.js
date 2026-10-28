@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { toast } from "sonner";
 import { saveCoverLetterContent } from "@/features/cover-letters/actions";
 import { letterToContent } from "@/features/cover-letters/letterDocument";
 
@@ -13,6 +12,7 @@ export function useLetterDocument({ coverLetterId, initialLetter }) {
   const [letter, setLetter] = useState(initialLetter);
   // "saved" | "saving" (includes edits waiting for the delay) | "error"
   const [saveStatus, setSaveStatus] = useState("saved");
+  const [saveError, setSaveError] = useState(null);
 
   const savedRef = useRef(initialLetter);
   const latestRef = useRef(letter);
@@ -31,6 +31,7 @@ export function useLetterDocument({ coverLetterId, initialLetter }) {
         try {
           const result = await saveCoverLetterContent(coverLetterId, letterToContent(snapshot));
           if (result.ok) {
+            setSaveError(null);
             savedRef.current = snapshot;
             if (latestRef.current === snapshot) setSaveStatus("saved");
             return true;
@@ -39,7 +40,7 @@ export function useLetterDocument({ coverLetterId, initialLetter }) {
         } catch {
           // Network failure: keep the default message
         }
-        toast.error(error, { id: "letter-autosave" });
+        setSaveError(error);
         setSaveStatus("error");
         return false;
       });
@@ -54,6 +55,7 @@ export function useLetterDocument({ coverLetterId, initialLetter }) {
       return;
     }
     setSaveStatus("saving");
+    setSaveError(null);
     const timer = setTimeout(() => persist(letter), AUTOSAVE_DELAY_MS);
     return () => clearTimeout(timer);
   }, [letter, persist]);
@@ -89,6 +91,7 @@ export function useLetterDocument({ coverLetterId, initialLetter }) {
   return {
     letter,
     saveStatus,
+    saveError,
     flush,
     update,
     updateHeader,

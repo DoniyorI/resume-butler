@@ -18,13 +18,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-// `short` is used between md and xl, where the full labels don't fit in one row
+// Profile & CV lives in the account menu
 const NAV_LINKS = [
-  { href: "/", label: "Dashboard", short: "Home" },
-  { href: "/applications", label: "Applications", short: "Applications" },
-  { href: "/documents", label: "Documents", short: "Documents" },
-  { href: "/profile", label: "Profile & CV", short: "Profile" },
-  { href: "/email-sync", label: "Email sync", short: "Email" },
+  { href: "/", label: "Dashboard" },
+  { href: "/applications", label: "Applications" },
+  { href: "/documents", label: "Documents" },
+  { href: "/email-sync", label: "Inbox" },
 ];
 
 // The current section: "/" only on the dashboard, the rest by prefix
@@ -110,7 +109,7 @@ export default function Navbar({ email }) {
 
         <nav aria-label="Main" className="ml-2 hidden min-w-0 md:block lg:ml-6">
           <ul className="flex items-center gap-0.5">
-            {NAV_LINKS.map(({ href, label, short }) => {
+            {NAV_LINKS.map(({ href, label }) => {
               const active = isActive(pathname, href);
               return (
                 <li key={href}>
@@ -124,8 +123,7 @@ export default function Navbar({ email }) {
                         : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
                     )}
                   >
-                    <span className="xl:hidden">{short}</span>
-                    <span className="hidden xl:inline">{label}</span>
+                    {label}
                   </Link>
                 </li>
               );

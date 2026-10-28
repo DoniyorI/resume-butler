@@ -28,7 +28,7 @@ export function useResumeDownload({
   const download = async (format) => {
     setDownloading(true);
     try {
-      // If saving failed the save toast already explains why; don't download stale content
+      // The inline save indicator explains a failed save; do not download stale content
       if (!(await flush())) return;
       const response = await fetch(endpoint, {
         method: "POST",

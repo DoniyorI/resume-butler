@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { toast } from "sonner";
 import { saveResumeContent } from "@/features/resumes/actions";
 import { DATED_SECTIONS, blankItem, sortByDateDesc } from "@/features/resumes/resumeDocument";
 
@@ -13,6 +12,7 @@ export function useResumeDocument({ resumeId, initialContent, needsInitialSave =
   const [doc, setDoc] = useState(initialContent);
   // "saved" | "saving" (includes edits waiting for the autosave delay) | "error"
   const [saveStatus, setSaveStatus] = useState("saved");
+  const [saveError, setSaveError] = useState(null);
 
   // The document last written to the database. Autosave runs whenever `doc`
   // differs from it, so the initial render doesn't save (unless the header
@@ -35,6 +35,7 @@ export function useResumeDocument({ resumeId, initialContent, needsInitialSave =
         try {
           const result = await saveResumeContent(resumeId, snapshot);
           if (result.ok) {
+            setSaveError(null);
             savedDocRef.current = snapshot;
             if (latestDocRef.current === snapshot) setSaveStatus("saved");
             return true;
@@ -43,7 +44,7 @@ export function useResumeDocument({ resumeId, initialContent, needsInitialSave =
         } catch {
           // Network failure: keep the default message
         }
-        toast.error(error, { id: "resume-autosave" });
+        setSaveError(error);
         setSaveStatus("error");
         return false;
       });
@@ -59,6 +60,7 @@ export function useResumeDocument({ resumeId, initialContent, needsInitialSave =
       return;
     }
     setSaveStatus("saving");
+    setSaveError(null);
     const timer = setTimeout(() => persist(doc), AUTOSAVE_DELAY_MS);
     return () => clearTimeout(timer);
   }, [doc, persist]);
@@ -188,11 +190,13 @@ export function useResumeDocument({ resumeId, initialContent, needsInitialSave =
   }, [doc]);
 
   return {
+    content: doc,
     header: doc.header,
     target: doc.target,
     sections,
     resumeContent,
     saveStatus,
+    saveError,
     flush,
     snapshot,
     restore,

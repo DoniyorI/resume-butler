@@ -1,332 +1,98 @@
-# Resume Butler — Project Roadmap
+# Resume Butler Roadmap
 
-## Vision
+Updated October 28, 2026 — personal-workflow revision. Streamline the owner's applications first, complete non-AI work before expanding AI, and implement one bounded task at a time. Public release is not the current objective.
 
-A job application platform where users build a comprehensive CV once, then generate tailored resumes for each job by selecting and refining relevant items — not AI slop, but intelligent curation of the user's own words. Output in LaTeX for maximum ATS compatibility, with a built-in ATS scanner to verify match quality before submitting.
+**Direction:** Capture a job, prepare the right truthful resume, apply with less repeated work, preserve the submission, and keep the next action visible. Keep the earlier tracking, extension, resume-building, setup, email and reusable-answer ideas; change their order and scope around personal CS/software use.
 
----
+**Full scope and acceptance criteria:** [Job-search improvements plan](docs/superpowers/plans/2026-10-28-job-search-improvements.md).
+**Research:** [User needs and complaints](docs/research/2026-10-28-job-seeker-needs.md) · [Official competitor capabilities](docs/research/2026-10-28-competitor-capabilities.md).
 
-## Current State (October 2026)
+## Current baseline
 
-Phases 0–7 below are complete. The Django + Firebase stack was replaced by Next.js + Supabase, and since then:
+The app uses Next.js + Supabase, server-owned auth/data access, a Master CV, resume and cover-letter studios, application tracking, status history, dashboard analytics, email suggestions and a Chrome extension. The architecture is documented in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
-- **Foundations**: auth on the server (middleware + route group layouts), data loading in Server Components, writes in Server Actions, code organized into `src/features`, `src/server` and route groups
-- **Security**: auth on every API route, input caps, per-user and per-IP rate limits, generic errors, XSS and LaTeX-injection fixes, encrypted email passwords, security headers, no Supabase client in the browser, working password reset limited to fresh recovery sessions
-- **Editors**: resume and cover letter "studios" with a page that matches the PDF, live one-page fit, tailoring, guarded AI rewrites
-- **Dashboard** as the home page: stats, goals and streaks, follow-ups, charts
-- **Email sync** with a review queue (nothing changes without approval) and an optional daily auto-sync (Vercel Cron)
-- **Chrome extension**: one-step connect, automatic tracking on LinkedIn Easy Apply, Greenhouse, Lever and Ashby, job details (pay, workplace, type) kept with each application
-- **Hiring cycles**: a reapplication to a closed or old application starts a new one
+- [x] Application search/filter/sort, bulk edits, notes, status history, saved descriptions and linked documents.
+- [x] Master CV, resume import/selection, AI suggestions/rewrites, cover letters and PDF export.
+- [x] Extension tracking for LinkedIn Easy Apply, Greenhouse, Lever and Ashby; saved pay/workplace/employment details.
+- [x] Email review queue and optional daily IMAP scans; locking, retries, hiring-cycle protections and transactional approval implemented locally.
+- [x] Supabase migrations 009–011 applied and synthetic concurrency/isolation checks recorded.
+- [x] Real-PDF overflow checks, honest page-fit feedback and quiet editor saving implemented locally.
+- [x] Local/default model updated to GPT-6 Luna; task overrides remain available.
+- [x] Job-seeker/competitor research and this delivery roadmap prepared.
 
-The full map is in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md); conventions are in CLAUDE.md.
+Checked items describe existence of the recorded work, **not a claim that every local source change is deployed**. The previous verification milestone was 90 tests, clean lint and an isolated build; rerun the relevant checks at the start of implementation. CSV currently exports loaded rows, not a complete account backup. The larger scoring/sections/onboarding/extension redesign remains planned.
 
-### Now
+## Phase A — Streamline applications without new AI
 
-- [ ] Merge the Next.js 16.4 / React 19 upgrade (branch `claude/keen-roentgen-b7b6a5`) once the signed-in checks pass
-- [ ] Apply migrations 009 (auth rate limits) and 010 (job details) in Supabase
-- [ ] CAPTCHA (Supabase Turnstile) on sign-in and sign-up
-- [ ] Error monitoring (`instrumentation.js` / Vercel or Sentry) and per-section error boundaries
-- [ ] Decide the email page's name ("Email Sync" today)
+“Non-AI first” means no new model-based features, prompts, persona calls or scoring engines in Phase A. Existing AI features may continue working. Fixing deterministic matching around the existing email classifier does not require changing that classifier. Work packages are split so an AI dependency cannot block a useful non-AI improvement.
 
-### Next: Gmail connection
+| Order | Deliverable | Existing work-package scope | Completion example |
+| --- | --- | --- | --- |
+| A0 | Verify the current baseline | RB-00 baseline only | Existing app/editor/extension flows still work; unrelated edits preserved |
+| A1 | Keep different openings separate and make retries safe | RB-01 | Same company/title, different posting IDs stays separate; uncertain matches can be resolved |
+| A2 | Save jobs before applying from the extension | RB-07A capture only | Save JD/link/pay, choose a working resume, see saved vs applied; capture never marks applied |
+| A3 | Make Master CV and resume editing flexible | RB-04A editor/storage/export | Custom sections and certifications survive save/refresh/PDF; current layout remains available |
+| A4 | Preserve the actual submission package | RB-02 | Later resume edits leave the submitted PDF/JD/known answers intact |
+| A5 | Reuse manually approved answers | RB-09A library only | Copy your saved project story, availability or other answer; no AI generation |
+| A6 | Add reviewed deterministic autofill, one site at a time | RB-10A | Fill known facts, preserve corrections, select the right file; Workday follows simpler platforms |
+| A7 | Improve tracking and next actions | RB-11A | Contacts, interview rounds, assessment deadlines, follow-ups and reminders in one place |
+| A8 | Make email integration and reconciliation easier | RB-08A/B transport and rule-based matching | Clear source evidence, unresolved linking, backlog progress; Gmail connection with existing classification unchanged |
+| A9 | Fix rule-based document checks and PDF readability | RB-03 plus deterministic PDF checks | Blank/hidden content cannot inflate checks; show what exported text actually contains |
+| A10 | Make records portable and progress understandable | RB-12A/RB-14A | Complete export and descriptive counts/rates, without AI advice or hiring predictions |
 
-- [ ] "Connect Gmail" with Google OAuth (replaces IMAP app passwords); store refresh tokens encrypted in a table with no client access
-- [ ] Incremental sync with the Gmail `historyId`, via Gmail push (Pub/Sub) or the existing daily cron
-- [x] Review queue: detected new applications and status changes wait for the user's approval
-- [ ] Plan for Google verification: `gmail.readonly` is a restricted scope (app verification + annual security assessment); `gmail.metadata` may be enough to start
+A1 has a detailed draft plan. Other items get bounded plans when reached. A3's existing AI compatibility is maintained through adapters, but new custom-section AI selection belongs in Phase B. A2 can select a working resume before applying; A4 adds verified/frozen submission binding. External Gmail setup waits do not block A9/A10. Optional small fixes can move earlier when they unblock daily use; record the reason here.
 
-### Later: extension
+## Phase B — Analyze before applying, then improve the application
 
-- [x] Token-based extension API (`/api/extension/*`) calling the same `src/server` services, with per-user limits
-- [ ] Workday and more job sites; a generic detector for other sites
-- [ ] Tailor a resume from the job posting the user is viewing; treat scraped page text as untrusted
-- [ ] Publish to the Chrome Web Store
+| Order | Deliverable | Scope | Completion example |
+| --- | --- | --- | --- |
+| B1 | Evidence-based job analysis and job-post fit meter | RB-06A + RB-07B | Compare Master CV vs selected resume, show requirements/evidence/gaps and your constraints; same result in app and extension |
+| B2 | Optional multi-perspective resume review | New RB-15 | ATS/document checks, recruiter, hiring manager and staff engineer; optional CEO, rival and bar-raiser lenses |
+| B3 | Job-specific tailoring from verified facts | RB-06B + RB-04B/RB-07C | Review a diff, choose relevant sections/bullets, answer missing-fact questions, re-check the exported document |
+| B4 | Contextual application-answer and follow-up drafts | RB-09B + optional RB-08C | Draft from approved facts/stories; review and send/submit yourself |
+| B5 | Interview preparation from the submitted package | RB-11B | Technical topics, credible stories and questions tied to this exact JD/resume |
+| B6 | Evaluate whether the analysis helps your search | RB-12B | Compare reviews with labeled examples and observed application outcomes; expose counts/uncertainty, not promises |
 
----
+The intended sequence is **scan the job before applying → decide whether it is worth your time → review/tailor → verify → apply → track**. A score is decision support, not the probability of an interview. Persona agreement is not independent hiring evidence.
 
-## Original Plan (2024)
+References and proposed panel behavior are in [Career Ops and local persona review notes](docs/research/2026-10-28-career-ops-and-persona-review.md). The existing rules-plus-grounded-AI direction remains; seven free-form scores will not replace the shared rubric.
 
-## Proposed Architecture
+## Later — Only when useful
 
-### Stack Migration
+Guided first-login onboarding for other users (RB-05), target-company alerts (RB-13), broader career/mobile polish, public launch, Chrome Web Store distribution, CAPTCHA and commercial billing are retained as later work. Basic ownership, privacy and data integrity apply from the start. Public rollout work does not lead the personal-use queue.
 
-| Current | Proposed | Why |
-|---------|----------|-----|
-| Firebase Auth | Supabase Auth | Unified with DB, row-level security |
-| Firestore | Supabase (PostgreSQL) | Relational data, full-text search, pg_vector for semantic matching |
-| Firebase Storage | Supabase Storage | Unified platform |
-| Django backend | Next.js API routes | Simplify to one codebase, Django only existed for GPT calls |
-| GPT-3.5 | GPT-4o-mini or Claude | Better structured output for selection/suggestion tasks |
+Statuses: all Phase A/B product work is **planned** unless specifically recorded as verified in the baseline above. A prepared design is not an implemented feature. Stable RB identifiers are retained for cross-references; the A/B tables above supersede their former numeric execution order.
 
-### Database Schema (PostgreSQL)
+## Start here: RB-01
 
-```sql
--- Core user profile
-users (
-  id uuid PK,
-  email text,
-  first_name text,
-  last_name text,
-  phone text,
-  location text,
-  linkedin text,
-  github text,
-  portfolio text,
-  created_at timestamp
-)
+[Design and exact behavior](docs/superpowers/specs/2026-10-28-application-identity-design.md) · [Five-task implementation plan](docs/superpowers/plans/2026-10-28-application-identity.md).
 
--- Master CV entries (the source of truth)
-cv_experience (
-  id uuid PK,
-  user_id uuid FK → users,
-  company text,
-  position text,
-  location text,
-  type text, -- internship, full-time, contract, part-time
-  start_date date,
-  end_date date,
-  currently_working boolean,
-  sort_order int,
-  created_at timestamp
-)
+- [ ] 1. Normalize posting identity and prove different openings remain separate.
+- [ ] 2. Make ambiguous email/pending matches explicit instead of selecting a same-title row.
+- [ ] 3. Add atomic ingestion receipts, safe approval and explicit resolution through a new migration.
+- [ ] 4. Preserve stable event IDs and account-bound extension queues across retries.
+- [ ] 5. Add minimal match recovery, run synthetic browser/SQL checks and record review evidence.
 
-cv_experience_bullets (
-  id uuid PK,
-  experience_id uuid FK → cv_experience,
-  content text, -- the actual bullet point in user's words
-  sort_order int
-)
+**Acceptance:** same company/title with different posting IDs stays separate; retries do not duplicate or revive deleted applications; ambiguous emails require a decision; concurrent writes and account changes remain safe. Next is A2 extension capture/save-for-later; exact submitted PDF preservation follows in A4 (RB-02).
 
-cv_projects (
-  id uuid PK,
-  user_id uuid FK → users,
-  name text,
-  description text,
-  url text,
-  start_date date,
-  end_date date,
-  currently_working boolean,
-  sort_order int
-)
+## Deferred public-release checklist
 
-cv_project_bullets (
-  id uuid PK,
-  project_id uuid FK → cv_projects,
-  content text,
-  sort_order int
-)
+- [ ] Verify and integrate the separate Next.js 16.4 / React 19 upgrade after signed-in checks and the known calendar regression are resolved; do not combine it with a feature milestone.
+- [ ] Add monitoring and useful error boundaries with private-data redaction.
+- [ ] Wire CAPTCHA tokens through login/signup/recovery before enabling Supabase protection; verify all flows.
+- [ ] Review current Google consent/scopes/verification requirements before releasing Gmail access.
+- [ ] Apply each new migration in order, record its result, then verify the deployed app/extension compatibility. Do not edit already applied migrations.
+- [ ] Publish the extension only after supported-platform, account-isolation and disclosure checks.
+- [ ] Verify actual production configuration and model overrides; local defaults do not establish hosted settings.
 
-cv_education (
-  id uuid PK,
-  user_id uuid FK → users,
-  school text,
-  location text,
-  degree_type text,
-  major text,
-  minor text,
-  gpa numeric,
-  start_date date,
-  end_date date,
-  sort_order int
-)
+Proposed feature name: **Application Updates**, retaining the current `/email-sync` route until deliberately changed. The existing local Inbox copy is not treated as a completed naming migration.
 
-cv_skills (
-  id uuid PK,
-  user_id uuid FK → users,
-  category text, -- "Languages", "Frameworks", "Tools", etc.
-  name text,
-  sort_order int
-)
+## Working rules
 
-cv_certifications (
-  id uuid PK,
-  user_id uuid FK → users,
-  name text,
-  issuer text,
-  date_earned date,
-  url text
-)
+Complete Phase A before beginning new AI features unless the user changes that priority. Implement and verify one bounded task at a time. Before each milestone, refresh its detailed plan against the current source. Keep synthetic tests separate from real job applications and private inboxes. Review material findings before marking complete. Record local code, applied database migrations and deployed behavior separately. Keep commits/pushes/deployments within the user's authorized integration scope.
 
--- Applications (the central hub)
-applications (
-  id uuid PK,
-  user_id uuid FK → users,
-  company text,
-  role text,
-  location text,
-  portal_link text,
-  job_description text, -- saved full posting
-  parsed_requirements jsonb, -- extracted keywords/skills
-  status text,
-  applied_date date,
-  comments text,
-  resume_id uuid FK → resumes (nullable),
-  cover_letter_id uuid FK → cover_letters (nullable),
-  created_at timestamp
-)
+## Later decisions
 
--- Status history for timeline
-application_status_history (
-  id uuid PK,
-  application_id uuid FK → applications,
-  status text,
-  changed_at timestamp
-)
+Commercial billing/trial/refund implementation is conditional on a commercialization request; transparent value and data access are already covered by RB-14. Unattended mass apply, a broad job marketplace, a generic chatbot, a coding-practice platform and claims of detecting employer intent remain deferred.
 
--- Generated resumes (subsets of CV)
-resumes (
-  id uuid PK,
-  user_id uuid FK → users,
-  application_id uuid FK → applications (nullable),
-  title text,
-  latex_content text, -- compiled LaTeX
-  ats_score numeric,
-  created_at timestamp,
-  updated_at timestamp
-)
-
--- Which CV items are included in a resume
-resume_items (
-  id uuid PK,
-  resume_id uuid FK → resumes,
-  item_type text, -- 'experience', 'project', 'education', 'skill', 'certification'
-  item_id uuid, -- FK to the relevant cv_ table
-  sort_order int,
-  included boolean -- user can toggle on/off
-)
-
--- AI suggestions (edits to bullet points for a specific resume)
-resume_suggestions (
-  id uuid PK,
-  resume_id uuid FK → resumes,
-  bullet_id uuid, -- FK to cv_experience_bullets or cv_project_bullets
-  original_text text,
-  suggested_text text,
-  reason text, -- "adds keyword: CI/CD"
-  accepted boolean default null -- null = pending, true = accepted, false = rejected
-)
-
--- Cover letters
-cover_letters (
-  id uuid PK,
-  user_id uuid FK → users,
-  application_id uuid FK → applications (nullable),
-  title text,
-  content text,
-  created_at timestamp,
-  updated_at timestamp
-)
-```
-
----
-
-## Phases
-
-### Phase 0: Foundation — Supabase Migration
-**Goal:** Replace Firebase with Supabase, keep existing features working.
-
-- [ ] Set up Supabase project (DB, Auth, Storage)
-- [ ] Create database schema (tables above)
-- [ ] Set up row-level security policies
-- [ ] Replace Firebase Auth with Supabase Auth (login, register, forgot-password, Google OAuth)
-- [ ] Migrate `useAuth` hook to Supabase
-- [ ] Migrate profile page to read/write from Supabase
-- [ ] Migrate CV forms (education, experience, projects, skills) to Supabase
-- [ ] Migrate application table to Supabase
-- [ ] Migrate resume/cover letter file uploads to Supabase Storage
-- [ ] Remove Django backend — move GPT call to Next.js API route (`/api/generate-resume`)
-- [ ] Remove all Firebase dependencies
-- [ ] Verify everything works end-to-end
-
-### Phase 1: Comprehensive CV Page
-**Goal:** Rebuild the CV page as the master document with rich data entry.
-
-- [ ] Redesign CV page layout — tabbed sections (Experience, Projects, Education, Skills, Certifications)
-- [ ] Experience form: multiple bullet points per role with inline editing
-- [ ] Projects form: multiple bullet points, tech stack tags, links
-- [ ] Education form: coursework, honors, activities
-- [ ] Skills form: categorized (Languages, Frameworks, Tools, Platforms)
-- [ ] Certifications form
-- [ ] Drag-and-drop reordering within each section
-- [ ] Import from existing resume (PDF parse) — stretch goal
-
-### Phase 2: Application Detail Page
-**Goal:** Make each application a hub that ties everything together.
-
-- [ ] New route: `/applications/[id]`
-- [ ] Click table row → opens detail page
-- [ ] Job description field — paste and save the full posting
-- [ ] Status timeline — visual history of status changes with dates
-- [ ] Linked resume and cover letter with preview
-- [ ] "Create tailored resume" button → goes to Phase 3 flow
-- [ ] Notes/comments section
-- [ ] Follow-up reminder dates
-
-### Phase 3: Smart Resume Builder — Selection
-**Goal:** AI selects the most relevant CV items for a job posting.
-
-- [ ] Job description parser — extract requirements, skills, qualifications
-- [ ] Matching engine — score each CV item against parsed requirements
-  - Keyword matching (exact + synonym)
-  - Semantic similarity via embeddings (pg_vector)
-- [ ] Selection UI:
-  - Ranked list of CV items with relevance scores
-  - Checkboxes to include/exclude
-  - Shows matched keywords per item ("matches: React, TypeScript")
-  - Drag to reorder
-- [ ] Preview pane — see the resume take shape as you select items
-
-### Phase 4: LaTeX Output + ATS Scanner
-**Goal:** Generate ATS-optimized resumes in LaTeX format.
-
-- [ ] LaTeX resume template (clean, single-column, no graphics)
-- [ ] Template system — support 2-3 LaTeX templates users can choose from
-- [ ] Generate LaTeX from selected CV items
-- [ ] Compile LaTeX → PDF (server-side via API route)
-- [ ] ATS Scanner:
-  - Keyword match score (% of job requirements found in resume)
-  - Missing keywords list with suggestions ("you have Jenkins experience, add 'CI/CD'")
-  - Section completeness check
-  - Format warnings (too long, too short, missing sections)
-- [ ] Score display: 85/100 with breakdown
-
-### Phase 5: AI Suggestions — Refinement
-**Goal:** AI suggests edits to bullet points (not rewrites).
-
-- [ ] For each included bullet point, AI can suggest additions:
-  - "Add 'REST APIs' — you did this at Company X and the job asks for it"
-  - "Quantify: add metrics if available"
-- [ ] Diff view — show original vs. suggested with highlights
-- [ ] Accept/reject per suggestion
-- [ ] Suggestions are stored, so user can review later
-- [ ] Never modify the master CV — suggestions only apply to the specific resume
-
-### Phase 6: Dashboard + Analytics
-**Goal:** Actionable insights about the job search.
-
-- [ ] Application funnel: Applied → Interviewed → Offered conversion rates
-- [ ] Response rate by company/role type
-- [ ] Time-to-response tracking
-- [ ] Weekly/monthly application goals with progress bar
-- [ ] Most-used skills across applications
-- [ ] Improve existing pie/line charts
-
-### Phase 7: Quality of Life
-**Goal:** Polish and power features.
-
-- [ ] Bulk status update (select multiple applications)
-- [ ] Duplicate application (same resume, different company)
-- [ ] Export to CSV
-- [ ] Email notifications for follow-up reminders
-- [ ] Dark mode (Tailwind already supports it, just needs toggle)
-- [ ] Mobile responsive improvements
-
----
-
-## Key Principles
-
-1. **User's words, not AI's** — AI selects and suggests, never generates from scratch
-2. **CV is the source of truth** — resumes are curated subsets, never standalone documents
-3. **Application is the hub** — everything connects back to a specific job application
-4. **ATS-first formatting** — LaTeX output, no fancy layouts that break parsers
-5. **Transparency** — always show why something was selected or suggested
+The [original 2024 roadmap](docs/archive/roadmap-2024.md) is preserved as historical context. Its proposals and unchecked boxes are not the current status or delivery order.

@@ -91,6 +91,7 @@ export async function suggestBullets({ focus, jobDescription, resumeContent, onl
   const job = jobDescription.trim() ? `Job description:\n${jobDescription}\n\n` : "";
 
   const parsed = await chatJSON({
+    task: "writing",
     system: `${PROMPTS[focus]}\n\n${OUTPUT_FORMAT}`,
     user: `${job}Bullets:\n${bulletList}`,
     temperature: 0.3,

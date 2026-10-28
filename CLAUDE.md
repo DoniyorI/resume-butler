@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Resume Butler is a job application tracker and resume builder: Next.js 14 (App Router, JavaScript) on Supabase (Postgres, Auth). AI features (resume alignment, cover letters, bullet suggestions, resume parsing, email classification) call OpenAI `gpt-4o-mini` from server code. Email sync reads the user's inbox over IMAP (a Gmail OAuth connection is planned), and the Chrome extension in `extension/` adds applications as the user submits them.
+Resume Butler is a job application tracker and resume builder: Next.js 14 (App Router, JavaScript) on Supabase (Postgres, Auth). AI features (resume alignment, cover letters, bullet suggestions, resume parsing, email classification) call OpenAI `gpt-6-luna` from server code. Email sync reads the user's inbox over IMAP (a Gmail OAuth connection is planned), and the Chrome extension in `extension/` adds applications as the user submits them.
 
 **Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) first** for the full map: stack, request flow, every page, feature, route, action, server module and table, the AI rules, the email pipeline, the extension and security. This file is the short list of rules for changing the code.
 
@@ -61,7 +61,7 @@ src/
                           rewriteBullet, guardrails (blocks AI edits that add or swap facts),
                           parseResume, renderResume
   middleware.js           Refreshes the session and routes signed-out visitors (pages only, skips /api)
-supabase/migrations/      SQL schema, 001-010; apply in order in the Supabase SQL editor
+supabase/migrations/      SQL schema, 001-011; apply in order in the Supabase SQL editor
 extension/                Chrome extension (Manifest V3, no build step); see extension/README.md
 docs/                     ARCHITECTURE.md (the full map), chrome-extension-plan.md
 ```
@@ -83,6 +83,7 @@ docs/                     ARCHITECTURE.md (the full map), chrome-extension-plan.
 - **Feedback.** Use `toast` from `sonner`, not `alert()`.
 - **AI edits to user text** go through `checkRewrite` (`@/server/resume/guardrails`): a suggestion may never add or swap a technology, or drop a fact, the user wrote.
 - **Auth flows.** Sign-in, sign-up, reset and password update count against `enforceAuthRateLimit` (`@/server/authRateLimit`), since Supabase sees the server's IP for everyone. Only a fresh recovery session (`hasRecentRecovery`) may set a new password. Redirects after sign-in go through `safeNextPath`.
+- **Auth configuration.** Follow [README.md's setup](README.md#getting-started) for Site URL and redirect patterns, including callback query strings. CAPTCHA is pending: enable Supabase protection only after the sign-in, sign-up and password-reset forms collect challenge tokens and their Server Actions pass `options.captchaToken`.
 - **Matching applications.** New submissions and confirmations only merge into an open application from the same hiring cycle (`isSameCycle`, 120 days); otherwise they're new. Email never changes applications directly: it writes `application_suggestions` for the user to approve.
 - **Loading and layout.** Each `(app)` route has a `loading.js` shaped like its page (`@/components/shared/PageSkeletons`); keep them in step with page layout changes. The header is a fixed 73px, so pages start at `pt-[85px]` and the editors at `top-[73px]`.
 - **Migrations.** Add a new numbered file in `supabase/migrations/`; never edit an applied one. The user runs it in the SQL editor, so code must keep working until it's applied (fail open, or check the column exists, as `writeWithDetails` and `enforceRateLimit` do). Enable RLS on every new table.
@@ -122,7 +123,7 @@ NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 OPENAI_API_KEY=
 APP_ENCRYPTION_KEY=   # base64 32 bytes: openssl rand -base64 32 (server-only)
-OPENAI_MODEL=         # optional; defaults to gpt-4o-mini
+OPENAI_MODEL=         # optional; defaults to gpt-6-luna
 SUPABASE_SERVICE_ROLE_KEY=  # server-only; daily email sync, extension API, auth rate limits
 CRON_SECRET=          # Vercel sends it as a Bearer token to /api/cron/*
 NEXT_PUBLIC_EXTENSION_ID=   # optional; lets /extension/connect use externally_connectable
@@ -133,7 +134,7 @@ Never print or commit `.env.local` values.
 ## Deployment and workflow
 
 - Personal project: commit and push straight to `main` (no PRs). Vercel deploys `main`; check the commit status after pushing.
-- Vercel Hobby: `maxDuration` must be 60 or less on every route, or every deploy fails.
-- No automated tests: verify with `npm run lint`, a production build, and the pages in a browser (signed in and signed out).
+- Vercel Hobby: the maximum duration is 300 seconds with Fluid Compute, 60 without it. Check the project's Functions settings before raising limits; scan and cron routes currently set `maxDuration = 60`. See [README.md](README.md#deploying-to-vercel) for deployment configuration and the official limits.
+- Verify email/AI changes with `npm test` under Node 24, then `npm run lint`, an isolated production build and relevant signed-in browser flows. Build outside output used by a running preview. For email matching, retries, approval concurrency or models, read [docs/email-sync-reliability.md](docs/email-sync-reliability.md); migration 011 is required for transactional approval and cross-instance scan locks.
 - `vercel.json` runs `/api/cron/email-sync` daily at 12:00 UTC.
 - An upgrade to Next.js 16.4 / React 19 is on the branch `claude/keen-roentgen-b7b6a5`. When it merges, update this file (versions, `proxy.js` instead of `middleware.js`, the lint command) and docs/ARCHITECTURE.md.

@@ -81,16 +81,16 @@ Inspected on 2026-10-27: only manifests, file names, config shape and which brow
   If nothing answers within 2 seconds, the page tries `externally_connectable` (when `NEXT_PUBLIC_EXTENSION_ID` is set), and finally shows the token once to paste in.
 - **Connecting the extension (details):**
   - A "Connect the extension" button in the app creates a personal API token. It's stored hashed in a new `extension_tokens` table, and the user can revoke it.
-  - The app hands the token to the extension through `externally_connectable` (only our domain can talk to the extension).
+  - The app hands the token to the extension through the content-script bridge above, with `externally_connectable` as a fallback when the extension ID is configured.
   - The extension never sees your Supabase session.
-- **`POST /api/extension/applications`** (already planned in CLAUDE.md as the extension API): authenticates the token, validates and caps the input like every other route, and creates the application.
-  - If an application for the same company and role already exists, it's updated instead.
+- **`POST /api/extension/applications`** (built): authenticates the token, validates and caps the input like every other route, and creates the application.
+  - A matching posting link, or normalized company and exact role, fills missing details on an existing application only when it is open and within the same 120-day hiring cycle (`isSameCycle` in `src/server/email/matching.js`). Closed or older matches start a new application; existing user data is preserved.
   - It stores the job description, so tailoring and the match score work right away.
 - **Email sync:**
   - matching (`src/server/email/matching.js`) finds these applications, so a later "Thanks for applying" email doesn't create a duplicate suggestion
-  - an interview or rejection email becomes a status update on the right application
+  - an interview or rejection email queues a suggested status update on the right application for the user to approve
   - the daily auto-sync works the same way
-- **Review step:** applications from the extension can go straight into the tracker, since you just applied, or into the existing review queue. My recommendation is straight in, with an "Added by extension" note and an undo.
+- **Review step (decided and built):** a confirmed submission after a real submit click goes straight into the tracker with an "Added by the browser extension" note and Undo. A confirmation page reached without a submit click asks "Did you apply?" first. Email-derived changes use the review queue.
 
 ### Order of work
 

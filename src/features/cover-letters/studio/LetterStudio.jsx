@@ -147,6 +147,7 @@ export default function LetterStudio({ coverLetter, jobOptions }) {
         title={title}
         onTitleChange={setTitle}
         saveStatus={letterDoc.saveStatus}
+        saveError={letterDoc.saveError}
         zoom={zoom}
         scale={scale}
         onZoom={setZoom}

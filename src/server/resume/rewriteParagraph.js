@@ -31,6 +31,7 @@ export async function rewriteParagraph({ text, jobDescription }) {
   const tech = [...technologies(text)];
   const keep = tech.length ? `\nTechnologies to keep exactly as written: ${tech.join(", ")}` : "";
   const answer = await chatJSON({
+    task: "writing",
     system: REWRITE_PROMPT,
     user: `${job}Paragraph: ${text}${keep}`,
     temperature: 0.6,

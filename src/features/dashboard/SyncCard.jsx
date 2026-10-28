@@ -40,7 +40,7 @@ export default function SyncCard({ connection, pendingCount }) {
       <Card className="flex flex-col">
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2 text-base">
-            <Mail className="h-4 w-4 text-brand" /> Email sync
+            <Mail className="h-4 w-4 text-brand" /> Inbox
           </CardTitle>
         </CardHeader>
         <CardContent className="flex flex-1 items-center justify-between gap-3">
@@ -61,7 +61,7 @@ export default function SyncCard({ connection, pendingCount }) {
     <Card className="flex flex-col">
       <CardHeader className="flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="flex items-center gap-2 text-base">
-          <Mail className="h-4 w-4 text-brand" /> Email sync
+          <Mail className="h-4 w-4 text-brand" /> Inbox
         </CardTitle>
         <Button size="sm" variant="outline" className="h-8" onClick={scan} disabled={scanning}>
           {scanning ? (

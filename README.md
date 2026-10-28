@@ -16,7 +16,7 @@ Built with Next.js (App Router, JavaScript) and Supabase, deployed on Vercel.
 
 ## Tech stack
 
-Next.js App Router (Server Components, Server Actions, Route Handlers) · React · Tailwind CSS and shadcn/ui · Supabase (Postgres with row-level security, Auth with email and Google) · OpenAI (`gpt-4o-mini`) · LaTeX compiled through YtoTech's LaTeX-on-HTTP · IMAP (`imap`, `mailparser`) · Chrome Manifest V3 extension · Vercel and Vercel Cron.
+Next.js App Router (Server Components, Server Actions, Route Handlers) · React · Tailwind CSS and shadcn/ui · Supabase (Postgres with row-level security, Auth with email and Google) · OpenAI (`gpt-6-luna`) · LaTeX compiled through YtoTech's LaTeX-on-HTTP · IMAP (`imap`, `mailparser`) · Chrome Manifest V3 extension · Vercel and Vercel Cron.
 
 The full breakdown (architecture, data model, every route and module, the AI rules, security) is in **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**.
 
@@ -34,16 +34,21 @@ Requirements: Node.js 24.x, a Supabase project, and an OpenAI API key.
    NEXT_PUBLIC_SUPABASE_ANON_KEY=
    SUPABASE_SERVICE_ROLE_KEY=   # server only: daily email sync, extension API, auth rate limits
    OPENAI_API_KEY=
-   OPENAI_MODEL=                # optional, defaults to gpt-4o-mini
+   OPENAI_MODEL=                # optional, defaults to gpt-6-luna
+   OPENAI_EMAIL_MODEL=          # optional override for email classification
+   OPENAI_WRITING_MODEL=        # optional override for wording and cover letters
+   OPENAI_SELECTION_MODEL=      # optional override for CV entry selection
+   OPENAI_IMPORT_MODEL=         # optional override for CV import
    APP_ENCRYPTION_KEY=          # base64 32 bytes: openssl rand -base64 32
    CRON_SECRET=                 # any long random string; Vercel Cron sends it
    NEXT_PUBLIC_EXTENSION_ID=    # optional: the published extension's ID
    ```
-3. **Database**: in the Supabase SQL editor, run each file in `supabase/migrations/` in order, `001` to `010`, as its own query. Each should report success.
+3. **Database**: in the Supabase SQL editor, run each file in `supabase/migrations/` in order, `001` to `011`, as its own query. Each should report success.
 4. **Auth settings** in Supabase:
-   - Authentication → URL Configuration: add `http://localhost:3000/auth/callback` and `<your site>/auth/callback` to Redirect URLs.
-   - Authentication → Providers: enable Email, and Google if you want Google sign-in.
-   - Recommended: minimum password length 8, and CAPTCHA (Cloudflare Turnstile).
+   - Authentication → URL Configuration: set **Site URL** to your production origin (for example, `https://resume-butler.vercel.app`; use `http://localhost:3000` for a local-only project).
+   - Add `http://localhost:3000/**` to **Redirect URLs** for local development. For production, add `<your site>/auth/callback` and the glob pattern `<your site>/auth/callback\?next=**`, replacing `<your site>` with your production origin. The backslash makes `?` literal; `**` accepts the `next` value, including paths and encoded slashes. The app uses these query strings for email confirmation (`next=/profile`), password reset (`next=/reset-password`) and Google sign-in. See [Supabase's redirect URL rules](https://supabase.com/docs/guides/auth/redirect-urls).
+   - Authentication → Providers: enable Email. For Google sign-in, configure a Google OAuth client and its credentials in Supabase, using the Supabase provider callback as Google's authorized redirect URI; follow [Supabase's Google setup](https://supabase.com/docs/guides/auth/social-sign-in/auth-google).
+   - Set the minimum password length to 8. **Leave CAPTCHA protection disabled for now**: the app has no challenge widget or `captchaToken` handling, so enabling it would block email/password sign-in, sign-up and password-reset requests. Turnstile integration is pending in [ROADMAP.md](ROADMAP.md); it must collect a challenge token in each form and pass it as `options.captchaToken` in the corresponding Supabase auth call before protection is enabled. See [Supabase's CAPTCHA integration](https://supabase.com/docs/guides/auth/auth-captcha).
 5. **Run**
    ```bash
    npm run dev
@@ -54,7 +59,7 @@ Requirements: Node.js 24.x, a Supabase project, and an OpenAI API key.
 
 - Add every variable from `.env.local` to the project's Production environment, then redeploy (Vercel applies changed variables on the next deploy).
 - `vercel.json` schedules the daily email sync (`/api/cron/email-sync`, 12:00 UTC).
-- On the Hobby plan, keep `maxDuration` at 60 seconds or less on every route, or the deploy fails.
+- Check **Functions → Fluid Compute** in the Vercel project settings before changing route durations. Hobby allows up to 300 seconds with Fluid Compute, or 60 seconds without it ([Vercel limits](https://vercel.com/docs/functions/limitations)). This repository's email scan and cron routes explicitly use `maxDuration = 60` and can run in either configuration; the project's Fluid Compute setting is not recorded in the repository.
 
 ### The Chrome extension
 
@@ -71,6 +76,7 @@ Details: [extension/README.md](extension/README.md).
 | `npm run build` | Production build |
 | `npm start` | Production server |
 | `npm run lint` | ESLint |
+| `npm test` | Email, AI, page-fit and editor-save regression checks (Node 24) |
 | `npm run format` | Prettier (write) |
 | `npm run format:check` | Prettier (check) |
 
@@ -81,5 +87,6 @@ Details: [extension/README.md](extension/README.md).
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | The whole app: stack, request flow, folders, pages, features, API routes, Server Actions, database, AI, PDFs, email sync, extension, security, design, deployment |
 | [CLAUDE.md](CLAUDE.md) | Coding conventions and rules for working in the codebase (for people and AI assistants) |
 | [ROADMAP.md](ROADMAP.md) | What's done and what's next |
+| [docs/email-sync-reliability.md](docs/email-sync-reliability.md) | Matching rules, model evaluation, QA evidence, migration 011 and remaining reliability limits |
 | [docs/chrome-extension-plan.md](docs/chrome-extension-plan.md) | How the extension was designed and what's planned for it |
 | [extension/README.md](extension/README.md) | Installing, testing and how the extension works |

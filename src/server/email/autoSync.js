@@ -31,13 +31,19 @@ function scanWindow(lastSyncAt) {
  */
 export async function runAutoSync(admin) {
   const startedAt = Date.now();
-  const { data: connections, error } = await admin
+  const loadConnections = (attempts) => admin
     .from("email_connections")
     .select("user_id, last_auto_sync_at")
     .eq("auto_sync", true)
     .eq("is_active", true)
-    .order("last_auto_sync_at", { ascending: true, nullsFirst: true })
+    .order(attempts ? "last_auto_sync_attempt_at" : "last_auto_sync_at", { ascending: true, nullsFirst: true })
     .limit(MAX_USERS_PER_RUN);
+  let attemptsSupported = true;
+  let { data: connections, error } = await loadConnections(true);
+  if (["42703", "PGRST204"].includes(error?.code)) {
+    attemptsSupported = false;
+    ({ data: connections, error } = await loadConnections(false));
+  }
   if (error) throw error;
 
   const summary = { users: connections.length, synced: 0, failed: 0, skipped: 0, suggestions: 0 };
@@ -49,7 +55,15 @@ export async function runAutoSync(admin) {
     let result = null;
     let failure = null;
     try {
-      result = await syncEmailsForUser(admin, connection.user_id, scanWindow(connection.last_auto_sync_at));
+      result = await syncEmailsForUser(admin, connection.user_id, {
+        ...scanWindow(connection.last_auto_sync_at),
+        deadlineAt: startedAt + 50_000,
+      });
+      if (result.errors > 0 || result.deferred > 0) {
+        failure = result.truncated > 0
+          ? "Too many emails in this window. Open Inbox and scan a smaller date range to recover older messages."
+          : "Some email updates are still pending. The next scan will retry them.";
+      }
     } catch (err) {
       // HttpError messages are user-safe (bad password, unsupported host); others aren't
       failure = err instanceof HttpError ? err.message : "The scan failed. It will try again tomorrow.";
@@ -59,17 +73,16 @@ export async function runAutoSync(admin) {
     const { error: saveError } = await admin
       .from("email_connections")
       .update({
-        last_auto_sync_at: new Date().toISOString(),
+        ...(attemptsSupported ? { last_auto_sync_attempt_at: new Date().toISOString() } : {}),
+        ...(!failure ? { last_auto_sync_at: new Date().toISOString() } : {}),
         last_auto_sync_error: failure,
       })
       .eq("user_id", connection.user_id);
     if (saveError) console.error("Could not record auto-sync:", saveError);
 
-    if (failure) summary.failed++;
-    else {
-      summary.synced++;
-      summary.suggestions += result.suggestions;
-    }
+    summary.suggestions += result?.suggestions || 0;
+    if (failure || saveError) summary.failed++;
+    else summary.synced++;
   }
   return summary;
 }

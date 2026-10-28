@@ -7,7 +7,7 @@ import { IMAP_PORT, isAllowedImapHost, normalizeImapHost } from "@/server/email/
 const MAX_MESSAGE_BYTES = 64 * 1024;
 const MAX_BODY_CHARS = 3000;
 const DEFAULT_MAX_MESSAGES = 300;
-const SCAN_TIMEOUT_MS = 90_000;
+const SCAN_TIMEOUT_MS = 25_000;
 const IMAP_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 // Gmail tabs that never hold application emails (confirmations land in Primary or Updates)
@@ -66,7 +66,7 @@ async function parseMessage(raw) {
  * to allow-listed hosts on port 993 with TLS certificate checks.
  * @returns {Promise<Array<{ messageId, subject, fromName, fromAddress, from, date, body, bulk }>>}
  */
-export function fetchEmails({ host, user, password }, { since, before, maxMessages = DEFAULT_MAX_MESSAGES }) {
+export function fetchEmails({ host, user, password }, { since, before, maxMessages = DEFAULT_MAX_MESSAGES, timeoutMs = SCAN_TIMEOUT_MS }) {
   const servername = normalizeImapHost(host);
   if (!isAllowedImapHost(servername)) {
     return Promise.reject(new Error("IMAP host is not allowed"));
@@ -87,7 +87,7 @@ export function fetchEmails({ host, user, password }, { since, before, maxMessag
     const timer = setTimeout(() => {
       imap.destroy();
       reject(new Error("IMAP scan timed out"));
-    }, SCAN_TIMEOUT_MS);
+    }, Math.max(1, Math.min(timeoutMs, SCAN_TIMEOUT_MS)));
     const succeed = (value) => {
       clearTimeout(timer);
       imap.end();
@@ -130,7 +130,10 @@ export function fetchEmails({ host, user, password }, { since, before, maxMessag
           fetch.once("error", fail);
           fetch.once("end", async () => {
             const parsed = await Promise.all(rawMessages.map((raw) => parseMessage(raw).catch(() => null)));
-            succeed(parsed.filter((email) => email && email.messageId && email.fromAddress));
+            const emails = parsed.filter((email) => email && email.messageId && email.fromAddress);
+            // Preserve the array API, but never report a capped mailbox as complete.
+            emails.truncated = Math.max(0, results.length - maxMessages);
+            succeed(emails);
           });
         });
       });

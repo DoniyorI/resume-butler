@@ -142,19 +142,41 @@ Respond with JSON only:
 
 // Returns { category, company, role, confidence, summary } or null if the call
 // failed. The model's output is untrusted: callers must validate every field.
-export async function classifyEmail(email) {
+export async function classifyEmail(email, { timeoutMs = 8_000 } = {}) {
   try {
     const result = await chatJSON({
       system: SYSTEM_PROMPT,
       user: classificationPrompt(email),
-      maxTokens: 200,
+      task: "email",
+      schemaName: "email_classification",
+      schema: {
+        type: "object",
+        properties: {
+          category: { type: "string", enum: CATEGORIES },
+          company: { type: "string" },
+          role: { type: "string" },
+          confidence: { type: "number" },
+          summary: { type: "string" },
+        },
+        required: ["category", "company", "role", "confidence", "summary"],
+        additionalProperties: false,
+      },
+      maxTokens: 256,
+      temperature: 0,
+      timeoutMs,
     });
+    if (!CATEGORIES.includes(result?.category) ||
+        typeof result.company !== "string" || typeof result.role !== "string" ||
+        typeof result.summary !== "string" || !Number.isFinite(result.confidence) ||
+        result.confidence < 0 || result.confidence > 1) {
+      throw new Error("Invalid email classification");
+    }
     return {
-      category: CATEGORIES.includes(result?.category) ? result.category : "not_job",
-      company: typeof result?.company === "string" ? result.company.trim().slice(0, 200) : "",
-      role: typeof result?.role === "string" ? result.role.trim().slice(0, 200) : "",
-      confidence: Number.isFinite(Number(result?.confidence)) ? Number(result.confidence) : 0,
-      summary: typeof result?.summary === "string" ? result.summary.slice(0, 500) : "",
+      category: result.category,
+      company: result.company.trim().slice(0, 200),
+      role: result.role.trim().slice(0, 200),
+      confidence: result.confidence,
+      summary: result.summary.slice(0, 500),
     };
   } catch (error) {
     console.error("Error classifying email:", error);

@@ -8,7 +8,7 @@ const PAGE_HEIGHT_PX = 1056;
 const RESUME_MARGIN_Y_PX = 48;
 // Room for writing on a resume page, and the height of one line of 10pt bullets
 export const PAGE_CONTENT_PX = PAGE_HEIGHT_PX - 2 * RESUME_MARGIN_Y_PX;
-export const LINE_PX = 16;
+export { LINE_PX } from "@/features/resumes/pageFit";
 // Space beside the page for the hover controls in its margins
 const GUTTER_PX = 56;
 
@@ -92,11 +92,11 @@ export default function PaperCanvas({
             {overflowing && (
               <div
                 aria-hidden
-                className="pointer-events-none absolute inset-x-0 bottom-0 border-t-2 border-dashed border-red-400 bg-red-500/[0.06]"
+                className="pointer-events-none absolute inset-x-0 bottom-0 border-t-2 border-dashed border-amber-400 bg-amber-500/[0.06]"
                 style={{ top: PAGE_HEIGHT_PX - marginYPx }}
               >
-                <span className="absolute -top-3 right-3 rounded-full bg-red-500 px-2 py-0.5 font-sans text-[11px] font-medium text-white">
-                  Page 1 ends here
+                <span className="absolute -top-3 right-3 rounded-full bg-amber-500 px-2 py-0.5 font-sans text-[11px] font-medium text-white">
+                  Estimated page boundary
                 </span>
               </div>
             )}

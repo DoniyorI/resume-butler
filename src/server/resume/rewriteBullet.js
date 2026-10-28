@@ -31,6 +31,7 @@ export async function rewriteBullet({ text, context, jobDescription }) {
   const tech = [...technologies(text)];
   const keep = tech.length ? `\nTechnologies to keep exactly as written: ${tech.join(", ")}` : "";
   const answer = await chatJSON({
+    task: "writing",
     system: REWRITE_PROMPT,
     user: `${job}Role: ${context || "unknown"}\nBullet: ${text}${keep}`,
     temperature: 0.5,
