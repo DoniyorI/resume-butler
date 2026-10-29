@@ -86,10 +86,11 @@ async function renderJob(connection) {
   select.replaceChildren(new Option("Master CV / decide later", ""));
   for (const resume of context?.resumes || []) select.add(new Option(resume.title, resume.id));
   select.value = saved?.resume_id || "";
+  globalThis.RB_autofillUi?.resumeChanged();
   $("capture-result").textContent = context?.error || (saved ? "✓ Saved · review or update below" : "Saving a job keeps it out of your applied count.");
   $("save-job").disabled = Boolean(!context || context.error);
   for (const id of ["capture-company", "capture-role", "capture-location", "capture-description", "resume-choice"]) {
-    $(id).oninput = () => { $("capture-result").textContent = "Unsaved changes"; };
+    $(id).oninput = () => { $("capture-result").textContent = "Unsaved changes"; if (id === "resume-choice") globalThis.RB_autofillUi?.resumeChanged(); };
   }
   $("save-job").onclick = async () => {
     $("save-job").disabled = true;
@@ -107,6 +108,7 @@ async function renderJob(connection) {
 async function render() {
   const status = await send({ type: "status" });
   const connection = status?.connection;
+  globalThis.RB_autofillUi?.init(connection);
   $("connected").hidden = !connection;
   $("disconnected").hidden = Boolean(connection);
 

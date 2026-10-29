@@ -90,5 +90,6 @@ Details: [extension/README.md](extension/README.md).
 | [docs/email-sync-reliability.md](docs/email-sync-reliability.md) | Matching rules, model evaluation, QA evidence, migration 011 and remaining reliability limits |
 | [docs/submission-packages-verification.md](docs/submission-packages-verification.md) | Preserved submission files, source labels, ownership/retry checks and storage limits |
 | [docs/approved-answers-verification.md](docs/approved-answers-verification.md) | Manual approval, revision safety, copying, submitted answer copies and verification limits |
+| [docs/reviewed-autofill-verification.md](docs/reviewed-autofill-verification.md) | Reviewed Lever fields, preserved corrections, source freshness, real MV3 checks and manual-upload limits |
 | [docs/chrome-extension-plan.md](docs/chrome-extension-plan.md) | How the extension was designed and what's planned for it |
 | [extension/README.md](extension/README.md) | Installing, testing and how the extension works |

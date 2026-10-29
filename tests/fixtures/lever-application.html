@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>QA Engineering application</title>
+<style>body{font:16px sans-serif;max-width:680px;margin:32px auto}li{list-style:none;margin:12px 0}input,textarea,select{display:block;padding:8px}label,.application-label{display:block}textarea{width:95%;height:90px}.hidden{display:none}</style></head>
+<body><h1>QA Engineering application</h1><form id="application-form" method="post">
+<ul>
+<li class="application-question"><label><span class="application-label">Full name✱</span><span class="application-field"><input name="name" type="text" required></span></label></li>
+<li class="application-question"><label><span class="application-label">Email✱</span><span class="application-field"><input name="email" type="email" required></span></label></li>
+<li class="application-question"><label><span class="application-label">Phone</span><span class="application-field"><input name="phone" type="text"></span></label></li>
+<li class="application-question"><label><span class="application-label">Current location✱</span><span class="application-field"><input name="location" id="location-input" type="text" maxlength="100"></span></label></li>
+<li class="application-question"><label><span class="application-label">Current company</span><span class="application-field"><input name="org" type="text"></span></label></li>
+<li class="application-question"><label><span class="application-label">LinkedIn URL</span><span class="application-field"><input name="urls[LinkedIn]" type="text"></span></label></li>
+<li class="application-question"><label><span class="application-label">GitHub URL</span><span class="application-field"><input name="urls[GitHub]" type="text"></span></label></li>
+<li class="application-question"><label><span class="application-label">Portfolio URL</span><span class="application-field"><input name="urls[Portfolio]" type="text"></span></label></li>
+<li class="application-question custom-question"><div><div class="application-label">Describe a project.✱</div><div class="application-field"><textarea name="cards[00000000-0000-4000-8000-000000000001][field0]" required></textarea></div></div></li>
+<li class="application-question custom-question"><div><div class="application-label">Who referred you?</div><div class="application-field"><input name="cards[00000000-0000-4000-8000-000000000001][field1]" type="text"></div></div></li>
+<li class="application-question"><div class="application-label">Work authorization</div><label><input type="radio" name="cards[00000000-0000-4000-8000-000000000002][field0]" value="Yes">Yes</label><label><input type="radio" name="cards[00000000-0000-4000-8000-000000000002][field0]" value="No">No</label></li>
+<li class="application-question"><div class="application-label">Languages</div><label><input type="checkbox" name="cards[00000000-0000-4000-8000-000000000003][field0]" value="English">English</label><label><input type="checkbox" name="cards[00000000-0000-4000-8000-000000000003][field0]" value="French">French</label></li>
+<li class="application-question"><label><span class="application-label">University</span><select name="cards[00000000-0000-4000-8000-000000000004][field0]"><option value="">Select</option><option>Example University</option></select></label></li>
+<li class="application-question"><label><span class="application-label">Name</span><input type="text" name="eeo[disabilitySignature]"></label></li>
+<li class="application-question"><label><span class="application-label">I agree to the privacy policy</span><input type="checkbox" name="consent"></label></li>
+<li class="application-question hidden"><label><span class="application-label">Hidden email</span><input type="email" name="hidden-email" value="hidden@example.test"></label></li>
+</ul><input type="hidden" name="csrf" value="synthetic-only">
+<div class="application-additional"><label for="additional-information">Additional information</label><textarea name="comments" id="additional-information"></textarea></div>
+<input type="file" name="resume"><button type="submit">Submit application</button>
+</form></body></html>

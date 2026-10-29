@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const source = new URL("../src/", import.meta.url);
+const extension = new URL("../extension/", import.meta.url);
 
 // Match Next's @/ alias and server-only boundary while testing the real modules.
 registerHooks({
@@ -25,7 +26,7 @@ registerHooks({
     }
   },
   load(url, context, nextLoad) {
-    if (url.startsWith(source.href) && new URL(url).pathname.endsWith(".js")) {
+    if ((url.startsWith(source.href) || url.startsWith(extension.href)) && new URL(url).pathname.endsWith(".js")) {
       return { format: "module", source: readFileSync(new URL(url), "utf8"), shortCircuit: true };
     }
     return nextLoad(url, context);

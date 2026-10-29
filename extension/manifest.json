@@ -2,8 +2,8 @@
   "manifest_version": 3,
   "name": "Resume Butler",
   "short_name": "Resume Butler",
-  "description": "Save jobs, choose your working resume, and track submissions on LinkedIn Easy Apply, Greenhouse, Lever and Ashby.",
-  "version": "0.3.0",
+  "description": "Save jobs, review and fill Lever forms, choose a working resume, and track submissions on LinkedIn, Greenhouse, Lever and Ashby.",
+  "version": "0.4.0",
   "minimum_chrome_version": "116",
   "icons": {
     "16": "icons/icon-16.png",
@@ -50,6 +50,12 @@
       "js": ["content/sites.js", "content/job-reader.js", "content/toast.js", "content/detector.js"],
       "run_at": "document_idle",
       "all_frames": true
+    },
+    {
+      "matches": ["https://jobs.lever.co/*"],
+      "js": ["content/autofill.js"],
+      "run_at": "document_idle",
+      "all_frames": false
     }
   ],
   "externally_connectable": {

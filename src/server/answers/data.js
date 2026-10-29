@@ -1,5 +1,5 @@
 import "server-only";
-import { answerError } from "./service";
+import { answerError } from "./service.js";
 
 export async function listAnswers(supabase, userId, { page = 1, search = "", archived = false } = {}) {
   let query = supabase.from("reusable_answers").select("*", { count: "exact" }).eq("user_id", userId);

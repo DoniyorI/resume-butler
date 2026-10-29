@@ -1,4 +1,5 @@
 import { createIngestionQueue } from "./ingestionQueue.js";
+import { createAutofillReview } from "./autofillReview.js";
 
 // Resume Butler extension: background service worker.
 //
@@ -85,6 +86,7 @@ async function connect(token, origin) {
   if (!response.ok) return { ok: false };
   const me = await response.json();
   if (!me.userId) return { ok: false };
+  autofillReview.clear();
   const previous = await getLocal("connection", null);
   if (previous?.userId !== me.userId || previous?.origin !== origin) await setLocal({ recent: [], reported: {} });
   await setLocal({ connection: { token, origin, userId: me.userId, name: me.name || "", email: me.email || "" } });
@@ -104,6 +106,12 @@ async function connectedAccount() {
   await setLocal({ connection: refreshed });
   return refreshed;
 }
+
+const autofillReview = createAutofillReview({
+  api, connectedAccount,
+  activeTab: async () => (await chrome.tabs.query({ active: true, currentWindow: true }))[0],
+  sendToTab: (tabId, message) => chrome.tabs.sendMessage(tabId, message, { frameId: 0 }),
+});
 
 // --- Recording applications ---
 
@@ -313,6 +321,10 @@ const contentHandlers = {
 // Messages only the extension's own popup may send
 const popupHandlers = {
   ...contentHandlers,
+  "autofill-prepare": message => autofillReview.prepare(message),
+  "autofill-select": message => autofillReview.selectAnswer(message),
+  "autofill-fill": message => autofillReview.fill(message),
+  "autofill-copy": message => autofillReview.copyField(message),
   record: (message) => record(message.job, message.account),
   "capture-context": async (message) => {
     const account = await connectedAccount();
@@ -348,6 +360,7 @@ const popupHandlers = {
     return { ok: true };
   },
   disconnect: async () => {
+    autofillReview.clear();
     await chrome.storage.local.remove(["connection", "recent"]);
     return { ok: true };
   },
@@ -359,6 +372,18 @@ async function openConnect(origin) {
   await chrome.tabs.create({ url: `${target}/extension/connect` });
   return { ok: true };
 }
+
+// Context events invalidate pending reads as well as published reviews. Two
+// sequential async snapshots alone cannot detect a switch between them.
+chrome.tabs.onActivated?.addListener(() => autofillReview.clear());
+chrome.tabs.onUpdated?.addListener((tabId, changes) => {
+  if (changes.url !== undefined || changes.status === "loading" || changes.discarded === true) autofillReview.invalidateTab(tabId);
+});
+chrome.tabs.onRemoved?.addListener(tabId => autofillReview.invalidateTab(tabId));
+chrome.windows?.onFocusChanged?.addListener(() => autofillReview.clear());
+chrome.storage.onChanged?.addListener((changes, area) => {
+  if (area === "local" && changes.connection) autofillReview.clear();
+});
 
 const fromPopup = (sender) => !sender.tab && sender.url?.startsWith(chrome.runtime.getURL(""));
 

@@ -1,6 +1,6 @@
 # Resume Butler Roadmap
 
-Updated October 28, 2026 — personal-workflow revision. Streamline the owner's applications first, complete non-AI work before expanding AI, and implement one bounded task at a time. Public release is not the current objective.
+Updated October 29, 2026 — personal-workflow revision. Streamline the owner's applications first, complete non-AI work before expanding AI, and implement one bounded task at a time. Public release is not the current objective.
 
 **Direction:** Capture a job, prepare the right truthful resume, apply with less repeated work, preserve the submission, and keep the next action visible. Keep the earlier tracking, extension, resume-building, setup, email and reusable-answer ideas; change their order and scope around personal CS/software use.
 
@@ -18,6 +18,7 @@ The app uses Next.js + Supabase, server-owned auth/data access, a Master CV, res
 - [x] Supabase migrations 009–012 applied and synthetic concurrency/isolation checks recorded.
 - [x] Reliability review: fail-closed AI quotas, conflict/recovery UI, read-only newer documents, CI checks, public processing disclosure and cron backlog visibility. [Evidence and retained tradeoffs](docs/review-follow-up-2026-10-29.md).
 - [x] A5: owned answer library, explicit approval, fresh copy checks, revision safety, archive/restore/delete, history export and frozen answer binding. Migrations016–017 applied. [Verification and limits](docs/approved-answers-verification.md).
+- [x] A6 first adapter: reviewed Lever contact/approved-answer filling, preserved manual values, copy fallback, source/context/expiry checks and working-resume link for manual attachment. Extension0.4.0; no new migration/AI/permission. [Verification and limits](docs/reviewed-autofill-verification.md).
 - [x] A4: preserved PDF bytes, frozen job descriptions/known answers, explicit source labels, corrections and a submission archive; migration 015 applied. [Verification and limits](docs/submission-packages-verification.md).
 - [x] A3: custom resume/Master CV sections, heading names, certifications and revision-protected saves; visible custom content exported and scanned. Migration 014 applied.
 - [x] A2: saved jobs workspace, corrected extension capture and intended resume selection; saving stays separate from applications. Migration 013 applied.
@@ -46,7 +47,7 @@ Checked items describe existence of the recorded work, **not a claim that every 
 | A9 | Fix rule-based document checks and PDF readability | RB-03 plus deterministic PDF checks | Blank/hidden content cannot inflate checks; show what exported text actually contains |
 | A10 | Make records portable and progress understandable | RB-12A/RB-14A | Complete export and descriptive counts/rates, without AI advice or hiring predictions |
 
-A1–A5 are implemented and verified locally; A6 reviewed deterministic autofill is next. A5 evidence: [approved answer verification](docs/approved-answers-verification.md). Migrations016–017 are installed; hosted integration state is recorded separately. A4 evidence: [submission package verification](docs/submission-packages-verification.md). Migration 015 is installed; hosted integration state is recorded separately. A3 evidence: [flexible document verification](docs/flexible-documents-verification.md). Migration 014 is installed. A2 evidence and limits: [saved jobs verification](docs/saved-jobs-verification.md). Migration 013 is installed; extension 0.3.0 requires an unpacked reload. Other items get bounded plans when reached. A3's existing AI compatibility is maintained through adapters, but new custom-section AI selection belongs in Phase B. A2 selects a working resume before applying; A4 preserves exact file bytes and user-reported submission details without claiming employer receipt. External Gmail setup waits do not block A9/A10. Optional small fixes can move earlier when they unblock daily use; record the reason here.
+A1–A5 and A6's first reviewed Lever adapter are implemented and verified locally; **A7 tracking and next actions is next**. [A6 evidence](docs/reviewed-autofill-verification.md) distinguishes real MV3 fixtures, live API checks and manual-upload limits. Extension0.4.0 requires an unpacked reload; more platforms/Workday and human correction-time measurement remain separate RB-10 work. A5 evidence: [approved answer verification](docs/approved-answers-verification.md). Migrations016–017 are installed; hosted integration state is recorded separately. A4 evidence: [submission package verification](docs/submission-packages-verification.md). Migration015 is installed. A3 evidence: [flexible document verification](docs/flexible-documents-verification.md), migration014. A2 evidence: [saved jobs verification](docs/saved-jobs-verification.md), migration013. A2/A6 select and open a working resume for preparation; A4 preserves exact file bytes and user-reported details without claiming employer receipt. New custom-section AI selection remains PhaseB. External Gmail setup waits do not block A9/A10. Optional fixes may move earlier when they unblock daily use; the development certificate-trust fix7630516 addressed an observed pre-authentication IMAP failure.
 
 ## Phase B — Analyze before applying, then improve the application
 
@@ -67,7 +68,7 @@ References and proposed panel behavior are in [Career Ops and local persona revi
 
 Guided first-login onboarding for other users (RB-05), target-company alerts (RB-13), broader career/mobile polish, public launch, Chrome Web Store distribution, CAPTCHA and commercial billing are retained as later work. Basic ownership, privacy and data integrity apply from the start. Public rollout work does not lead the personal-use queue.
 
-Statuses: RB-01 / A1, RB-07A / A2, RB-04A / A3, RB-02 / A4 and RB-09A / A5 are verified locally; other Phase A/B product work is **planned** unless specifically recorded as verified in the baseline above. A prepared design is not an implemented feature. Stable RB identifiers are retained for cross-references; the A/B tables above supersede their former numeric execution order.
+Statuses: RB-01 / A1, RB-07A / A2, RB-04A / A3, RB-02 / A4, RB-09A / A5 and the first RB-10A / A6 Lever adapter are verified locally; other PhaseA/B product work is **planned** unless specifically recorded above. Broader RB-10 support/distribution is not complete. Stable RB identifiers remain for cross-references; the A/B tables supersede their former numeric execution order.
 
 ## Completed first milestone: RB-01
 

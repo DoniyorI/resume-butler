@@ -12,7 +12,7 @@
     </header>
 
     <section id="disconnected" hidden>
-      <p class="lead">Save openings, choose a working resume, and track submissions on LinkedIn, Greenhouse, Lever and Ashby.</p>
+      <p class="lead">Save openings and track submissions on LinkedIn, Greenhouse, Lever and Ashby. Reviewed autofill is available on Lever application forms.</p>
       <button id="connect" class="primary" type="button">Connect to Resume Butler</button>
       <button id="connect-local" class="link" type="button" hidden>Connect to localhost:3000 instead</button>
       <p class="result"><a href="https://resume-butler.vercel.app/privacy" target="_blank" rel="noopener">Privacy &amp; data use</a></p>
@@ -45,6 +45,32 @@
         tracker.
       </p>
 
+      <section id="autofill" class="card autofill-panel" hidden aria-labelledby="autofill-title">
+        <div class="fill-heading"><h2 id="autofill-title">Fill application</h2><span class="fill-platform">Lever</span></div>
+        <p class="muted">Review your details before filling this form.</p>
+        <button id="autofill-review" class="secondary" type="button">Review fields</button>
+        <p id="autofill-status" class="result muted" role="status" aria-live="polite"></p>
+        <div id="autofill-body" hidden>
+          <p id="autofill-job" class="fill-job"></p>
+          <p id="autofill-summary" class="fill-summary"></p>
+          <div id="autofill-fields" class="fill-fields"></div>
+          <button id="autofill-apply" class="primary" type="button" disabled>Fill selected fields</button>
+          <details id="autofill-manual" class="fill-manual">
+            <summary id="autofill-manual-summary">Review manually</summary>
+            <div id="autofill-manual-list"></div>
+          </details>
+          <div class="fill-resume">
+            <h3>Attach your resume yourself</h3>
+            <a id="autofill-resume" class="review-link" href="#" target="_blank" rel="noopener" hidden>Open working resume</a>
+            <p id="autofill-resume-note" class="muted"></p>
+          </div>
+          <div class="fill-source-links">
+            <a id="autofill-profile" href="#" target="_blank" rel="noopener">Edit Master CV</a>
+            <a id="autofill-answers" href="#" target="_blank" rel="noopener">Answer library</a>
+          </div>
+        </div>
+      </section>
+
       <section id="queue-review" class="card sync-card" hidden>
         <p class="label">Submission sync</p>
         <p id="queued" class="muted" role="status"></p>
@@ -67,6 +93,7 @@
       </footer>
     </section>
 
+    <script src="autofill.js"></script>
     <script src="popup.js"></script>
   </body>
 </html>

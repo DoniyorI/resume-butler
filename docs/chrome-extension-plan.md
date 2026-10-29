@@ -101,7 +101,7 @@ Inspected on 2026-10-27: only manifests, file names, config shape and which brow
 5. ~~LinkedIn Easy Apply.~~ Built and confirmed on real Easy Apply submissions. LinkedIn's new server-driven Easy Apply has no stable markup, so it's confirmed by its submit request succeeding (`webRequest`, URL and status only), with the "Submit application" click and the brief `/jobs/view/<id>/post-apply/` page as backups.
 5a. ~~Job details.~~ The posting's pay range, workplace and employment type (JSON-LD, else parsed from the description) and the site are saved with the application (migration 010).
 6. Workday adapter, and a generic detector for other sites. Workday is the hardest: multi-step, dynamic pages.
-7. Autofill from the Master CV. This is the biggest piece and optional; tracking works without it.
+7. ~~First reviewed autofill adapter: English Lever application forms.~~ Version0.4.0 fills selected Master CV contact facts and current approved text answers, keeps existing values and offers copy fallback. Resume attachment, location, employer, options and sensitive/referral fields remain manual. More adapters and Workday require separate compatibility work and measured correction time. [Evidence and limits](reviewed-autofill-verification.md).
 8. Chrome Web Store listing: privacy policy, screenshots, review.
 
 ## Decisions
@@ -112,4 +112,4 @@ Version 0.2.5 adds account/origin-bound durable submission events and migration 
 
 - ~~Straight into the tracker, or through the review queue?~~ Straight in after a real submit click, with undo; a confirmation page reached without a click asks "Did you apply?" first.
 - ~~Which sites first?~~ LinkedIn Easy Apply, Greenhouse, Lever and Ashby. Workday next.
-- Still open: is autofill in scope, or just tracking and "tailor my resume"?
+- Autofill is in scope for the owner's workflow, one adapter at a time. A6 uses no new AI and leaves employer submission to the user. Working-resume choice supports preparation/manual attachment; it does not prove a file was uploaded.
