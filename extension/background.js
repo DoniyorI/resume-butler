@@ -314,6 +314,22 @@ const contentHandlers = {
 const popupHandlers = {
   ...contentHandlers,
   record: (message) => record(message.job, message.account),
+  "capture-context": async (message) => {
+    const account = await connectedAccount();
+    if (message.account?.userId !== account.userId || message.account?.origin !== account.origin) throw new NotConnectedError("Your connected account changed. Reopen the popup.");
+    const result = await api("/api/extension/opportunities?url=" + encodeURIComponent(message.job?.url || ""), { expectedAccount: account });
+    const current = await connectedAccount();
+    if (current.userId !== account.userId || current.origin !== account.origin) throw new NotConnectedError("Your connected account changed. Reopen the popup.");
+    return result;
+  },
+  "save-job": async (message) => {
+    const account = await connectedAccount();
+    if (message.account?.userId !== account.userId || message.account?.origin !== account.origin) throw new NotConnectedError("Your connected account changed. Reopen the popup.");
+    const result = await api("/api/extension/opportunities", { method: "POST", expectedAccount: account, body: { ...toPayload(message.job), resumeId: message.resumeId || null } });
+    const current = await connectedAccount();
+    if (current.userId !== account.userId || current.origin !== account.origin) throw new NotConnectedError("Your connected account changed. Reopen the popup.");
+    return { ok: true, ...result };
+  },
   // Never includes the token
   status: async () => {
     const connection = await getLocal("connection", null);

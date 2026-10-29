@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { Bookmark } from "lucide-react";
 import ScanEmailsButton from "@/features/applications/ScanEmailsButton";
 
 // Title row: how many applications there are and, with filters on, how many match
@@ -13,7 +15,7 @@ export default function ApplicationsHeader({ total, allTotal, filtered }) {
           </span>
         )}
       </div>
-      <ScanEmailsButton />
+      <div className="flex items-center gap-3"><Link href="/saved-jobs" className="inline-flex items-center gap-1.5 rounded-md border bg-white px-3 py-2 text-xs font-medium hover:bg-muted"><Bookmark size={14} /> Saved jobs</Link><ScanEmailsButton /></div>
     </div>
   );
 }

@@ -10,7 +10,7 @@
 }
 
 body {
-  width: 320px;
+  width: 360px;
   margin: 0;
   padding: 14px 16px 12px;
   color: var(--text);
@@ -173,4 +173,16 @@ footer .link {
 .review-link { display: inline-block; margin-top: 8px; color: #326f5a; font-weight: 600; text-decoration: none; }
 .review-link:hover { text-decoration: underline; }
 #legacy-note { margin-top: 8px; font-size: 12px; }
+.field-label { display: block; margin: 12px 0 4px; font-size: 11px; font-weight: 600; color: #475569; }
+select, input, textarea { width: 100%; padding: 8px 9px; border: 1px solid var(--border); border-radius: 6px; background: #fff; color: var(--text); font: inherit; }
+textarea { resize: vertical; }
+select:focus, input:focus, textarea:focus { outline: 2px solid #559f8733; border-color: var(--brand); }
+.capture-details { margin-top: 12px; }
+.capture-details summary { cursor: pointer; color: #475569; font-size: 12px; }
+.result { margin-top: 8px; font-size: 12px; }
+.fine-print { margin-top: 7px; font-size: 10px; line-height: 1.5; color: var(--muted); }
+.submission-action { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--border); }
+button.secondary { width: 100%; padding: 7px 12px; border: 1px solid var(--border); border-radius: 6px; background: #fff; color: #334155; font-weight: 500; }
+button.secondary:disabled { opacity: .6; }
+.saved-link { margin: 0 0 14px; }
 [hidden] { display: none !important; }

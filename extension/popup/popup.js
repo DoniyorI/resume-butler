@@ -55,11 +55,15 @@ async function renderJob(connection) {
   $("job").hidden = !job;
   $("no-job").hidden = Boolean(job);
   if (!job) return;
+  const account = { userId: connection.userId, origin: connection.origin };
   $("job-role").textContent = job.role || "Untitled role";
   $("job-company").textContent = [job.company, job.location].filter(Boolean).join(", ");
+  $("save-job").disabled = true;
+  $("record").disabled = false;
+  $("capture-result").textContent = "Loading your resume choices…";
   $("record").onclick = async () => {
     $("record").disabled = true;
-    const result = await send({ type: "record", job, account: { userId: connection.userId, origin: connection.origin } });
+    const result = await send({ type: "record", job, account });
     const messages = {
       added: "Added to your tracker.",
       updated: "Already in your tracker; updated with this posting.",
@@ -67,11 +71,37 @@ async function renderJob(connection) {
       "needs-matching": "Saved for review. Choose the application in Resume Butler.",
       "not-connected": "Connect first.",
     };
-    $("record-result").textContent =
-      messages[result?.status] || result?.error || "Couldn't add it. Try again.";
+    $("record-result").textContent = messages[result?.status] || result?.error || "Couldn't add it. Try again.";
     if (["added", "needs-matching", "queued"].includes(result?.status)) render();
     else $("record").disabled = false;
   };
+  const context = await send({ type: "capture-context", job, account });
+  const saved = context?.opportunity;
+  const p = saved?.payload || {};
+  $("capture-company").value = p.company ?? job.company ?? "";
+  $("capture-role").value = p.role ?? job.role ?? "";
+  $("capture-location").value = p.location ?? job.location ?? "";
+  $("capture-description").value = p.job_description ?? job.description ?? "";
+  const select = $("resume-choice");
+  select.replaceChildren(new Option("Master CV / decide later", ""));
+  for (const resume of context?.resumes || []) select.add(new Option(resume.title, resume.id));
+  select.value = saved?.resume_id || "";
+  $("capture-result").textContent = context?.error || (saved ? "✓ Saved · review or update below" : "Saving a job keeps it out of your applied count.");
+  $("save-job").disabled = Boolean(!context || context.error);
+  for (const id of ["capture-company", "capture-role", "capture-location", "capture-description", "resume-choice"]) {
+    $(id).oninput = () => { $("capture-result").textContent = "Unsaved changes"; };
+  }
+  $("save-job").onclick = async () => {
+    $("save-job").disabled = true;
+    $("capture-result").textContent = "Saving…";
+    const corrected = { ...job, company: $("capture-company").value, role: $("capture-role").value, location: $("capture-location").value, description: $("capture-description").value,
+      ...(saved ? { salary: p.salary_min != null || p.salary_max != null ? { min: p.salary_min ?? null, max: p.salary_max ?? null, currency: p.salary_currency || "USD", period: p.salary_period || null } : null, employmentType: p.employment_type || "", workplaceType: p.workplace_type || "" } : {}),
+    };
+    const result = await send({ type: "save-job", job: corrected, resumeId: select.value || null, account });
+    $("capture-result").textContent = result?.ok ? "✓ Saved · ready when you are" : result?.error || "Not saved. Keep this popup open and try again.";
+    $("save-job").disabled = false;
+  };
+
 }
 
 async function render() {
@@ -91,6 +121,7 @@ async function render() {
   $("account").textContent = connection.name || connection.email || "your account";
   $("account").title = connection.email || "";
   $("open-app").href = connection.origin + "/";
+  $("saved-jobs").href = connection.origin + "/saved-jobs";
   $("queue-review").hidden = !(status.queued || status.legacy);
   $("queued").textContent = status.needsMatching ? `${status.needsMatching} submission${status.needsMatching === 1 ? "" : "s"} need matching.`
     : status.blocked ? "A submission needs your attention before it can sync."

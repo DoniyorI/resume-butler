@@ -12,7 +12,7 @@
     </header>
 
     <section id="disconnected" hidden>
-      <p class="lead">Connect to add the jobs you apply to on LinkedIn, Greenhouse, Lever and Ashby to your tracker.</p>
+      <p class="lead">Save openings, choose a working resume, and track submissions on LinkedIn, Greenhouse, Lever and Ashby.</p>
       <button id="connect" class="primary" type="button">Connect to Resume Butler</button>
       <button id="connect-local" class="link" type="button" hidden>Connect to localhost:3000 instead</button>
     </section>
@@ -24,7 +24,19 @@
         <p class="label">On this page</p>
         <p id="job-role" class="job-role"></p>
         <p id="job-company" class="muted"></p>
-        <button id="record" class="primary" type="button">I applied to this</button>
+        <label class="field-label" for="resume-choice">Working resume</label>
+        <select id="resume-choice"><option value="">Master CV / decide later</option></select>
+        <details class="capture-details">
+          <summary>Review captured details</summary>
+          <label class="field-label" for="capture-company">Company</label><input id="capture-company" maxlength="200" />
+          <label class="field-label" for="capture-role">Job title</label><input id="capture-role" maxlength="200" />
+          <label class="field-label" for="capture-location">Location</label><input id="capture-location" maxlength="200" />
+          <label class="field-label" for="capture-description">Job description</label><textarea id="capture-description" maxlength="50000" rows="6"></textarea>
+        </details>
+        <button id="save-job" class="primary" type="button">Save for later</button>
+        <p id="capture-result" class="muted result" role="status"></p>
+        <p class="fine-print">Resume choice is for preparation, not proof of the file you submitted.</p>
+        <div class="submission-action"><button id="record" class="secondary" type="button">I applied to this</button></div>
         <p id="record-result" class="muted" role="status"></p>
       </div>
       <p id="no-job" class="muted" hidden>
@@ -39,6 +51,8 @@
         <p id="legacy-note" class="muted" hidden>Older queued items have no account attached. Assign them only if these are your applications.</p>
         <button id="adopt-legacy" class="link" type="button" hidden></button>
       </section>
+
+      <a id="saved-jobs" class="review-link saved-link" href="#" target="_blank" rel="noopener">Open saved jobs →</a>
 
       <div id="recent-wrap" hidden>
         <p class="label">Recently added</p>

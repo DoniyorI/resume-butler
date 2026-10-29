@@ -1,6 +1,12 @@
 # Resume Butler Chrome extension
 
-Adds the jobs you apply to on LinkedIn Easy Apply, Greenhouse, Lever and Ashby to your Resume Butler tracker, automatically, with the posting's description, so email sync can keep their status up to date. Plain Manifest V3: no build step.
+Save openings before applying, choose a working resume, and automatically track submissions on LinkedIn Easy Apply, Greenhouse, Lever and Ashby. Plain Manifest V3: no build step.
+
+## Save before applying (0.3.0)
+
+Open a supported posting and the toolbar popup. Select a working resume (or Master CV / decide later), expand **Review captured details** to correct extracted text, then choose **Save for later**. Open **Saved jobs** to search, edit or remove saved openings. Saving does not count as applying. Resume choice records intent; it does not verify the actual uploaded file.
+
+Saved jobs require migration **013** after **012**. A failed save shows an error and preserves popup fields while it stays open; retry explicitly. Confirmed submissions still use the durable offline queue. Exact, unique posting matches link a saved job to its application automatically; ambiguous evidence remains unlinked.
 
 ## Install (development)
 
@@ -22,7 +28,7 @@ After changing files here, click the reload button on the extension's card in `c
 | `content/job-reader.js` | Reads company, role, location and description (JSON-LD first, then the site's selectors) |
 | `content/detector.js` | Remembers postings, spots the submission, reports it |
 | `content/toast.js` | The "Added to Resume Butler, Undo" notice on the job site |
-| `popup/` | Status, "I applied to this" for the current tab, recent additions with Undo |
+| `popup/` | Save/correct the current posting, select a working resume, submission tracking and recent additions with Undo |
 
 A submission counts when the site moves to its confirmation page (Greenhouse `/confirmation`, Lever `/thanks`), or when a "thanks for applying" / "Your application was sent" message appears after you click submit that wasn't on the page before (LinkedIn Easy Apply, Ashby, and the others as a fallback). When you clicked submit for that job, it's added automatically: a "Tracking application" notice appears in the top-right corner, then "Added to Resume Butler" with Undo. A confirmation page with no submit click first (a link opened directly, say) only asks "Did you apply?" with an Add button. On LinkedIn the success text counts only inside the Easy Apply dialog.
 
@@ -32,7 +38,7 @@ The plan, including what comes next (more sites, autofill, the Web Store), is in
 
 ## Known gaps
 
-Version **0.2.5** requires database migration **012**. Each queued submission keeps the same event UUID and original payload across retries. Different employer boards never share a queue identity just because their posting numbers match. Queues belong to an account and app origin; switching accounts cannot replay another account's work. Older unscoped items require explicit assignment in the popup. Reconnect restores retry scheduling.
+Version **0.3.0** requires database migrations **012–013**. Each queued submission keeps the same event UUID and original payload across retries. Different employer boards never share a queue identity just because their posting numbers match. Queues belong to an account and app origin; switching accounts cannot replay another account's work. Older unscoped items require explicit assignment in the popup. Reconnect restores retry scheduling.
 
 When multiple applications could match, the submission is saved for review at **Applications → Submissions to match**. Choose an existing opening or explicitly create a separate one. Nothing is preselected. Resolving it completes the original event, so a queued retry returns the same result. Reload the unpacked extension after updating its files.
 

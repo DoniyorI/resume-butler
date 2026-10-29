@@ -118,7 +118,7 @@ src/
   lib/                       Safe on client and server: constants, dates, redirects, safeUrl,
                              salary, jobDetails, emailCategories, postJson, utils, supabase clients
   server/                    Server-only ("server-only" import), reusable by actions, routes, cron, extension
-supabase/migrations/         SQL schema, applied in order (001–012)
+supabase/migrations/         SQL schema, applied in order (001–013)
 extension/                   Chrome extension (see its README)
 docs/                        This file, the extension plan
 public/image/                Logo, illustrations, Lottie animations
@@ -135,6 +135,7 @@ Feature folders: `applications`, `ats`, `auth`, `contact`, `cover-letters`, `cv`
 | `/` | `(app)/page.jsx` | Dashboard: welcome, stat cards, goal, email sync card, follow-ups, recent applications, charts |
 | `/applications` | `(app)/applications/page.jsx` | Applications table (URL-driven filters, sort, pages of 50), suggestions banner |
 | `/applications/[id]` | `(app)/applications/[id]/page.jsx` | Application detail: facts, editable details, job description, notes, ATS scanner, status timeline, linked documents |
+| `/saved-jobs` | `(app)/saved-jobs/page.jsx` | Searchable shortlist, captured posting details and owned working resume selection; separate from application counts |
 | `/documents` | `(app)/documents/page.jsx` | Library of resumes and cover letters with page thumbnails, search, tabs, sort |
 | `/profile` | `(app)/profile/page.jsx` | Profile (identity rail, CV strength) and master CV sections, resume import |
 | `/email-sync` | `(app)/email-sync/page.jsx` | IMAP connection, Gmail setup guide, scan options and results, scan history, suggestion review |
@@ -432,3 +433,7 @@ Full details in [extension/README.md](../extension/README.md) and [docs/chrome-e
 ## Upgrades in flight
 
 Branch `claude/keen-roentgen-b7b6a5` (not merged): Next.js 16.4.3 with React 19 (async request APIs, `proxy.js` in place of `middleware.js`, ESLint run directly instead of `next lint`, Turbopack builds), plus a feature sweep adopting Next 16 / React 19 features where they beat the current code. When it merges, update this file, CLAUDE.md and the README: version numbers, `proxy.js`, the lint command, and any new caching or form conventions.
+
+### Saved jobs (A2, extension 0.3.0)
+
+`job_opportunities` (migration013) stores owned canonical postings, extracted details and optional intended resume. `src/server/opportunities/service.js` supplies app actions and `/api/extension/opportunities` (GET metadata/current save; POST save). The trusted popup corrects capture and chooses resumes; content scripts do not receive resume data. Saves never create an application or status event. A unique exact posting links to an application within120days; contradictory or multiple identities remain unlinked. See [verification and limits](saved-jobs-verification.md).

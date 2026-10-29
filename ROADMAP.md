@@ -16,6 +16,7 @@ The app uses Next.js + Supabase, server-owned auth/data access, a Master CV, res
 - [x] Extension tracking for LinkedIn Easy Apply, Greenhouse, Lever and Ashby; saved pay/workplace/employment details.
 - [x] Email review queue and optional daily IMAP scans; locking, retries, hiring-cycle protections and transactional approval implemented locally.
 - [x] Supabase migrations 009–012 applied and synthetic concurrency/isolation checks recorded.
+- [x] A2: saved jobs workspace, corrected extension capture and intended resume selection; saving stays separate from applications. Migration 013 applied.
 - [x] RB-01: posting identity, account-bound retry receipts and explicit matching for ambiguous email/extension events. [Verification and limits](docs/application-identity-verification.md).
 - [x] Real-PDF overflow checks, honest page-fit feedback and quiet editor saving implemented locally.
 - [x] Local/default model updated to GPT-6 Luna; task overrides remain available.
@@ -41,7 +42,7 @@ Checked items describe existence of the recorded work, **not a claim that every 
 | A9 | Fix rule-based document checks and PDF readability | RB-03 plus deterministic PDF checks | Blank/hidden content cannot inflate checks; show what exported text actually contains |
 | A10 | Make records portable and progress understandable | RB-12A/RB-14A | Complete export and descriptive counts/rates, without AI advice or hiring predictions |
 
-A1 is implemented and verified; A2 is next. Other items get bounded plans when reached. A3's existing AI compatibility is maintained through adapters, but new custom-section AI selection belongs in Phase B. A2 can select a working resume before applying; A4 adds verified/frozen submission binding. External Gmail setup waits do not block A9/A10. Optional small fixes can move earlier when they unblock daily use; record the reason here.
+A1 and A2 are implemented and verified; A3 flexible editing is next. A2 evidence and limits: [saved jobs verification](docs/saved-jobs-verification.md). Migration 013 is installed; extension 0.3.0 requires an unpacked reload. Other items get bounded plans when reached. A3's existing AI compatibility is maintained through adapters, but new custom-section AI selection belongs in Phase B. A2 can select a working resume before applying; A4 adds verified/frozen submission binding. External Gmail setup waits do not block A9/A10. Optional small fixes can move earlier when they unblock daily use; record the reason here.
 
 ## Phase B — Analyze before applying, then improve the application
 
@@ -62,7 +63,7 @@ References and proposed panel behavior are in [Career Ops and local persona revi
 
 Guided first-login onboarding for other users (RB-05), target-company alerts (RB-13), broader career/mobile polish, public launch, Chrome Web Store distribution, CAPTCHA and commercial billing are retained as later work. Basic ownership, privacy and data integrity apply from the start. Public rollout work does not lead the personal-use queue.
 
-Statuses: RB-01 / A1 is verified; other Phase A/B product work is **planned** unless specifically recorded as verified in the baseline above. A prepared design is not an implemented feature. Stable RB identifiers are retained for cross-references; the A/B tables above supersede their former numeric execution order.
+Statuses: RB-01 / A1 and RB-07A / A2 are verified; other Phase A/B product work is **planned** unless specifically recorded as verified in the baseline above. A prepared design is not an implemented feature. Stable RB identifiers are retained for cross-references; the A/B tables above supersede their former numeric execution order.
 
 ## Completed first milestone: RB-01
 

@@ -16,19 +16,38 @@ test("worker resumes the reconnected account and refuses stale legacy assignment
   };
   let offline = true;
   const sent = [];
+  const saved = [];
   globalThis.fetch = async (url, options) => {
     if (url.endsWith("/me")) return { ok: true, status: 200, json: async () => ({ userId: options.headers.Authorization.endsWith("A") ? "A" : "B" }) };
+    if (url.includes("/opportunities")) {
+      saved.push({ url, body: options.body && JSON.parse(options.body), authorization: options.headers.Authorization });
+      return { ok: true, status: 200, json: async () => options.method === "POST" ? { opportunity: { id: "saved" } } : { resumes: [{ id: "resume-a", title: "Working copy" }] } };
+    }
     sent.push(JSON.parse(options.body));
     if (offline) throw new Error("offline");
     return { ok: true, status: 201, json: async () => ({ application: { id: "recorded", company: "QA", role: "Engineer" }, created: true }) };
   };
   await import("../extension/background.js");
   const connect = token => new Promise(resolve => listeners.external({ type: "resume-butler:connect", token: `rbx_${token}` }, { url: "https://resume-butler.vercel.app/extension" }, resolve));
-  const popup = message => new Promise(resolve => listeners.message(message, { id: "test", url: "chrome-extension://test/popup/popup.html" }, resolve));
+  const popup = message => new Promise(resolve => { if (!listeners.message(message, { id: "test", url: "chrome-extension://test/popup/popup.html" }, resolve)) resolve(null); });
   await connect("A");
   const job = { site: "greenhouse", jobId: "123", company: "QA", role: "Engineer", url: "https://boards.greenhouse.io/qa/jobs/123" };
+  const accountA = (await popup({ type: "status" })).connection;
+  const choices = await popup({ type: "capture-context", job, account: accountA });
+  assert.deepEqual(choices?.resumes, [{ id: "resume-a", title: "Working copy" }]);
+  const saveResult = await popup({ type: "save-job", job: { ...job, description: "Full posting text" }, resumeId: "resume-a", account: accountA });
+  assert.equal(saveResult.opportunity.id, "saved");
+  assert.equal(saved.at(-1).body.resumeId, "resume-a");
+  assert.equal(saved.at(-1).body.jobDescription, "Full posting text");
+  assert.equal(sent.length, 0, "saving must never call the application endpoint");
+  assert.equal(state.queue?.length || 0, 0, "saving is not a queued submission");
   assert.equal((await popup({ type: "record", job })).status, "queued");
   await connect("B");
+  const savedBefore = saved.length;
+  assert.equal((await popup({ type: "save-job", job, account: accountA })).ok, false);
+  assert.equal(saved.length, savedBefore, "stale popup cannot save into another account");
+  const fromContent = await new Promise(resolve => { if (!listeners.message({ type: "capture-context", job, account: accountA }, { id: "test", tab: { id: 1 }, url: job.url }, resolve)) resolve(null); });
+  assert.equal(fromContent?.resumes, undefined, "job site content scripts cannot request resume metadata");
   listeners.alarm({ name: "retry-queue" });
   await new Promise(resolve => setTimeout(resolve, 20));
   await connect("A");
