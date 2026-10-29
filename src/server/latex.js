@@ -286,7 +286,7 @@ export function generateLatex(resumeData) {
   const doc = normalizeResumeContent(resumeData);
 
   // Sections in the editor's order and with its titles; hidden ones are left out
-  const order = normalizeResumeContent(resumeData).order.filter((section) => !section.hidden);
+  const order = doc.order.filter((section) => !section.hidden);
 
   const sectionBuilders = {
     experience: (title) => buildExperience(experience, title),

@@ -1,7 +1,7 @@
 import "server-only";
 import { cache } from "react";
 import { requirePageUser } from "@/server/auth";
-import { HEADER_FIELDS, normalizeResumeContent } from "@/features/resumes/resumeDocument";
+import { HEADER_FIELDS, readResumeForEditing } from "@/features/resumes/resumeDocument";
 
 // Empty header fields fall back to the profile. needsHeaderSave tells the
 // editor to persist the filled-in header, as the old client code did.
@@ -42,7 +42,9 @@ export const getResumeForEditor = cache(async (resumeId) => {
 
   if (resumeRes.error || !resumeRes.data) return null;
 
-  const content = normalizeResumeContent(resumeRes.data.content);
+  const view = readResumeForEditing(resumeRes.data.content);
+  if (view.readOnly) return { id: resumeRes.data.id, title: resumeRes.data.title || "Resume", ...view };
+  const content = view.content;
   const { header, needsHeaderSave } = resolveHeader(content.header, profileRes.data || {});
 
   return {

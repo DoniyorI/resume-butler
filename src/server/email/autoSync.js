@@ -37,7 +37,7 @@ export async function runAutoSync(admin) {
     .eq("auto_sync", true)
     .eq("is_active", true)
     .order(attempts ? "last_auto_sync_attempt_at" : "last_auto_sync_at", { ascending: true, nullsFirst: true })
-    .limit(MAX_USERS_PER_RUN);
+    .limit(MAX_USERS_PER_RUN + 1);
   let attemptsSupported = true;
   let { data: connections, error } = await loadConnections(true);
   if (["42703", "PGRST204"].includes(error?.code)) {
@@ -46,7 +46,9 @@ export async function runAutoSync(admin) {
   }
   if (error) throw error;
 
-  const summary = { users: connections.length, synced: 0, failed: 0, skipped: 0, suggestions: 0 };
+  const remainingAtLeast = Math.max(0, connections.length - MAX_USERS_PER_RUN);
+  connections = connections.slice(0, MAX_USERS_PER_RUN);
+  const summary = { users: connections.length, synced: 0, failed: 0, skipped: 0, suggestions: 0, remainingAtLeast };
   for (const connection of connections) {
     if (Date.now() - startedAt > START_NEXT_BEFORE_MS) {
       summary.skipped++;
@@ -84,5 +86,6 @@ export async function runAutoSync(admin) {
     if (failure || saveError) summary.failed++;
     else summary.synced++;
   }
+  if (summary.skipped || summary.remainingAtLeast) console.warn("email_sync_backlog", { skipped: summary.skipped, remainingAtLeast: summary.remainingAtLeast, reason: summary.remainingAtLeast ? "batch_limit" : "time_budget" });
   return summary;
 }

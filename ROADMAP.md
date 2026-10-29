@@ -16,6 +16,7 @@ The app uses Next.js + Supabase, server-owned auth/data access, a Master CV, res
 - [x] Extension tracking for LinkedIn Easy Apply, Greenhouse, Lever and Ashby; saved pay/workplace/employment details.
 - [x] Email review queue and optional daily IMAP scans; locking, retries, hiring-cycle protections and transactional approval implemented locally.
 - [x] Supabase migrations 009–012 applied and synthetic concurrency/isolation checks recorded.
+- [x] Reliability review: fail-closed AI quotas, conflict/recovery UI, read-only newer documents, CI checks, public processing disclosure and cron backlog visibility. [Evidence and retained tradeoffs](docs/review-follow-up-2026-10-29.md).
 - [x] A3: custom resume/Master CV sections, heading names, certifications and revision-protected saves; visible custom content exported and scanned. Migration 014 applied.
 - [x] A2: saved jobs workspace, corrected extension capture and intended resume selection; saving stays separate from applications. Migration 013 applied.
 - [x] RB-01: posting identity, account-bound retry receipts and explicit matching for ambiguous email/extension events. [Verification and limits](docs/application-identity-verification.md).

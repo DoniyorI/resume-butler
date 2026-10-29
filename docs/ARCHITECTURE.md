@@ -441,3 +441,11 @@ Branch `claude/keen-roentgen-b7b6a5` (not merged): Next.js 16.4.3 with React 19 
 ### Flexible documents (A3)
 
 Schema2 keeps legacy resume arrays and adds certifications, stable-ID custom sections (entries/text/list) and a revision. `resumeDocument.js` normalizes legacy content and projects visible printable fields shared by checks and PDF freshness. `documentSchema.js` validates writes; `save_resume_document` owns and locks each save, rejecting revision conflicts and older-client overwrites. Master CV custom sections/heading names live in owned `profiles.cv_sections`, updated through `save_cv_sections`; manual library selections copy independently. Existing AI selection supports legacy arrays and preserves custom content. Migration014 and [verification](flexible-documents-verification.md) document rollout and limits.
+
+### Document validation and recovery authority
+
+`documentSchema.js` (Zod) is the complete contract for supported document writes. Normalization adapts known legacy reads; SQL deliberately enforces the independent ownership, row-lock, revision/version and coarse size/shape boundary rather than duplicating every Zod rule. The editor detects unsupported data and offers read-only original-data recovery; PDF/scoring must not reinterpret unknown formats. `documentSave.js` serializes revision updates and latches409; recovery downloads retain local edits before an explicit latest-version reload.
+
+### Reliability review (October 29, 2026)
+
+AI/email quota checks fail closed without an explicit grant; PDF-only quota-service availability retains its logged fallback. CI runs lint/tests/build with placeholder configuration and no production secrets. Public `/privacy` documents current integration data flows. Cron reports capacity/time-budget backlog without inbox data. See [review follow-up and retained tradeoffs](review-follow-up-2026-10-29.md).

@@ -10,7 +10,7 @@ export async function runAction(context, body) {
   try {
     return { ok: true, data: await body() };
   } catch (error) {
-    if (error instanceof HttpError) return { ok: false, error: error.message };
+    if (error instanceof HttpError) return { ok: false, error: error.message, status: error.status };
     console.error(`${context}:`, error);
     return { ok: false, error: "Something went wrong. Please try again." };
   }

@@ -122,6 +122,7 @@ async function render() {
   $("account").title = connection.email || "";
   $("open-app").href = connection.origin + "/";
   $("saved-jobs").href = connection.origin + "/saved-jobs";
+  $("privacy").href = connection.origin + "/privacy";
   $("queue-review").hidden = !(status.queued || status.legacy);
   $("queued").textContent = status.needsMatching ? `${status.needsMatching} submission${status.needsMatching === 1 ? "" : "s"} need matching.`
     : status.blocked ? "A submission needs your attention before it can sync."

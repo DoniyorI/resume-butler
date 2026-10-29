@@ -1,6 +1,6 @@
 // Pages anyone can open. Everything else (except /api, which checks auth per
 // route) requires a signed-in user.
-export const PUBLIC_PATHS = ["/about", "/contact", "/auth/callback"];
+export const PUBLIC_PATHS = ["/about", "/contact", "/privacy", "/auth/callback"];
 
 // Sign-in pages: signed-out only, signed-in users are sent to the app
 export const AUTH_PATHS = ["/login", "/register", "/forgot-password"];

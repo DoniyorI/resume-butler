@@ -1,4 +1,5 @@
 "use client";
+import { downloadRecoveryCopy } from "@/features/resumes/recoveryDownload";
 import { useCallback, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { toast } from "sonner";
@@ -317,7 +318,7 @@ export default function ResumeStudio({ resume, masterCv, jobOptions }) {
         pdfPages={pdfPages}
         onToggleAssistant={() => setAssistantOpen((open) => !open)}
       />
-      {resumeDoc.saveError ? <div role="alert" className="border-b border-red-200 bg-red-50 px-4 py-2 text-xs leading-relaxed text-red-800">{resumeDoc.saveError} Your edits are still visible in this tab.</div> : null}
+      {resumeDoc.saveError ? <div role="alert" className="border-b border-red-200 bg-red-50 px-4 py-2 text-xs leading-relaxed text-red-800">{resumeDoc.saveError} Your edits are still visible in this tab.{resumeDoc.saveConflict ? <div className="mt-2 flex flex-wrap gap-3"><button type="button" onClick={() => downloadRecoveryCopy(resumeDoc.snapshot(), title)} className="rounded-md border border-red-200 bg-white px-3 py-1.5 font-medium">Download my copy (.json)</button><button type="button" onClick={resumeDoc.reloadLatest} className="rounded-md border border-red-200 bg-white px-3 py-1.5 font-medium">Reload latest (discard mine)</button></div> : null}</div> : null}
       <div className="relative flex min-h-0 flex-1">
         <aside
           aria-label="Outline"

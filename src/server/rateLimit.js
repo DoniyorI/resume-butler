@@ -7,14 +7,15 @@ import { HttpError } from "@/server/http";
 // so callers can't change them. Keys: generate-resume, generate-cover-letter,
 // suggest-bullets, rewrite-bullet, parse-resume, scan-emails, download-resume.
 export async function enforceRateLimit(supabase, key) {
-  const { data: allowed, error } = await supabase.rpc("consume_rate_limit", { p_key: key });
-
-  if (error) {
-    // Fail open so the app keeps working if the migration hasn't been applied yet
-    console.warn(`Rate limit check skipped for ${key}:`, error.message);
-    return;
+  let result;
+  try { result = await supabase.rpc("consume_rate_limit", { p_key: key }); }
+  catch (error) { result = { error }; }
+  if (result.error || typeof result.data !== "boolean") {
+    console.warn("rate_limit_unavailable", { key, code: result.error?.code || "transport_or_invalid_result" });
+    // PDF checks remain available during quota-service outages. AI and email
+    // classification require an explicit quota grant before spending credit.
+    if (key === "download-resume") return;
+    throw new HttpError(503, "Usage checks are temporarily unavailable. Please try again shortly.");
   }
-  if (allowed === false) {
-    throw new HttpError(429, "Too many requests. Please wait a while and try again.");
-  }
+  if (!result.data) throw new HttpError(429, "Too many requests. Please wait a while and try again.");
 }

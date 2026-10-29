@@ -1,3 +1,4 @@
+import ReadOnlyResume from "@/features/resumes/ReadOnlyResume";
 import { notFound } from "next/navigation";
 import { Source_Serif_4 } from "next/font/google";
 import { requirePageUser } from "@/server/auth";
@@ -15,13 +16,12 @@ export async function generateMetadata({ params }) {
 // The resume editor: outline and page fit, the editable page, and the tailoring assistant
 export default async function ResumeEditorPage({ params }) {
   const { supabase, user } = await requirePageUser();
-  // All at once: none needs another's result (the ID is in the URL)
-  const [resume, masterCv, jobOptions] = await Promise.all([
-    getResumeForEditor(params.resumeId),
-    getMasterCv(supabase, user.id),
-    getJobOptions(supabase, user.id, { resumeId: params.resumeId }),
-  ]);
+  const resume = await getResumeForEditor(params.resumeId);
   if (!resume) notFound();
+  if (resume.readOnly) return <ReadOnlyResume resume={resume} />;
+  const [masterCv, jobOptions] = await Promise.all([
+    getMasterCv(supabase, user.id), getJobOptions(supabase, user.id, { resumeId: params.resumeId }),
+  ]);
 
   return (
     <div className={paperFont.variable}>

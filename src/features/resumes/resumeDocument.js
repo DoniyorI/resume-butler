@@ -10,6 +10,7 @@ import { parseDate } from "@/lib/dates";
 
 export const SECTION_IDS = ["education", "experience", "projects", "skills", "certifications"];
 export const CUSTOM_SECTION_TYPES = ["entries", "text", "list"];
+export const CUSTOM_SECTION_ID = /^custom:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export const DEFAULT_SECTION_ORDER = [
   { id: "education", title: "Education" },
@@ -104,7 +105,7 @@ export function normalizeResumeContent(content) {
   const customSections = list(source.customSections);
   const seen = new Set();
   for (const section of customSections) {
-    if (!/^custom:[0-9a-f-]{36}$/i.test(section?.id || "") || seen.has(section.id) || !CUSTOM_SECTION_TYPES.includes(section.type) || !Array.isArray(section.items)) {
+    if (!CUSTOM_SECTION_ID.test(section?.id || "") || seen.has(section.id) || !CUSTOM_SECTION_TYPES.includes(section.type) || !Array.isArray(section.items)) {
       throw new Error("Unsupported custom section. Your original document has been preserved.");
     }
     seen.add(section.id);
@@ -117,6 +118,14 @@ export function normalizeResumeContent(content) {
     certifications: list(source.certifications), customSections,
     order: normalizeOrder(source.order, customSections), target: normalizeTarget(source.target),
   };
+}
+
+export function readResumeForEditing(value) {
+  try { return { readOnly: false, content: normalizeResumeContent(value) }; }
+  catch {
+    return { readOnly: true, content: null, rawContent: value,
+      reason: "This resume uses a newer or unsupported document format. This version can preserve and download the original data, but cannot edit it safely." };
+  }
 }
 
 export function sectionItems(doc, sectionId) {

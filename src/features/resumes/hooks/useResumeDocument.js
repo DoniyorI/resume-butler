@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createDocumentSaver } from "@/features/resumes/documentSave";
 import { saveResumeContent } from "@/features/resumes/actions";
 import { DATED_SECTIONS, SECTION_IDS, blankItem, sectionItems, withSectionItems, visibleResumeContent, sortByDateDesc } from "@/features/resumes/resumeDocument";
 
@@ -13,14 +14,15 @@ export function useResumeDocument({ resumeId, initialContent, needsInitialSave =
   // "saved" | "saving" (includes edits waiting for the autosave delay) | "error"
   const [saveStatus, setSaveStatus] = useState("saved");
   const [saveError, setSaveError] = useState(null);
+  const [saveConflict, setSaveConflict] = useState(false);
 
   // The document last written to the database. Autosave runs whenever `doc`
   // differs from it, so the initial render doesn't save (unless the header
   // was filled in from the profile and needs persisting).
   const savedDocRef = useRef(needsInitialSave ? null : initialContent);
   const latestDocRef = useRef(doc);
-  const saveQueueRef = useRef(Promise.resolve());
-  const revisionRef = useRef(initialContent.revision || 0);
+  const saverRef = useRef(null);
+  if (!saverRef.current) saverRef.current = createDocumentSaver({ revision: initialContent.revision || 0, initialSnapshot: needsInitialSave ? null : initialContent, save: content => saveResumeContent(resumeId, content) });
 
   useEffect(() => {
     latestDocRef.current = doc;
@@ -28,34 +30,20 @@ export function useResumeDocument({ resumeId, initialContent, needsInitialSave =
 
   // Saves run one after another so an older save can't land after a newer one.
   // Resolves to true when the snapshot is saved, false when saving failed.
-  const persist = useCallback(
-    (snapshot) => {
-      saveQueueRef.current = saveQueueRef.current.then(async () => {
-        if (snapshot === savedDocRef.current) return true;
-        let error = "Failed to save resume";
-        try {
-          const result = await saveResumeContent(resumeId, { ...snapshot, revision: revisionRef.current });
-          if (result.ok) {
-            revisionRef.current = result.data.revision;
-            setSaveError(null);
-            savedDocRef.current = snapshot;
-            if (latestDocRef.current === snapshot) setSaveStatus("saved");
-            return true;
-          }
-          error = result.error;
-        } catch {
-          // Network failure: keep the default message
-        }
-        setSaveError(error);
-        setSaveStatus("error");
-        return false;
-      });
-      return saveQueueRef.current;
-    },
-    [resumeId]
-  );
+  const persist = useCallback(async snapshot => {
+    const result = await saverRef.current.saveSnapshot(snapshot);
+    if (result.ok) {
+      setSaveError(null); savedDocRef.current = snapshot;
+      if (latestDocRef.current === snapshot) setSaveStatus("saved");
+      return true;
+    }
+    setSaveError(result.error); setSaveStatus("error");
+    if (result.status === 409) setSaveConflict(true);
+    return false;
+  }, []);
 
   useEffect(() => {
+    if (saveConflict) return;
     if (doc === savedDocRef.current) {
       // e.g. an undo back to the saved document before the autosave ran
       setSaveStatus("saved");
@@ -65,7 +53,7 @@ export function useResumeDocument({ resumeId, initialContent, needsInitialSave =
     setSaveError(null);
     const timer = setTimeout(() => persist(doc), AUTOSAVE_DELAY_MS);
     return () => clearTimeout(timer);
-  }, [doc, persist]);
+  }, [doc, persist, saveConflict]);
 
   // Fields commit on blur, so clicking a link can leave an edit inside the
   // autosave delay. Save it when the editor unmounts, and warn before closing
@@ -196,6 +184,8 @@ export function useResumeDocument({ resumeId, initialContent, needsInitialSave =
     resumeContent,
     saveStatus,
     saveError,
+    saveConflict,
+    reloadLatest: () => { savedDocRef.current = latestDocRef.current; window.location.reload(); },
     flush,
     snapshot,
     restore,

@@ -48,6 +48,23 @@ test("application scans give hidden sections no section or bullet credit", () =>
   assert.equal(result.keywordScore, 0);
 });
 
+test("unsupported newer documents are recoverable in a read-only editor without reinterpreting them", () => {
+  const original = { schemaVersion: 99, revision: 7, newSections: [{ title: "Preserve me", facts: ["Original fact"] }] };
+  const view = document.readResumeForEditing(original);
+  assert.equal(view.readOnly, true);
+  assert.equal(view.content, null);
+  assert.deepEqual(view.rawContent, original);
+  assert.match(view.reason, /newer|unsupported/i);
+  assert.equal(document.readResumeForEditing({ experience: [] }).readOnly, false);
+});
+
+test("custom IDs require UUID groups rather than an arbitrary run of hyphens", () => {
+  const malformed = content();
+  malformed.customSections[0].id = "custom:" + "-".repeat(36);
+  malformed.order[0].id = malformed.customSections[0].id;
+  assert.throws(() => document.normalizeResumeContent(malformed), /custom section/i);
+});
+
 test("custom section edits are immutable and do not change Master CV source copies", () => {
   const source = document.normalizeResumeContent(content());
   const changed = document.withSectionItems(source, customId, [{ ...custom.items[0], title: "Edited research" }]);

@@ -23,6 +23,7 @@ export default function Footer() {
             </Link>
           </li>
 
+          <li><Link href="/privacy" className="hover:underline me-4 md:me-6">Privacy</Link></li>
           <li>
             <Link href="/contact" className="hover:underline">
               Contact Us
