@@ -41,4 +41,4 @@ The fixture counts measure automated correctness, not human time saved or interv
 
 ## Deployment
 
-No new migration or permission is needed; existing migrations001–017 remain unchanged. Code is locally verified; commit/hosted CI/deployment will be recorded here after pushing. Reload the unpacked0.4.0 extension; shipping web API code alone does not update an installed extension.
+No new migration or permission is needed; existing migrations001–017 remain unchanged. Feature commit `9988a20eb4d2b626aebf2b41dae3c30e2b49b3a7` is pushed to main: [GitHub CI](https://github.com/DoniyorI/resume-butler/actions/runs/40942835690) and [Vercel deployment](https://vercel.com/doniyoris-projects/resume-butler/BA341dYHYS4iBRPE5iFFeRrVAYLA) succeeded. The updated public privacy page also passed desktop/mobile frontend checks with0 findings. Reload the unpacked0.4.0 extension; shipping web API code alone does not update an installed extension. The owner requested stopping after this release; A7 has not been started.
