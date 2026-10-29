@@ -1,3 +1,4 @@
+import CustomCvSections, { CvSectionsProvider } from "./CustomCvSections";
 import IdentityRail from "@/features/profile/IdentityRail";
 import ExperienceSection from "@/features/profile/ExperienceSection";
 import EducationSection from "@/features/profile/EducationSection";
@@ -14,9 +15,10 @@ export default function CareerProfile({ profile, cv }) {
     { id: "projects", title: "Projects", count: cv.projects.length },
     { id: "skills", title: "Skills", count: cv.skills.length },
     { id: "certifications", title: "Certifications", count: cv.certifications.length },
-  ];
+  ].map(section => ({ ...section, title: cv.sectionTitles?.[section.id] || section.title }));
 
   return (
+    <CvSectionsProvider initialSettings={cv.sectionSettings}>
     <div className="grid gap-8 lg:grid-cols-[20rem_minmax(0,1fr)] lg:gap-12">
       <IdentityRail profile={profile} cv={cv} sections={sections} />
 
@@ -40,8 +42,10 @@ export default function CareerProfile({ profile, cv }) {
           <ProjectsSection initialItems={cv.projects} />
           <SkillsSection initialItems={cv.skills} />
           <CertificationsSection initialItems={cv.certifications} />
+          <CustomCvSections />
         </div>
       </div>
     </div>
+    </CvSectionsProvider>
   );
 }

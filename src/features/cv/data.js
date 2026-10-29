@@ -1,3 +1,4 @@
+import { loadCvSections } from "@/server/resume/cvSections";
 import "server-only";
 
 // Reads for the master CV. Dates stay as the "yyyy-MM-dd" strings Postgres
@@ -117,13 +118,14 @@ export async function getCertifications(supabase, userId) {
 }
 
 export async function getCvData(supabase, userId) {
-  const [experience, projects, education, skills, certifications] = await Promise.all([
+  const [experience, projects, education, skills, certifications, sectionSettings] = await Promise.all([
     getExperience(supabase, userId),
     getProjects(supabase, userId),
     getEducation(supabase, userId),
     getSkills(supabase, userId),
     getCertifications(supabase, userId),
+    loadCvSections(supabase, userId),
   ]);
 
-  return { experience, projects, education, skills, certifications };
+  return { experience, projects, education, skills, certifications, sectionSettings, customSections: sectionSettings.customSections, sectionTitles: sectionSettings.titles };
 }

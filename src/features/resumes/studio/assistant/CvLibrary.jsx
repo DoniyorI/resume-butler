@@ -68,7 +68,7 @@ export default function CvLibrary({ cv, sections, onAdd }) {
         .
       </p>
 
-      <Group title="Experience" empty={cv.experience.length === 0}>
+      <Group title={cv.sectionTitles?.experience || "Experience"} empty={cv.experience.length === 0}>
         {cv.experience.map((exp) => (
           <Entry
             key={exp.id}
@@ -81,7 +81,7 @@ export default function CvLibrary({ cv, sections, onAdd }) {
         ))}
       </Group>
 
-      <Group title="Projects" empty={cv.projects.length === 0}>
+      <Group title={cv.sectionTitles?.projects || "Projects"} empty={cv.projects.length === 0}>
         {cv.projects.map((proj) => (
           <Entry
             key={proj.id}
@@ -94,7 +94,7 @@ export default function CvLibrary({ cv, sections, onAdd }) {
         ))}
       </Group>
 
-      <Group title="Education" empty={cv.education.length === 0}>
+      <Group title={cv.sectionTitles?.education || "Education"} empty={cv.education.length === 0}>
         {cv.education.map((edu) => (
           <Entry
             key={edu.id}
@@ -107,6 +107,15 @@ export default function CvLibrary({ cv, sections, onAdd }) {
         ))}
       </Group>
 
+      <Group title={cv.sectionTitles?.certifications || "Certifications"} empty={!cv.certifications?.length}>
+        {(cv.certifications || []).map(cert => <Entry key={cert.id} title={cert.name} subtitle={cert.issuer} meta={shortDate(cert.dateEarned)}
+          onPage={itemsOf("certifications").some(item => item.id === cert.id)}
+          onAdd={() => onAdd("certifications", cvToResumeItem.certifications(cert))} />)}
+      </Group>
+      {(cv.customSections || []).map(section => <Group key={section.id} title={section.title} empty={!section.items.length}>
+        <Entry title={section.title} subtitle={section.items.length + " entries · copied independently"}
+          onPage={sections.some(s => s.id === section.id)} onAdd={() => onAdd("custom-section", section)} />
+      </Group>)}
       <section className="space-y-2">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold">Skills</h3>

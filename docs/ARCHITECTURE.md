@@ -118,7 +118,7 @@ src/
   lib/                       Safe on client and server: constants, dates, redirects, safeUrl,
                              salary, jobDetails, emailCategories, postJson, utils, supabase clients
   server/                    Server-only ("server-only" import), reusable by actions, routes, cron, extension
-supabase/migrations/         SQL schema, applied in order (001–013)
+supabase/migrations/         SQL schema, applied in order (001–014)
 extension/                   Chrome extension (see its README)
 docs/                        This file, the extension plan
 public/image/                Logo, illustrations, Lottie animations
@@ -437,3 +437,7 @@ Branch `claude/keen-roentgen-b7b6a5` (not merged): Next.js 16.4.3 with React 19 
 ### Saved jobs (A2, extension 0.3.0)
 
 `job_opportunities` (migration013) stores owned canonical postings, extracted details and optional intended resume. `src/server/opportunities/service.js` supplies app actions and `/api/extension/opportunities` (GET metadata/current save; POST save). The trusted popup corrects capture and chooses resumes; content scripts do not receive resume data. Saves never create an application or status event. A unique exact posting links to an application within120days; contradictory or multiple identities remain unlinked. See [verification and limits](saved-jobs-verification.md).
+
+### Flexible documents (A3)
+
+Schema2 keeps legacy resume arrays and adds certifications, stable-ID custom sections (entries/text/list) and a revision. `resumeDocument.js` normalizes legacy content and projects visible printable fields shared by checks and PDF freshness. `documentSchema.js` validates writes; `save_resume_document` owns and locks each save, rejecting revision conflicts and older-client overwrites. Master CV custom sections/heading names live in owned `profiles.cv_sections`, updated through `save_cv_sections`; manual library selections copy independently. Existing AI selection supports legacy arrays and preserves custom content. Migration014 and [verification](flexible-documents-verification.md) document rollout and limits.

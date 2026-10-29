@@ -1,19 +1,16 @@
-import { HEADER_FIELDS, normalizeResumeContent } from "@/features/resumes/resumeDocument";
+import { HEADER_FIELDS, visibleResumeContent } from "@/features/resumes/resumeDocument";
 
 // Postgres jsonb may reorder object keys. Normalize and sort before identifying
 // the exact document used for compilation; targeting metadata is not printed.
 export function printableResumeKey(value) {
-  const { target: _target, ...content } = normalizeResumeContent(value);
+  const { target: _target, revision: _revision, schemaVersion: _schemaVersion, ...content } = visibleResumeContent(value);
   content.header = Object.fromEntries(HEADER_FIELDS.map(field => [field, content.header[field] || ""]));
-  content.order = content.order.filter(section => !section.hidden);
-  const visible = new Set(content.order.map(section => section.id));
-  for (const id of ["education", "experience", "projects", "skills"]) {
-    if (!visible.has(id)) content[id] = [];
-  }
   const sort = item => Array.isArray(item) ? item.map(sort)
     : item && typeof item === "object" ? Object.fromEntries(Object.keys(item).sort()
-      .filter(key => item[key] !== undefined).map(key => [key, sort(item[key])])) : item;
-  return JSON.stringify(sort(content));
+      .filter(key => item[key] !== undefined && key !== "id").map(key => [key, sort(item[key])])) : item;
+  // Section IDs determine the order, so retain them even though item IDs do not print.
+  const order = content.order.map(s => ({ id: s.id, title: s.title, type: s.type }));
+  return JSON.stringify({ order, content: sort(content) });
 }
 
 export async function hashPdfContentKey(key) {

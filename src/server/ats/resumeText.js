@@ -1,3 +1,4 @@
+import { visibleResumeContent } from "@/features/resumes/resumeDocument";
 import "server-only";
 
 function descriptionParts(description) {
@@ -6,7 +7,8 @@ function descriptionParts(description) {
 }
 
 // Flatten resume content (the resumes.content JSON) to one searchable string
-export function resumeToText(content) {
+export function resumeToText(value) {
+  const content = visibleResumeContent(value);
   const parts = [];
 
   if (content.header) {
@@ -49,6 +51,9 @@ export function resumeToText(content) {
     }
   });
 
+  for (const item of [...content.certifications, ...content.customSections.flatMap(s => s.items)]) {
+    parts.push(item.title || "", item.subtitle || "", item.location || "", item.date || "", item.text || "", ...descriptionParts(item.description));
+  }
   return parts.join(" ");
 }
 
@@ -59,8 +64,9 @@ export function entryBullets(entry) {
   return entry.description ? String(entry.description).split("\n") : [];
 }
 
-export function allBullets(content) {
-  return [...(content.experience || []), ...(content.projects || [])].flatMap((entry) =>
-    entryBullets(entry).filter(Boolean)
-  );
+export function allBullets(value) {
+  const content = visibleResumeContent(value);
+  return [...content.experience, ...content.projects, ...content.certifications,
+    ...content.customSections.filter(s => s.type === "entries").flatMap(s => s.items)]
+    .flatMap(entry => entryBullets(entry).filter(Boolean));
 }

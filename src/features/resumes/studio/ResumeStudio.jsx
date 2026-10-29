@@ -267,6 +267,8 @@ export default function ResumeStudio({ resume, masterCv, jobOptions }) {
   };
 
   const addFromCv = (sectionId, item) => {
+    if (sectionId === "custom-section") { resumeDoc.addCustomSection(item); return; }
+    if (itemsOf(sectionId).length === 0 && masterCv.sectionTitles?.[sectionId]) resumeDoc.updateSectionMeta(sectionId, { title: masterCv.sectionTitles[sectionId] });
     resumeDoc.addItem(sectionId, item);
     showSection(sectionId);
   };
@@ -293,6 +295,7 @@ export default function ResumeStudio({ resume, masterCv, jobOptions }) {
       tightening={reviewing === "concise"}
       canTighten={longBullets.length > 0}
       onOpenCv={() => openPanel("cv")}
+      onRemoveSection={id => withUndo("Section removed", () => resumeDoc.removeSection(id))}
     />
   );
 
@@ -314,6 +317,7 @@ export default function ResumeStudio({ resume, masterCv, jobOptions }) {
         pdfPages={pdfPages}
         onToggleAssistant={() => setAssistantOpen((open) => !open)}
       />
+      {resumeDoc.saveError ? <div role="alert" className="border-b border-red-200 bg-red-50 px-4 py-2 text-xs leading-relaxed text-red-800">{resumeDoc.saveError} Your edits are still visible in this tab.</div> : null}
       <div className="relative flex min-h-0 flex-1">
         <aside
           aria-label="Outline"

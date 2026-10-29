@@ -1,3 +1,4 @@
+import { visibleResumeContent } from "@/features/resumes/resumeDocument";
 import "server-only";
 import { analyzeBullets } from "@/server/ats/bullets";
 import { extractKeywords, findInResume } from "@/server/ats/keywords";
@@ -10,7 +11,8 @@ function percentPresent(checks, whenEmpty) {
 }
 
 // Heuristic ATS score (no AI) for a resume's content against a job description
-export function scoreResume(jobDescription, resumeContent) {
+export function scoreResume(jobDescription, value) {
+  const resumeContent = visibleResumeContent(value);
   const keywords = extractKeywords(jobDescription);
   const resumeText = resumeToText(resumeContent);
 

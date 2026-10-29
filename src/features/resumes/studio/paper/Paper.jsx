@@ -1,4 +1,5 @@
 import { Github, Linkedin, Mail, Phone, Plus } from "lucide-react";
+import CustomItem from "./CustomItem";
 import { Field } from "@/features/resumes/studio/paper/Field";
 import { EducationItem, ExperienceItem, ProjectItem, SkillLine } from "@/features/resumes/studio/paper/Items";
 
@@ -68,7 +69,7 @@ function SectionHeading({ section, onRename, onAdd }) {
         className="flex items-center gap-1 rounded-md px-1.5 font-sans text-[11px] font-medium normal-case leading-5 text-brand opacity-0 transition-opacity hover:bg-brand/10 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring group-hover/heading:opacity-100"
         style={{ fontVariant: "normal" }}
       >
-        <Plus className="h-3 w-3" /> {ADD_LABEL[section.id]}
+        <Plus className="h-3 w-3" /> {ADD_LABEL[section.id] || "Add entry"}
       </button>
     </h2>
   );
@@ -92,7 +93,7 @@ export default function Paper({ resumeDoc, review, onRemoveItem }) {
         </p>
       )}
       {visible.map((section) => {
-        const Item = ITEMS[section.id];
+        const Item = ITEMS[section.id] || CustomItem;
         return (
           <section key={section.id} aria-label={section.title} className="rb-section">
             <SectionHeading
@@ -102,8 +103,9 @@ export default function Paper({ resumeDoc, review, onRemoveItem }) {
             />
             {section.items.map((item, itemIndex) => (
               <Item
-                key={itemIndex}
+                key={item.id || itemIndex}
                 item={item}
+                type={section.type || "entries"}
                 onChange={(changes) => resumeDoc.updateItem(section.id, itemIndex, changes)}
                 onRemove={() => onRemoveItem(section.id, itemIndex)}
                 bulletProps={{

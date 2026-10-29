@@ -8,13 +8,15 @@ import { parseDate } from "@/lib/dates";
 // `target` is the job the resume is tailored for: { jobDescription,
 // applicationId, company, role }.
 
-export const SECTION_IDS = ["education", "experience", "projects", "skills"];
+export const SECTION_IDS = ["education", "experience", "projects", "skills", "certifications"];
+export const CUSTOM_SECTION_TYPES = ["entries", "text", "list"];
 
 export const DEFAULT_SECTION_ORDER = [
   { id: "education", title: "Education" },
   { id: "experience", title: "Experience" },
   { id: "projects", title: "Projects" },
   { id: "skills", title: "Skills" },
+  { id: "certifications", title: "Certifications" },
 ];
 
 export const HEADER_FIELDS = ["name", "email", "phone", "linkedin", "github"];
@@ -37,8 +39,10 @@ export function blankItem(sectionId) {
       return { projectName: "", description: "", startDate: "", endDate: "", currentlyWorking: false };
     case "skills":
       return { header: "", skills: [] };
+    case "certifications":
+      return { id: crypto.randomUUID(), title: "", subtitle: "", date: "", url: "", description: [] };
     default:
-      return {};
+      return { id: crypto.randomUUID(), title: "", subtitle: "", date: "", location: "", url: "", text: "", description: [] };
   }
 }
 
@@ -63,19 +67,18 @@ export function sortByDateDesc(items) {
 }
 
 // Every known section exactly once, in the saved order, missing ones appended
-function normalizeOrder(order) {
+function normalizeOrder(order, customSections = []) {
   const saved = Array.isArray(order) ? order : [];
+  const available = [...DEFAULT_SECTION_ORDER, ...customSections.map(s => ({ id: s.id, title: s.title, type: s.type }))];
   const result = [];
   for (const section of saved) {
-    const known = DEFAULT_SECTION_ORDER.find((s) => s.id === section?.id);
-    if (known && !result.some((s) => s.id === known.id)) {
-      const entry = { id: known.id, title: section.title || known.title };
-      if (section.hidden === true) entry.hidden = true;
-      result.push(entry);
+    const known = available.find(s => s.id === section?.id);
+    if (known && !result.some(s => s.id === known.id)) {
+      result.push({ ...known, title: section.title || known.title, ...(section.hidden === true ? { hidden: true } : {}) });
     }
   }
-  for (const section of DEFAULT_SECTION_ORDER) {
-    if (!result.some((s) => s.id === section.id)) result.push(section);
+  for (const section of available) {
+    if (!result.some(s => s.id === section.id)) result.push({ ...section });
   }
   return result;
 }
@@ -96,16 +99,52 @@ function normalizeTarget(target) {
 // Turn a stored content value into the editor's document shape
 export function normalizeResumeContent(content) {
   const source = content && typeof content === "object" ? content : {};
-  const list = (value) => (Array.isArray(value) ? value : []);
+  if (source.schemaVersion != null && ![1, 2].includes(source.schemaVersion)) throw new Error("Unsupported resume document version. Update the app before editing.");
+  const list = value => Array.isArray(value) ? value : [];
+  const customSections = list(source.customSections);
+  const seen = new Set();
+  for (const section of customSections) {
+    if (!/^custom:[0-9a-f-]{36}$/i.test(section?.id || "") || seen.has(section.id) || !CUSTOM_SECTION_TYPES.includes(section.type) || !Array.isArray(section.items)) {
+      throw new Error("Unsupported custom section. Your original document has been preserved.");
+    }
+    seen.add(section.id);
+  }
   return {
+    schemaVersion: 2, revision: Number.isInteger(source.revision) ? source.revision : 0,
     header: source.header && typeof source.header === "object" ? source.header : {},
-    education: list(source.education),
-    experience: list(source.experience),
-    projects: list(source.projects),
-    skills: list(source.skills),
-    order: normalizeOrder(source.order),
-    target: normalizeTarget(source.target),
+    education: list(source.education), experience: list(source.experience),
+    projects: list(source.projects), skills: list(source.skills),
+    certifications: list(source.certifications), customSections,
+    order: normalizeOrder(source.order, customSections), target: normalizeTarget(source.target),
   };
+}
+
+export function sectionItems(doc, sectionId) {
+  return SECTION_IDS.includes(sectionId) ? doc[sectionId] || [] : doc.customSections?.find(s => s.id === sectionId)?.items || [];
+}
+
+export function withSectionItems(doc, sectionId, items) {
+  if (SECTION_IDS.includes(sectionId)) return { ...doc, [sectionId]: items };
+  return { ...doc, customSections: doc.customSections.map(s => s.id === sectionId ? { ...s, items } : s) };
+}
+
+function printedCustomItem(item, type) {
+  if (type !== "entries") return { id: item.id, text: item.text || "" };
+  return { id: item.id, title: item.title || "", subtitle: item.subtitle || "",
+    date: item.date || "", location: item.location || "", url: item.url || "",
+    description: itemBullets(item).filter(Boolean) };
+}
+
+export function visibleResumeContent(value) {
+  const doc = normalizeResumeContent(value);
+  const order = doc.order.filter(s => !s.hidden);
+  const visible = new Set(order.map(s => s.id));
+  return { ...doc, ...Object.fromEntries(SECTION_IDS.map(id => [id, visible.has(id) ? doc[id] : []])),
+    certifications: visible.has("certifications") ? doc.certifications.map(item => printedCustomItem(item, "entries")) : [],
+    customSections: doc.customSections.filter(s => visible.has(s.id)).map(s => ({
+      ...s, title: order.find(o => o.id === s.id).title,
+      items: s.items.map(item => printedCustomItem(item, s.type)),
+    })), order };
 }
 
 // Bullets of an experience or project item. Stored as an array; older items
@@ -117,6 +156,7 @@ export function itemBullets(item) {
 
 // Master CV entries (camelCase, from loadMasterCv) as resume items
 export const cvToResumeItem = {
+  certifications: cert => ({ id: cert.id, title: cert.name, subtitle: cert.issuer, date: cert.dateEarned, url: cert.url, description: [] }),
   education: (edu) => ({
     school: edu.school,
     location: edu.location,

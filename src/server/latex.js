@@ -160,6 +160,23 @@ function buildProjects(projects, title) {
   \\resumeSubHeadingListEnd`;
 }
 
+function buildCustomSection(section, title) {
+  if (!section.items?.length) return "";
+  const items = section.items.map(item => {
+    if (section.type === "text") return "\\item {\\small " + esc(item.text || "").replace(/\n/g, "\\\\ ") + "}";
+    if (section.type === "list") return "\\resumeItem{" + esc(item.text || "") + "}";
+    const subtitle = [item.subtitle, item.location].filter(Boolean).join(" · ");
+    const heading = subtitle ? "\\resumeSubheading{" + esc(item.title || "") + "}{" + esc(item.date || "") + "}{" + esc(subtitle) + "}{}"
+      : "\\resumeProjectHeading{" + esc(item.title || "") + "}{" + esc(item.date || "") + "}";
+    const body = getBullets(item).filter(Boolean).map(bullet => "\\resumeItem{" + esc(bullet) + "}").join("\n");
+    return heading
+      + (escUrl(item.url) ? "\n\\par\\vspace{6pt}{\\small " + link(escUrl(item.url), esc(item.url)) + "}\\par" : "")
+      + (body ? "\n\\resumeItemListStart\n" + body + "\n\\resumeItemListEnd" : "");
+  }).join("\n");
+  const list = section.type === "list" ? ["\\resumeItemListStart", "\\resumeItemListEnd"] : ["\\resumeSubHeadingListStart", "\\resumeSubHeadingListEnd"];
+  return "\\section{" + esc(title) + "}\n" + list[0] + "\n" + items + "\n" + list[1];
+}
+
 function buildSkills(skillsData, title) {
   if (!skillsData || skillsData.length === 0) return "";
 
@@ -266,6 +283,7 @@ export function generateLatex(resumeData) {
   const experience = resumeData.experience || [];
   const projects = resumeData.projects || [];
   const skills = resumeData.skills || [];
+  const doc = normalizeResumeContent(resumeData);
 
   // Sections in the editor's order and with its titles; hidden ones are left out
   const order = normalizeResumeContent(resumeData).order.filter((section) => !section.hidden);
@@ -275,6 +293,8 @@ export function generateLatex(resumeData) {
     education: (title) => buildEducation(education, title),
     projects: (title) => buildProjects(projects, title),
     skills: (title) => buildSkills(skills, title),
+    certifications: title => buildCustomSection({ type: "entries", items: doc.certifications }, title),
+    ...Object.fromEntries(doc.customSections.map(section => [section.id, title => buildCustomSection(section, title)])),
   };
 
   const sectionContent = order

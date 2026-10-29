@@ -13,7 +13,7 @@ export default async function ProfilePage() {
   return (
     <div className="mx-auto w-full max-w-6xl px-5 pb-16 pt-24 md:px-8">
       <p className="mb-8 text-sm text-muted-foreground">
-        Everything here feeds the resumes and cover letters you generate.
+        Keep your full background here. Choose the entries and sections you want in each resume.
       </p>
       <CareerProfile profile={profile} cv={cv} />
     </div>

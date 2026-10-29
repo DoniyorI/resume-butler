@@ -1,4 +1,5 @@
 import "server-only";
+import { loadCvSections } from "./cvSections.js";
 
 async function rows(query) {
   const { data, error } = await query;
@@ -36,7 +37,7 @@ function sortedBullets(bullets) {
  * projects, skills }. Each entry keeps its row id so AI picks can refer to it.
  */
 export async function loadMasterCv(supabase, userId) {
-  const [eduRes, expRes, projRes, skillRes] = await Promise.all([
+  const [eduRes, expRes, projRes, skillRes, certRes, sectionSettings] = await Promise.all([
     supabase.from("cv_education").select("*").eq("user_id", userId).order("sort_order"),
     supabase
       .from("cv_experience")
@@ -45,12 +46,16 @@ export async function loadMasterCv(supabase, userId) {
       .order("sort_order"),
     supabase.from("cv_projects").select("*, cv_project_bullets(*)").eq("user_id", userId).order("sort_order"),
     supabase.from("cv_skills").select("*").eq("user_id", userId).order("sort_order"),
+    supabase.from("cv_certifications").select("*").eq("user_id", userId).order("date_earned"),
+    loadCvSections(supabase, userId),
   ]);
-  for (const res of [eduRes, expRes, projRes, skillRes]) {
+  for (const res of [eduRes, expRes, projRes, skillRes, certRes]) {
     if (res.error) throw res.error;
   }
 
   return {
+    customSections: sectionSettings.customSections, sectionTitles: sectionSettings.titles,
+    certifications: certRes.data.map(cert => ({ id: cert.id, name: cert.name || "", issuer: cert.issuer || "", dateEarned: cert.date_earned || "", url: cert.url || "" })),
     education: eduRes.data.map((edu) => ({
       id: edu.id,
       school: edu.school || "",

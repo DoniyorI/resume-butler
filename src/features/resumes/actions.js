@@ -6,36 +6,11 @@ import { z } from "zod";
 import { requireUser } from "@/server/auth";
 import { parseInput, runAction } from "@/server/actionResult";
 import { HttpError } from "@/server/http";
-import { SECTION_IDS } from "@/features/resumes/resumeDocument";
+import { saveResumeDocument } from "@/server/resume/saveDocument";
 
 const TITLE_MAX = 200;
-const MAX_ITEMS_PER_SECTION = 100;
-const MAX_CONTENT_CHARS = 250_000;
-
 const idSchema = z.string().uuid("Invalid resume");
 const titleSchema = z.string().trim().min(1, "Title is required").max(TITLE_MAX, "Title is too long");
-
-const itemsSchema = z.array(z.record(z.unknown())).max(MAX_ITEMS_PER_SECTION, "Too many items");
-
-const targetSchema = z.object({
-  jobDescription: z.string().max(50_000),
-  applicationId: z.string().uuid().nullable(),
-  company: z.string().max(200),
-  role: z.string().max(200),
-});
-
-const contentSchema = z.object({
-  header: z.record(z.string().max(1000).nullable()),
-  education: itemsSchema,
-  experience: itemsSchema,
-  projects: itemsSchema,
-  skills: itemsSchema,
-  order: z
-    .array(z.object({ id: z.enum(SECTION_IDS), title: z.string().max(100), hidden: z.boolean().optional() }))
-    .max(SECTION_IDS.length),
-  // Optional so a save without it keeps the stored one
-  target: targetSchema.optional(),
-});
 
 export async function createResume(input) {
   const result = await runAction("Error creating resume", async () => {
@@ -96,29 +71,9 @@ export async function deleteResume(resumeId) {
 // the editor page on the server after every debounced keystroke.
 export async function saveResumeContent(resumeId, content) {
   return runAction("Error saving resume", async () => {
-    const { supabase, user } = await requireUser();
+    const { supabase } = await requireUser();
     const id = parseInput(idSchema, resumeId);
-    const next = parseInput(contentSchema, content);
-    if (JSON.stringify(next).length > MAX_CONTENT_CHARS) {
-      throw new HttpError(413, "Resume is too large to save");
-    }
-
-    const { data: existing, error: readError } = await supabase
-      .from("resumes")
-      .select("content")
-      .eq("id", id)
-      .eq("user_id", user.id)
-      .maybeSingle();
-    if (readError) throw readError;
-    if (!existing) throw new HttpError(404, "Resume not found");
-
-    const { error } = await supabase
-      .from("resumes")
-      .update({ content: { ...(existing.content || {}), ...next } })
-      .eq("id", id)
-      .eq("user_id", user.id);
-    if (error) throw error;
-    return null;
+    return saveResumeDocument(supabase, id, content);
   });
 }
 

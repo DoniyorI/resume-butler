@@ -1,3 +1,5 @@
+"use client";
+import { CvHeading } from "./CustomCvSections";
 import { Pencil, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -9,7 +11,7 @@ export function Section({ id, title, count, addLabel, onAdd, empty, children }) 
     <section id={id} aria-labelledby={`${id}-title`} className="scroll-mt-28 py-8 first:pt-0">
       <div className="mb-5 flex items-baseline justify-between gap-4 border-b pb-3">
         <h2 id={`${id}-title`} className="text-lg font-semibold tracking-tight">
-          {title}
+          <CvHeading id={id} fallback={title} />
           {!isEmpty && <span className="ml-2 text-sm font-normal text-muted-foreground">{count}</span>}
         </h2>
         {onAdd && (

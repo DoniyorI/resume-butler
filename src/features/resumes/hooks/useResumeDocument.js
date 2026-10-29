@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { saveResumeContent } from "@/features/resumes/actions";
-import { DATED_SECTIONS, blankItem, sortByDateDesc } from "@/features/resumes/resumeDocument";
+import { DATED_SECTIONS, SECTION_IDS, blankItem, sectionItems, withSectionItems, visibleResumeContent, sortByDateDesc } from "@/features/resumes/resumeDocument";
 
 const AUTOSAVE_DELAY_MS = 500;
 const BULLET_SECTIONS = new Set(["experience", "projects"]);
@@ -20,6 +20,7 @@ export function useResumeDocument({ resumeId, initialContent, needsInitialSave =
   const savedDocRef = useRef(needsInitialSave ? null : initialContent);
   const latestDocRef = useRef(doc);
   const saveQueueRef = useRef(Promise.resolve());
+  const revisionRef = useRef(initialContent.revision || 0);
 
   useEffect(() => {
     latestDocRef.current = doc;
@@ -33,8 +34,9 @@ export function useResumeDocument({ resumeId, initialContent, needsInitialSave =
         if (snapshot === savedDocRef.current) return true;
         let error = "Failed to save resume";
         try {
-          const result = await saveResumeContent(resumeId, snapshot);
+          const result = await saveResumeContent(resumeId, { ...snapshot, revision: revisionRef.current });
           if (result.ok) {
+            revisionRef.current = result.data.revision;
             setSaveError(null);
             savedDocRef.current = snapshot;
             if (latestDocRef.current === snapshot) setSaveStatus("saved");
@@ -85,8 +87,8 @@ export function useResumeDocument({ resumeId, initialContent, needsInitialSave =
 
   const updateSection = useCallback((sectionId, update) => {
     setDoc((prev) => {
-      const items = update(prev[sectionId]);
-      return { ...prev, [sectionId]: DATED_SECTIONS.has(sectionId) ? sortByDateDesc(items) : items };
+      const items = update(sectionItems(prev, sectionId));
+      return withSectionItems(prev, sectionId, DATED_SECTIONS.has(sectionId) ? sortByDateDesc(items) : items);
     });
   }, []);
 
@@ -98,18 +100,14 @@ export function useResumeDocument({ resumeId, initialContent, needsInitialSave =
     [updateSection]
   );
 
-  const addBlankItem = useCallback((sectionId) => {
-    setDoc((prev) => ({ ...prev, [sectionId]: [...prev[sectionId], blankItem(sectionId)] }));
-  }, []);
+  const addBlankItem = useCallback(sectionId => updateSection(sectionId, items => [...items, blankItem(sectionId)]), [updateSection]);
 
   const addItem = useCallback(
     (sectionId, item) => updateSection(sectionId, (items) => [...items, item]),
     [updateSection]
   );
 
-  const deleteItem = useCallback((sectionId, index) => {
-    setDoc((prev) => ({ ...prev, [sectionId]: prev[sectionId].filter((_, i) => i !== index) }));
-  }, []);
+  const deleteItem = useCallback((sectionId, index) => updateSection(sectionId, items => items.filter((_, i) => i !== index)), [updateSection]);
 
   // Applies an AI suggestion. Only experience/project bullets have suggestions;
   // anything that doesn't point at an existing bullet is ignored.
@@ -173,21 +171,22 @@ export function useResumeDocument({ resumeId, initialContent, needsInitialSave =
   const snapshot = useCallback(() => latestDocRef.current, []);
   const restore = useCallback((saved) => setDoc(saved), []);
 
-  const sections = useMemo(() => doc.order.map((section) => ({ ...section, items: doc[section.id] })), [doc]);
+  const addCustomSection = useCallback(section => {
+    const id = section.id || "custom:" + crypto.randomUUID();
+    setDoc(prev => {
+      if (prev.customSections.some(s => s.id === id) || prev.customSections.length >= 20) return prev;
+      const copy = structuredClone({ ...section, id, items: section.items || [blankItem(id)] });
+      return { ...prev, customSections: [...prev.customSections, copy], order: [...prev.order, { id, title: copy.title, type: copy.type }] };
+    });
+  }, []);
+  const removeSection = useCallback(id => setDoc(prev => SECTION_IDS.includes(id)
+    ? { ...withSectionItems(prev, id, []), order: prev.order.map(s => s.id === id ? { ...s, hidden: true } : s) }
+    : { ...prev, customSections: prev.customSections.filter(s => s.id !== id), order: prev.order.filter(s => s.id !== id) }), []);
+  const sections = useMemo(() => doc.order.map(section => ({ ...section, items: sectionItems(doc, section.id) })), [doc]);
 
   // What /api/ats-score and /api/suggest-bullets expect. Hidden sections
   // aren't printed, so they don't count.
-  const resumeContent = useMemo(() => {
-    const visible = (sectionId) =>
-      doc.order.some((section) => section.id === sectionId && section.hidden) ? [] : doc[sectionId];
-    return {
-      header: doc.header,
-      education: visible("education"),
-      experience: visible("experience"),
-      projects: visible("projects"),
-      skills: visible("skills"),
-    };
-  }, [doc]);
+  const resumeContent = useMemo(() => visibleResumeContent(doc), [doc]);
 
   return {
     content: doc,
@@ -206,6 +205,8 @@ export function useResumeDocument({ resumeId, initialContent, needsInitialSave =
     updateHeaderField,
     updateItem,
     addBlankItem,
+    addCustomSection,
+    removeSection,
     addItem,
     deleteItem,
     replaceBullet,
