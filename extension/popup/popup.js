@@ -15,7 +15,7 @@ async function currentTabJob() {
   if (!tab?.id) return null;
   return new Promise((resolve) =>
     chrome.tabs.sendMessage(tab.id, { type: "read-job" }, (job) =>
-      resolve(chrome.runtime.lastError ? null : job)
+      resolve(chrome.runtime.lastError || !job ? null : { ...job, tabContext: { id: tab.id, url: tab.url } })
     )
   );
 }
@@ -58,6 +58,15 @@ async function renderJob(connection) {
   const account = { userId: connection.userId, origin: connection.origin };
   $("job-role").textContent = job.role || "Untitled role";
   $("job-company").textContent = [job.company, job.location].filter(Boolean).join(", ");
+  const pay = job.salary;
+  const amount = number => new Intl.NumberFormat("en-US", { style: "currency", currency: pay.currency || "USD", notation: "compact", maximumFractionDigits: 1 }).format(number);
+  const salary = pay && (pay.min != null || pay.max != null) ? [
+    pay.min != null && amount(pay.min), pay.max != null && pay.max !== pay.min && amount(pay.max),
+  ].filter(Boolean).join("–") + (pay.period ? ` / ${pay.period}` : "") : "";
+  $("job-facts").textContent = [salary, job.employmentType].filter(Boolean).join(" · ");
+  $("job-facts").hidden = !$("job-facts").textContent;
+  $("capture-description").value = job.description || "";
+  globalThis.RB_jobScoreUi?.bind({ account, job });
   $("save-job").disabled = true;
   $("record").disabled = false;
   $("capture-result").textContent = "Loading your resume choices…";
@@ -87,6 +96,7 @@ async function renderJob(connection) {
   for (const resume of context?.resumes || []) select.add(new Option(resume.title, resume.id));
   select.value = saved?.resume_id || "";
   globalThis.RB_autofillUi?.resumeChanged();
+  globalThis.RB_jobScoreUi?.bind({ account, job });
   $("capture-result").textContent = context?.error || (saved ? "✓ Saved · review or update below" : "Saving a job keeps it out of your applied count.");
   $("save-job").disabled = Boolean(!context || context.error);
   for (const id of ["capture-company", "capture-role", "capture-location", "capture-description", "resume-choice"]) {

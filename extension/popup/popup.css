@@ -222,3 +222,23 @@ button.secondary:disabled { opacity: .6; }
 .fill-copy-dialog textarea { margin: 12px 0 8px; }
 button:disabled { cursor: default; opacity: .6; }
 [hidden] { display: none !important; }
+
+.job-facts { color: #334155; font-size: 12px; margin: 4px 0 14px; }
+.job-score-panel { margin: 16px 0; padding: 14px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.score-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.score-heading h2 { font-size: 14px; margin: 0; }
+.score-method { color: #64748b; font-size: 10px; }
+.score-overview { display: flex; gap: 12px; align-items: center; margin: 12px 0 8px; }
+.score-overview strong { color: var(--brand); font-size: 32px; line-height: 1.1; letter-spacing: -1px; }
+.score-overview div { min-width: 0; }
+.score-overview p { margin: 0; overflow-wrap: anywhere; }
+#job-score-source { font-weight: 600; font-size: 12px; }
+#job-score-count { font-size: 11px; }
+.score-meter { height: 5px; border-radius: 3px; background: #e2e8f0; overflow: hidden; }
+.score-meter span { display: block; height: 100%; background: var(--brand); }
+.score-evidence { margin: 10px 0; }
+.score-evidence summary { color: #334155; cursor: pointer; font-size: 12px; }
+.score-evidence h3 { font-size: 11px; margin: 12px 0 6px; color: #475569; }
+.score-terms { display: flex; flex-wrap: wrap; gap: 4px; color: #475569; font-size: 11px; }
+.score-term { padding: 3px 7px; background: #eaf4ee; color: #245540; border-radius: 4px; overflow-wrap: anywhere; max-width: 100%; }
+.score-missing .score-term { background: #fff6e5; color: #805318; }

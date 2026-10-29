@@ -113,3 +113,8 @@ Version 0.2.5 adds account/origin-bound durable submission events and migration 
 - ~~Straight into the tracker, or through the review queue?~~ Straight in after a real submit click, with undo; a confirmation page reached without a click asks "Did you apply?" first.
 - ~~Which sites first?~~ LinkedIn Easy Apply, Greenhouse, Lever and Ashby. Workday next.
 - Autofill is in scope for the owner's workflow, one adapter at a time. A6 uses no new AI and leaves employer submission to the user. Working-resume choice supports preparation/manual attachment; it does not prove a file was uploaded.
+
+
+## Capture and comparison update (0.5.0)
+
+Implemented the user-supplied generated-class LinkedIn layout, current-posting salary/workplace/employment metadata, full About the job capture, delayed-panel identity checks and confirmation detail retention. Migration018 adds site-specific generated notes, preserving edited comments. The popup now offers explicit deterministic keyword comparison with the selected resume or Master CV; this is wording coverage, not interview probability or AI analysis. [Evidence and limits](extension-capture-score-verification.md). More platforms/Workday and the broader evidence-based fit meter remain separate work.

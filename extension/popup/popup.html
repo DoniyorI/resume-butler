@@ -25,8 +25,20 @@
         <p class="label">On this page</p>
         <p id="job-role" class="job-role"></p>
         <p id="job-company" class="muted"></p>
+        <p id="job-facts" class="job-facts" hidden></p>
         <label class="field-label" for="resume-choice">Working resume</label>
         <select id="resume-choice"><option value="">Master CV / decide later</option></select>
+        <section class="job-score-panel" aria-labelledby="job-score-title">
+          <div class="score-heading"><h2 id="job-score-title">Resume match</h2><span class="score-method">Keyword coverage</span></div>
+          <div id="job-score-result" hidden>
+            <div class="score-overview"><strong id="job-score-value"></strong><div><p id="job-score-source"></p><p id="job-score-count" class="muted"></p></div></div>
+            <div id="job-score-meter" class="score-meter" role="meter" aria-label="Job keyword coverage" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span id="job-score-fill"></span></div>
+            <details class="score-evidence"><summary>Matched and missing terms</summary><h3>Found in your source</h3><div id="job-score-matched" class="score-terms"></div><h3>Not found in your source</h3><div id="job-score-missing" class="score-terms score-missing"></div></details>
+          </div>
+          <p id="job-score-status" class="muted result" role="status" aria-live="polite"></p>
+          <button id="job-score-compare" class="secondary" type="button">Compare with job</button>
+          <p class="fine-print">Checks wording, not proficiency or interview chances. Does not assess experience duration, eligibility or PDF readability.</p>
+        </section>
         <details class="capture-details">
           <summary>Review captured details</summary>
           <label class="field-label" for="capture-company">Company</label><input id="capture-company" maxlength="200" />
@@ -94,6 +106,7 @@
     </section>
 
     <script src="autofill.js"></script>
+    <script src="job-score.js"></script>
     <script src="popup.js"></script>
   </body>
 </html>

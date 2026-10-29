@@ -47,7 +47,7 @@ Checked items describe existence of the recorded work, **not a claim that every 
 | A9 | Fix rule-based document checks and PDF readability | RB-03 plus deterministic PDF checks | Blank/hidden content cannot inflate checks; show what exported text actually contains |
 | A10 | Make records portable and progress understandable | RB-12A/RB-14A | Complete export and descriptive counts/rates, without AI advice or hiring predictions |
 
-A1–A5 and A6's first reviewed Lever adapter are implemented and verified locally; **A7 tracking and next actions is next**. [A6 evidence](docs/reviewed-autofill-verification.md) distinguishes real MV3 fixtures, live API checks and manual-upload limits. Extension0.4.0 requires an unpacked reload; more platforms/Workday and human correction-time measurement remain separate RB-10 work. A5 evidence: [approved answer verification](docs/approved-answers-verification.md). Migrations016–017 are installed; hosted integration state is recorded separately. A4 evidence: [submission package verification](docs/submission-packages-verification.md). Migration015 is installed. A3 evidence: [flexible document verification](docs/flexible-documents-verification.md), migration014. A2 evidence: [saved jobs verification](docs/saved-jobs-verification.md), migration013. A2/A6 select and open a working resume for preparation; A4 preserves exact file bytes and user-reported details without claiming employer receipt. New custom-section AI selection remains PhaseB. External Gmail setup waits do not block A9/A10. Optional fixes may move earlier when they unblock daily use; the development certificate-trust fix7630516 addressed an observed pre-authentication IMAP failure.
+A1–A5 and A6's first reviewed Lever adapter are implemented and verified locally; **A7 tracking and next actions is next**. [A6 evidence](docs/reviewed-autofill-verification.md) distinguishes real MV3 fixtures, live API checks and manual-upload limits. Extension0.5.0 requires an unpacked reload; more platforms/Workday and human correction-time measurement remain separate RB-10 work. A5 evidence: [approved answer verification](docs/approved-answers-verification.md). Migrations016–017 are installed; hosted integration state is recorded separately. A4 evidence: [submission package verification](docs/submission-packages-verification.md). Migration015 is installed. A3 evidence: [flexible document verification](docs/flexible-documents-verification.md), migration014. A2 evidence: [saved jobs verification](docs/saved-jobs-verification.md), migration013. A2/A6 select and open a working resume for preparation; A4 preserves exact file bytes and user-reported details without claiming employer receipt. New custom-section AI selection remains PhaseB. External Gmail setup waits do not block A9/A10. Optional fixes may move earlier when they unblock daily use; the development certificate-trust fix7630516 addressed an observed pre-authentication IMAP failure.
 
 ## Phase B — Analyze before applying, then improve the application
 
@@ -103,3 +103,12 @@ Complete Phase A before beginning new AI features unless the user changes that p
 Commercial billing/trial/refund implementation is conditional on a commercialization request; transparent value and data access are already covered by RB-14. Unattended mass apply, a broad job marketplace, a generic chatbot, a coding-practice platform and claims of detecting employer intent remain deferred.
 
 The [original 2024 roadmap](docs/archive/roadmap-2024.md) is preserved as historical context. Its proposals and unchecked boxes are not the current status or delivery order.
+
+
+### Daily-use extension fixes (0.5.0)
+
+- [x] Supplied LinkedIn layout: captured pay/workplace/employment details and full descriptions, stale-panel checks and detail retention.
+- [x] Site-specific generated application notes; migration018 installed, preserving edited comments.
+- [x] Explicit popup keyword coverage for selected resume or Master CV, with matched/missing terms, owned-source reads and stale-result checks. This is the deterministic first step; B1's broader evidence-based analysis remains planned.
+
+[Verification and limits](docs/extension-capture-score-verification.md). Stop after this requested scope; A7 is not started.

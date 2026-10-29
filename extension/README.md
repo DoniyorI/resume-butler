@@ -1,6 +1,16 @@
 # Resume Butler Chrome extension
 
-Save openings before applying, choose a working resume, and automatically track submissions on LinkedIn Easy Apply, Greenhouse, Lever and Ashby. Version0.4.0 also offers reviewed filling on English Lever application forms. Plain Manifest V3: no build step.
+Save openings before applying, choose a working resume, compare job keywords, and automatically track submissions on LinkedIn Easy Apply, Greenhouse, Lever and Ashby. Version0.5.0 includes updated LinkedIn capture; reviewed filling remains available on English Lever application forms. Plain Manifest V3: no build step.
+
+## Job details and resume comparison (0.5.0)
+
+LinkedIn's generated-class layout is read using posting-linked metadata and the **About the job** expandable description. Salary, workplace and employment chips are tied to the current posting, including search-result links. The reader rejects a panel still showing another job during navigation, captures details after they finish loading, and preserves them when confirmation pages show little. Generated class changes do not affect this path. Geographic location is only captured when provided; **Remote** does not imply a particular city. Published metadata pay takes priority over a different range in the description. Missing or ambiguous details still require review. Older selectors and matching structured job data remain supported.
+
+In the toolbar popup, choose a working resume or leave **Master CV / decide later**, then select **Compare with job**. The **Resume match** panel shows unweighted keyword coverage and expandable matched/missing terms using the app's existing deterministic checker. Only visible selected-resume content counts; Master CV comparison includes owned skills, experience, projects, education, certifications and custom sections. It uses the current description in **Review captured details**, including your corrections, and the saved resume/CV at request time. Changing source or description clears the result; compare again after editing the source elsewhere. No recognized terms means no numeric score.
+
+This is wording coverage, not proficiency, interview probability, experience-duration/eligibility verification or PDF readability. It makes no AI calls. Comparison is an explicit popup action: resume contents remain server-side, and the posting page receives neither your resume nor the result. The connection and current tab are checked before returning results; changed contexts require another comparison. Saving and recording remain available when comparison fails.
+
+Migration **018** gives new extension-created applications source notes such as **Added from LinkedIn**, derived from the posting link. It also replaces untouched generic extension notes; edited notes remain unchanged. Migration018 is installed in the configured project. No other schema change, permission or dependency is needed. [Verification and limits](../docs/extension-capture-score-verification.md). Reload the unpacked extension after updating.
 
 ## Reviewed Lever filling (0.4.0)
 

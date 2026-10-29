@@ -24,6 +24,7 @@ const RECENT_LIMIT = 10;
 // A confirmation page can be reloaded or revisited; report each job once a day
 const REPORT_COOLDOWN_MS = 24 * 60 * 60 * 1000;
 const RETRY_ALARM = "retry-queue";
+let scoreEpoch = 0;
 
 // --- Storage helpers ---
 
@@ -86,6 +87,7 @@ async function connect(token, origin) {
   if (!response.ok) return { ok: false };
   const me = await response.json();
   if (!me.userId) return { ok: false };
+  scoreEpoch++;
   autofillReview.clear();
   const previous = await getLocal("connection", null);
   if (previous?.userId !== me.userId || previous?.origin !== origin) await setLocal({ recent: [], reported: {} });
@@ -280,7 +282,11 @@ async function undo(id) {
 
 async function rememberJob(key, job) {
   const { jobs = {} } = await chrome.storage.session.get("jobs");
-  jobs[key] = job;
+  const merged = { ...job };
+  for (const field of ["company", "role", "location", "url", "description", "salary", "employmentType", "workplaceType"]) {
+    if (!merged[field] && jobs[key]?.[field]) merged[field] = jobs[key][field];
+  }
+  jobs[key] = merged;
   await chrome.storage.session.set({ jobs });
 }
 
@@ -325,6 +331,22 @@ const popupHandlers = {
   "autofill-select": message => autofillReview.selectAnswer(message),
   "autofill-fill": message => autofillReview.fill(message),
   "autofill-copy": message => autofillReview.copyField(message),
+  "job-score": async message => {
+    const epoch = scoreEpoch;
+    const account = await connectedAccount();
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    const matchesTab = candidate => candidate?.id === message.tab?.id && candidate?.url === message.tab?.url;
+    if (message.account?.userId !== account.userId || message.account?.origin !== account.origin || !matchesTab(tab)) {
+      throw new NotConnectedError("The account or job tab changed. Reopen the popup.");
+    }
+    const result = await api("/api/extension/job-score", { method: "POST", expectedAccount: account,
+      body: { jobDescription: message.jobDescription, resumeId: message.resumeId || null } });
+    const [current, tabs] = await Promise.all([connectedAccount(), chrome.tabs.query({ active: true, currentWindow: true })]);
+    if (scoreEpoch !== epoch || current.token !== account.token || current.userId !== account.userId || current.origin !== account.origin || !matchesTab(tabs[0])) {
+      throw new NotConnectedError("The account or job tab changed. Compare again from the current page.");
+    }
+    return result;
+  },
   record: (message) => record(message.job, message.account),
   "capture-context": async (message) => {
     const account = await connectedAccount();
@@ -360,6 +382,7 @@ const popupHandlers = {
     return { ok: true };
   },
   disconnect: async () => {
+    scoreEpoch++;
     autofillReview.clear();
     await chrome.storage.local.remove(["connection", "recent"]);
     return { ok: true };
@@ -375,14 +398,14 @@ async function openConnect(origin) {
 
 // Context events invalidate pending reads as well as published reviews. Two
 // sequential async snapshots alone cannot detect a switch between them.
-chrome.tabs.onActivated?.addListener(() => autofillReview.clear());
+chrome.tabs.onActivated?.addListener(() => { scoreEpoch++; autofillReview.clear(); });
 chrome.tabs.onUpdated?.addListener((tabId, changes) => {
-  if (changes.url !== undefined || changes.status === "loading" || changes.discarded === true) autofillReview.invalidateTab(tabId);
+  if (changes.url !== undefined || changes.status === "loading" || changes.discarded === true) { scoreEpoch++; autofillReview.invalidateTab(tabId); }
 });
-chrome.tabs.onRemoved?.addListener(tabId => autofillReview.invalidateTab(tabId));
-chrome.windows?.onFocusChanged?.addListener(() => autofillReview.clear());
+chrome.tabs.onRemoved?.addListener(tabId => { scoreEpoch++; autofillReview.invalidateTab(tabId); });
+chrome.windows?.onFocusChanged?.addListener(() => { scoreEpoch++; autofillReview.clear(); });
 chrome.storage.onChanged?.addListener((changes, area) => {
-  if (area === "local" && changes.connection) autofillReview.clear();
+  if (area === "local" && changes.connection) { scoreEpoch++; autofillReview.clear(); }
 });
 
 const fromPopup = (sender) => !sender.tab && sender.url?.startsWith(chrome.runtime.getURL(""));

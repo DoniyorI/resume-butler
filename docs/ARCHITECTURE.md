@@ -118,7 +118,7 @@ src/
   lib/                       Safe on client and server: constants, dates, redirects, safeUrl,
                              salary, jobDetails, emailCategories, postJson, utils, supabase clients
   server/                    Server-only ("server-only" import), reusable by actions, routes, cron, extension
-supabase/migrations/         SQL schema, applied in order (001–017)
+supabase/migrations/         SQL schema, applied in order (001–018)
 extension/                   Chrome extension (see its README)
 docs/                        This file, the extension plan
 public/image/                Logo, illustrations, Lottie animations
@@ -458,3 +458,10 @@ Migration015 adds private `resume_artifacts` and append-only `application_submis
 ### Reliability review (October 29, 2026)
 
 AI/email quota checks fail closed without an explicit grant; PDF-only quota-service availability retains its logged fallback. CI runs lint/tests/build with placeholder configuration and no production secrets. Public `/privacy` documents current integration data flows. Cron reports capacity/time-budget backlog without inbox data. See [review follow-up and retained tradeoffs](review-follow-up-2026-10-29.md).
+
+
+### Extension capture and keyword comparison (0.5.0)
+
+The extension reads the newer LinkedIn layout using current-posting metadata links and its semantic About the job section, rejects stale SPA panels, and preserves captured details through confirmation. Migration018 changes generated source notes without modifying ingestion fingerprints or edited comments. It is installed; the next migration is019.
+
+`POST /api/extension/job-score` uses extension bearer authentication and a dedicated owned-source service. It compares the popup description with a selected resume or Master CV using the existing ATS keyword rules and returns unweighted coverage plus matched/missing terms. It does not return resume contents, call AI or write applications. The popup invalidates changed inputs; the worker checks account, token and tab context. [Verification and limitations](extension-capture-score-verification.md).

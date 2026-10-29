@@ -65,9 +65,15 @@
   const currentJobId = () => site.jobId(new URL(window.location.href));
 
   // Save what the posting says, so the confirmation page (which shows little) can use it
+  let lastCapture = "";
   function capture() {
+    if (site.successUrl?.test(window.location.pathname)) return;
     const job = globalThis.RB_readJob(site);
-    if (job) send({ type: "job-seen", key: keyFor(job.jobId), job });
+    if (!job) return;
+    const key = keyFor(job.jobId), signature = JSON.stringify({ key, job });
+    if (signature === lastCapture) return;
+    lastCapture = signature;
+    send({ type: "job-seen", key, job });
   }
 
   // Prefer what was read on the posting; fill gaps from this page
@@ -123,8 +129,9 @@
       lastUrl = window.location.href;
       // Moved to another job: a click on the last one no longer counts
       if (clickedJobId && currentJobId() !== clickedJobId) clickedJobId = null;
-      capture();
     }
+    // Detail panels can finish loading after the SPA URL changes.
+    capture();
     if (site.successUrl?.test(window.location.pathname)) {
       onSubmitted();
     } else if (clickedJobId && !successTextBeforeClick && successTextShowing()) {

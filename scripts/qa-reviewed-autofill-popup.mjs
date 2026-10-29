@@ -58,7 +58,7 @@ await page.addInitScript(jobUrl => {
 }, jobUrl);
 await context.route("**/*", async route => {
   const path = new URL(route.request().url()).pathname;
-  if (!/^\/(?:popup\/(?:popup\.html|popup\.css|popup\.js|autofill\.js)|icons\/icon-32\.png)$/.test(path)) return route.abort();
+  if (!/^\/(?:popup\/(?:popup\.html|popup\.css|popup\.js|autofill\.js|job-score\.js)|icons\/icon-32\.png)$/.test(path)) return route.abort();
   try {
     const body = await readFile(new URL(`../extension${path}`, import.meta.url));
     await route.fulfill({ body, contentType: path.endsWith(".css") ? "text/css" : path.endsWith(".js") ? "text/javascript" : path.endsWith(".png") ? "image/png" : "text/html" });
