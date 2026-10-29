@@ -9,9 +9,7 @@ import { HttpError } from "@/server/http";
 // getUser() round-trip.
 export const getCurrentUser = cache(async () => {
   const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await verifiedUser(supabase);
   return { supabase, user };
 });
 
@@ -29,12 +27,24 @@ export async function requirePageUser() {
 // getUser() validates the session with Supabase, unlike getSession().
 export async function requireUser() {
   const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await verifiedUser(supabase);
 
   if (!user) throw new HttpError(401, "Unauthorized");
   return { supabase, user };
+}
+
+// Keep provider outages distinct from a definitive missing/invalid session.
+async function verifiedUser(supabase) {
+  let result;
+  try { result = await supabase.auth.getUser(); }
+  catch { throw new HttpError(503, "Sign-in verification is temporarily unavailable. Please retry shortly."); }
+  if (result.error) {
+    if ([400,401,403].includes(result.error.status)) return null;
+    // An auth/network outage must not bounce a valid local session between
+    // a protected page and the middleware’s authenticated-login redirect.
+    throw new HttpError(503, "Sign-in verification is temporarily unavailable. Please retry shortly.");
+  }
+  return result.data?.user || null;
 }
 
 // How long after following a password reset link the new password can be set

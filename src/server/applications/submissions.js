@@ -15,7 +15,11 @@ export const submissionInput = z.object({
   submittedOn: recordedDate, supersedesId: uuid.nullable().default(null),
   notes: z.string().trim().max(5000).default(""),
   answers: z.array(z.object({ question: z.string().max(1000), answer: z.string().max(10000) })).max(30).default([]),
+  answerSelections: z.array(z.object({ id: uuid, revision: z.number().int().min(1) }).strict()).max(20).default([]),
 }).superRefine((input, context) => {
+  if (new Set(input.answerSelections.map(item => item.id)).size !== input.answerSelections.length || input.answerSelections.length + input.answers.length > 30) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ["answerSelections"], message: "Choose each answer once, with at most 30 answers total." });
+  }
   if (input.kind === "export" ? !input.artifactId || input.resumeId : input.kind === "selected" ? !input.resumeId || input.artifactId : input.artifactId || input.resumeId) {
     context.addIssue({ code: z.ZodIssueCode.custom, message: "Choose one source for this recorded version." });
   }
@@ -35,6 +39,7 @@ export function preparePdfArtifact(value) {
 export function archiveError(error) {
   if (["PGRST202", "42883", "42703", "42P01", "PGRST205"].includes(error?.code)) throw new HttpError(503, "Submission archive setup is pending (migration 015). Your version has not been recorded; please retry after setup.");
   if (error?.code === "P0002") throw new HttpError(404, "That application, file or resume is no longer available.");
+  if (error?.code === "PT409") throw new HttpError(409, "A selected answer changed or is no longer approved. Review and reselect the latest approved version.");
   if (error?.code === "55000") throw new HttpError(409, "This capture request changed. Review the details and create a new record.");
   if (error?.code === "22023") throw new HttpError(400, "Check the file and submission details.");
   if (error?.code === "54000") throw new HttpError(507, "Your private PDF archive has reached its 200 MB capacity. Existing records are safe. Contact the app operator to increase capacity.");
@@ -58,6 +63,8 @@ export async function captureSubmission(admin, userId, input, { bytes, fileName 
   const artifact = bytes ? preparePdfArtifact(bytes) : null;
   const filename = fileName ? String(fileName).replace(/[\r\n\\/]/g, "-").replace(/\.pdf$/i, "").slice(0, 196) + ".pdf" : null;
   const intent = { ...input, pdfSha256: artifact?.sha256 || null, filename };
+  // Empty new fields must not invalidate already accepted A4 retry fingerprints.
+  if (!input.answerSelections?.length) delete intent.answerSelections;
   const requestHash = createHash("sha256").update(JSON.stringify(intent)).digest("hex");
   const { data, error } = await admin.rpc("capture_application_submission", {
     p_user_id: userId, p_event_id: input.eventId,

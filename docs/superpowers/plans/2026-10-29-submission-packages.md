@@ -19,7 +19,7 @@ Execute inline on main after A3 and the review reliability fixes. Scope: RB-02; 
 - [x] Application detail package capture/review UI: explicit source selection, recorded date, optional correction note, uploaded file and honest source labels. Separate frozen versions from editable linked documents.
 - [x] Read-only package/archive page with frozen JD and original file download, including packages whose application was deleted. Link from Documents. Freeze known answers where available; A5 will supply the manual library.
 - [x] Synthetic exported-byte equality, edit/delete-after-capture, upload/retry/ownership/concurrency, desktop/mobile and actual-file checks. Full tests/lint/isolated build; fresh independent review/material fixes; migration applied. See [evidence](../../submission-packages-verification.md).
-- [ ] Commit/push and record hosted CI/deployment in the continuation checkpoint.
+- [x] Commit/push and record hosted CI/deployment in the continuation checkpoint. Commit `76a80fd`; [CI](https://github.com/DoniyorI/resume-butler/actions/runs/40885180769) and [Vercel](https://vercel.com/doniyoris-projects/resume-butler/7HBSWqx2GJAX1tBFoSD2nDmybPeM) succeeded.
 
 Storage decision: private bounded Postgres bytes rather than object keys keep upload and package creation atomic. Enforce3MiB/file and200MiB PDF bytes/account, with an explicit capacity error. Individual frozen-record deletion is not implemented; profile/account cascade includes bytes and privacy disclosure explains operator removal. The trusted export RPC may retain an already owned render snapshot if its source disappears during compilation; any surviving foreign source is rejected. Capture from selected working content independently checks and locks the owned row.
 

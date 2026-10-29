@@ -118,7 +118,7 @@ src/
   lib/                       Safe on client and server: constants, dates, redirects, safeUrl,
                              salary, jobDetails, emailCategories, postJson, utils, supabase clients
   server/                    Server-only ("server-only" import), reusable by actions, routes, cron, extension
-supabase/migrations/         SQL schema, applied in order (001–015)
+supabase/migrations/         SQL schema, applied in order (001–017)
 extension/                   Chrome extension (see its README)
 docs/                        This file, the extension plan
 public/image/                Logo, illustrations, Lottie animations
@@ -410,7 +410,7 @@ Full details in [extension/README.md](../extension/README.md) and [docs/chrome-e
 | Variable | Where it's used |
 |---|---|
 | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase clients (public) |
-| `SUPABASE_SERVICE_ROLE_KEY` | Service-role client: cron, extension API, auth rate limits (server only) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Service-role client: cron, extension API, auth rate limits, PDF/submission archival (server only) |
 | `OPENAI_API_KEY`, `OPENAI_MODEL` and task-specific `OPENAI_*_MODEL` overrides (optional) | AI features |
 | `APP_ENCRYPTION_KEY` | Encrypting stored email passwords (`openssl rand -base64 32`) |
 | `CRON_SECRET` | Authorizes Vercel Cron |
@@ -449,6 +449,10 @@ Schema2 keeps legacy resume arrays and adds certifications, stable-ID custom sec
 ### Frozen submission versions (A4)
 
 Migration015 adds private `resume_artifacts` and append-only `application_submissions`. PDF downloads archive the exact returned bytes; page-fit checks do not. Application details explicitly record an app export, uploaded PDF, unverified working snapshot or no-file version, with frozen job context/answers. Corrections append records. Source document/application deletion preserves the archive; account/profile cascade removes it. Service-only write RPCs enforce ownership, hash checks, per-account locking and event/fingerprint replay. Authenticated reads stay owned; file downloads verify SHA-256. `/submissions` is linked from Documents. Bounded private Postgres bytes keep upload/package writes atomic (3MiB/file,200MiB PDF bytes/account); account removal and individual-retention limits are disclosed in `/privacy`. See [verification and decisions](submission-packages-verification.md).
+
+### Approved reusable answers (A5)
+
+`reusable_answers` holds current user-authored content; immutable `reusable_answer_versions` retain snapshots and account-bound command receipts. Session-owned RPCs enforce expected revisions and explicit draft/approve/archive/restore actions. Permanent deletion removes history but retains content-free deletion IDs to block delayed resurrection. `/answers` rechecks approved current versions before copying and provides clipboard fallback and local conflict recovery. Capture resolves explicit metadata-only selections under SQL locks, freezes actual text/version, and preserves old A4 empty-selection fingerprints. Library export is one consistent SQL snapshot, streamed to the browser; full account export remains A10. Migrations016–017 and [verification](approved-answers-verification.md) cover ownership, concurrency, UI checks and the explicit PT409 business-conflict rule. Auth transport/provider failures return503 rather than treating an outage as sign-out.
 
 ### Reliability review (October 29, 2026)
 

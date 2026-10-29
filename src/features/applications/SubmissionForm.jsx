@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Check, Loader2, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,7 +16,7 @@ const sources = [
 ];
 const selectClass = "h-10 w-full rounded-md border border-input bg-background px-3 text-sm focus:outline-none focus:ring-2 focus:ring-ring";
 
-export default function SubmissionForm({ applicationId, initialDate, exports, resumes, records }) {
+export default function SubmissionForm({ applicationId, initialDate, exports, resumes, records, answers: libraryAnswers = [], answerMessage = "" }) {
   const router = useRouter();
   const event = useRef(null);
   const [open, setOpen] = useState(false);
@@ -46,6 +47,7 @@ export default function SubmissionForm({ applicationId, initialDate, exports, re
       artifactId: fields.get("artifactId") || null, resumeId: fields.get("resumeId") || null,
       submittedOn: date, notes: fields.get("notes") || "", supersedesId: fields.get("supersedesId") || null,
       answers: answers ? [{ question: "Submitted answers", answer: answers }] : [],
+      answerSelections: fields.getAll("answerSelection").map(value => { const [id, revision] = String(value).split(":"); return { id, revision: Number(revision) }; }),
     }));
     if (kind === "upload") payload.set("pdf", file);
     setBusy(true); setError("");
@@ -53,7 +55,12 @@ export default function SubmissionForm({ applicationId, initialDate, exports, re
       const response = await fetch("/api/submissions", { method: "POST", body: payload });
       const result = await response.json();
       if (!response.ok) {
-        if (response.status === 409) event.current = null;
+        if (response.status === 409) {
+          event.current = null;
+          // Refresh server-owned choices while retaining this mounted form’s
+          // local notes/file. A new revision has a new key and stays unchecked.
+          router.refresh();
+        }
         throw new Error(result.error || "The version could not be recorded.");
       }
       event.current = null; setOpen(false); setKind(""); router.refresh();
@@ -73,6 +80,7 @@ export default function SubmissionForm({ applicationId, initialDate, exports, re
       {kind === "upload" && <label className="block space-y-2 text-sm font-medium">Submitted PDF<Input type="file" name="pdf" accept="application/pdf,.pdf" required className="h-auto py-2" /><span className="block text-xs font-normal text-muted-foreground">Upload the original file you sent. Its bytes stay unchanged.</span></label>}
       {kind === "selected" && <label className="block space-y-2 text-sm font-medium">Working resume<select name="resumeId" className={selectClass} required defaultValue=""><option value="">Choose a resume…</option>{resumes.map(resume => <option key={resume.id} value={resume.id}>{resume.title || "Untitled resume"}</option>)}</select><span className="block text-xs font-normal text-muted-foreground">This records its current saved content. It does not reconstruct an earlier version.</span></label>}
       <label className="block space-y-2 text-sm font-medium">Date submitted<Input type="date" required value={date} onChange={e => setDate(e.target.value)} /></label>
+      <fieldset className="space-y-2"><legend className="mb-2 text-sm font-medium">Approved library answers <span className="font-normal text-muted-foreground">(optional)</span></legend><p className="text-xs leading-relaxed text-muted-foreground">Choose only the versions you actually used. <Link href="/answers" target="_blank" rel="noopener noreferrer" className="font-medium text-brand hover:underline">Review your library ↗</Link></p>{answerMessage && <p className="text-xs text-muted-foreground">{answerMessage}</p>}{libraryAnswers.length ? <div className="max-h-56 space-y-2 overflow-y-auto rounded-md border bg-background p-3">{libraryAnswers.map(answer => <label key={`${answer.id}:${answer.revision}`} className="flex items-start gap-2 text-sm"><input type="checkbox" name="answerSelection" value={`${answer.id}:${answer.revision}`} className="mt-1 accent-brand" /><span className="min-w-0 break-words"><span className="font-medium">{answer.label}</span><span className="block text-xs text-muted-foreground">Version {answer.revision} · {answer.question}</span></span></label>)}</div> : !answerMessage && <p className="text-xs text-muted-foreground">No approved answers yet. Create and approve one in your library, then refresh this page.</p>}</fieldset>
       <label className="block space-y-2 text-sm font-medium">Answers used <span className="font-normal text-muted-foreground">(optional)</span><Textarea name="answers" rows={3} maxLength={10000} placeholder="Paste the questions and the answers you actually sent." /></label>
       <label className="block space-y-2 text-sm font-medium">Note <span className="font-normal text-muted-foreground">(optional)</span><Textarea name="notes" rows={2} maxLength={5000} placeholder="For example: uploaded through the company’s careers page." /></label>
       {records.length > 0 && <label className="block space-y-2 text-sm font-medium">Corrects an earlier record <span className="font-normal text-muted-foreground">(optional)</span><select name="supersedesId" defaultValue="" className={selectClass}><option value="">New submission / no correction</option>{records.map(record => <option key={record.id} value={record.id}>{record.submitted_on} · {record.resume_title || "No file"} · {record.id.slice(0, 8)}</option>)}</select><span className="block text-xs font-normal text-muted-foreground">A correction adds a new record. The original remains available.</span></label>}

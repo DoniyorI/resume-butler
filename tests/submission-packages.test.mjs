@@ -57,6 +57,17 @@ test("retry fingerprints bind selected intent and exact uploaded bytes", async (
   assert.notEqual(hashes[0], hashes[2]);
 });
 
+test("approved answer selections preserve A4 fingerprints when empty", async () => {
+  const { submissionInput, captureSubmission } = await load();
+  const base = { eventId: event, applicationId: resume, kind: "unknown", submittedOn: "2026-10-29" };
+  const selected = submissionInput.parse({ ...base, answerSelections: [{ id: user, revision: 2 }] });
+  assert.deepEqual(selected.answerSelections, [{ id: user, revision: 2 }]);
+  let hash;
+  await captureSubmission({ rpc: async (name,args) => { hash=args.p_input.requestHash; return { data:{id:event},error:null }; } }, user, submissionInput.parse(base));
+  assert.equal(hash, "f2e5c7b16ccf1d0a3ea2f4a2d7ab63605d808c3ad7965c7b98bd7f801a6e5b11");
+  assert.equal(submissionInput.safeParse({ ...base, answerSelections: [{id:user,revision:1},{id:user,revision:1}] }).success, false);
+});
+
 // Request parsing must enforce a streamed limit before buffering multipart input.
 test("upload parsing bounds a body with no declared content length", async () => {
   const { readSubmissionRequest } = await load();

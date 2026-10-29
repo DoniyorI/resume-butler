@@ -189,10 +189,11 @@ No split changes existing ownership, truthful-content or test requirements. Futu
 
 **Depends on:** RB-09A manual library uses owned user-authored facts; RB-09B AI drafts depend on RB-04 facts and RB-06 provenance. **Touches:** new answer feature and owned store, profile/editor integration, shared drafting service and extension trusted UI.
 
-- [ ] Store approved reusable facts and accomplishment stories with source references, categories and editable versions.
-- [ ] Support common questions and contextual drafts; distinguish a factual stored answer from a job-specific adaptation.
-- [ ] Keep salary, authorization, relocation and demographic answers user-controlled, optional and never guessed.
-- [ ] Offer copy buttons first, before broad form automation; include approved answers in submission packages where known.
+- [x] A5 stores user-authored facts/stories with optional references, categories, revision history and explicit approval. [Verification](../../approved-answers-verification.md).
+- [x] Common questions and manual drafts are supported; current approved content is distinct from an unapproved edit.
+- [ ] Job-specific AI drafts remain Phase B; distinguish adaptations from factual stored answers.
+- [x] Salary, authorization, relocation and demographic answers remain user-controlled, optional and never guessed.
+- [x] Copy buttons precede form automation; explicitly selected approved answers are frozen in submission packages.
 
 **Done when:** Repeated questions can be answered from approved material without invented claims, stale answers are identifiable, and users can edit/delete/export their library.
 
