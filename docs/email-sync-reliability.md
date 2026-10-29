@@ -1,6 +1,6 @@
 # Email sync: matching, models and reliability
 
-Investigation and synthetic QA: October 27, 2026. Changes remain uncommitted.
+Initial investigation and synthetic QA: October 27, 2026. Current rollout status is recorded in [ROADMAP.md](../ROADMAP.md) and the milestone verification notes.
 
 ## How an email connects to an application
 
@@ -134,3 +134,11 @@ Local evidence is under `/tmp/resume-butler-email-*`, `/tmp/resume-butler-browse
 6. Expand the labeled model corpus, including multilingual emails and uncommon role/company names. Confidence is model-reported, not a calibrated correctness probability.
 
 Gmail OAuth would improve connection setup and token revocation, but does not itself solve matching, replay, backlog or transaction integrity.
+
+## Local certificate trust and connection errors — October 29, 2026
+
+A real local scan failed with `UNABLE_TO_VERIFY_LEAF_SIGNATURE` before authentication. A credential-free TLS probe to `imap.gmail.com:993` reproduced the failure with plain Node24; the same probe with `--use-system-ca` completed with `authorized:true`. Both probes required certificate verification and sent no credentials or mailbox commands.
+
+The development script now uses Node24's system CA store. IMAP explicitly retains `rejectUnauthorized:true`. TLS failures return502 with a certificate explanation; reachability/timeouts return503; provider authentication rejection returns400 with provider-appropriate credential guidance. Logs retain only error code/source rather than raw error objects. The stored password and actual inbox contents were not accessed during this diagnosis.
+
+Verification:190 Node tests pass, including certificate/auth/network error separation, explicit strict-TLS configuration and the sync error path with credential-safe logging. Lint and isolated production build pass. Independent review found no material issue. Successful TLS establishes transport trust; it does not prove the saved app password or a complete inbox scan succeeds.

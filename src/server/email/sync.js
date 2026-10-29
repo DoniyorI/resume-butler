@@ -2,6 +2,7 @@ import "server-only";
 import { CATEGORY_STATUS, MIN_CONFIDENCE, classifyEmail, isCandidateEmail } from "@/server/email/classify";
 import { encryptStoredPassword, getConnectionCredentials, markScanned } from "@/server/email/connection";
 import { fetchEmails } from "@/server/email/imapClient";
+import { emailConnectionError } from "@/server/email/connectionErrors";
 import { isAllowedImapHost } from "@/server/email/imapHosts";
 import { decideEmailApplication, normalizeCompany, shouldUpdateStatus } from "@/server/email/matching";
 import { resolveScanOptions } from "@/server/email/scanOptions";
@@ -143,11 +144,8 @@ async function scanEmailsForUser(supabase, userId, options) {
   try {
     emails = await fetchEmails(credentials, { since, before, timeoutMs: Math.max(1, deadlineAt - Date.now() - 10_000) });
   } catch (imapErr) {
-    console.error("IMAP error:", imapErr);
-    throw new HttpError(
-      400,
-      "Failed to connect to email. Check your credentials and ensure you're using an App Password for Gmail."
-    );
+    console.error("IMAP connection failed", { code: imapErr?.code || "unknown", source: imapErr?.source || "unknown" });
+    throw emailConnectionError(imapErr);
   }
 
   // Encrypt a legacy plaintext password now that we know it works

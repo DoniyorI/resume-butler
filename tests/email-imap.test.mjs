@@ -4,6 +4,8 @@ import { mock, test } from "node:test";
 
 class SilentImap extends EventEmitter {
   static ready = false;
+  static options;
+  constructor(options) { super(); SilentImap.options = options; }
   connect() { if (SilentImap.ready) queueMicrotask(() => this.emit("ready")); }
   serverSupports() { return false; }
   openBox(_name, readOnly, callback) { assert.equal(readOnly, true); callback(null); }
@@ -38,5 +40,7 @@ test("an IMAP search exceeding the transport cap reports omitted messages", asyn
       since: new Date("2026-10-20"), before: new Date("2026-10-28"),
     });
     assert.equal(result.truncated, 1);
+    assert.equal(SilentImap.options.tls, true);
+    assert.equal(SilentImap.options.tlsOptions.rejectUnauthorized, true);
   } finally { SilentImap.ready = false; }
 });

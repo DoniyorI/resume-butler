@@ -53,7 +53,7 @@ Requirements: Node.js 24.x, a Supabase project, and an OpenAI API key.
    ```bash
    npm run dev
    ```
-   Then open http://localhost:3000.
+   Then open http://localhost:3000. The dev script uses Node24's system CA store so locally trusted certificate chains also work for secure IMAP connections.
 
 ### Deploying to Vercel
 

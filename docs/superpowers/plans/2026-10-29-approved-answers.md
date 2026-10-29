@@ -20,7 +20,7 @@ Continue the approved personal-workflow program inline on main after A4. No AI d
 - [x] Submission metadata-only approved choices and explicit selection; SQL resolves and freezes selected text/version. No silent inclusion or re-approval.
 - [x] Synthetic browser checks, real concurrency, second-account isolation, stale changes, clipboard fallback, recovery, submission freeze/removal and desktop/mobile. Full tests/lint/isolated build, independent review and material fixes. [Evidence](../../approved-answers-verification.md).
 - [x] Apply016 once and follow-up017 without editing applied SQL. Record exact text/checksum and Success.
-- [ ] Commit/push and record hosted CI/deployment separately. Continue A6 without waiting for another instruction.
+- [x] Commit/push and record hosted CI/deployment separately. Commit `9fb7d79`; [CI](https://github.com/DoniyorI/resume-butler/actions/runs/40920740272) and [Vercel](https://vercel.com/doniyoris-projects/resume-butler/6xn5ZKobew2mznTr3favNKGpAtnW) succeeded. Continue A6; the owner-reported IMAP certificate failure was handled first as a bounded reliability fix.
 
 Decisions: complete export uses a single SQL snapshot/scalar JSON to avoid row limits and inconsistent history, followed by Unicode-safe HTTP streaming. It is assembled in memory, not a full-account paged exporter. Live provider testing required PT409 rather than reserved40001 for business conflicts;017 makes only that guarded replacement. The post-save list waits for fresh revisions before enabling actions. Temporary auth outages return503; verified/invalid-session behavior remains fail-closed.
 

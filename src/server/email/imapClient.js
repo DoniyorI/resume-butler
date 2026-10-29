@@ -79,7 +79,7 @@ export function fetchEmails({ host, user, password }, { since, before, maxMessag
       host: servername,
       port: IMAP_PORT,
       tls: true,
-      tlsOptions: { servername },
+      tlsOptions: { servername, rejectUnauthorized: true },
       connTimeout: 15_000,
       authTimeout: 15_000,
     });

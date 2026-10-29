@@ -3,8 +3,9 @@ import { beforeEach, mock, test } from "node:test";
 import { database } from "./helpers/database.mjs";
 
 let messages = [];
+let transportError = null;
 let answers = {};
-mock.module("@/server/email/imapClient", { namedExports: { fetchEmails: async () => messages } });
+mock.module("@/server/email/imapClient", { namedExports: { fetchEmails: async () => { if (transportError) throw transportError; return messages; } } });
 mock.module("@/server/openai", { namedExports: { chatJSON: async ({ user }) => {
   const subject = /Subject: (.*)/.exec(user)?.[1];
   if (!answers[subject]) throw new Error("Synthetic provider outage");
@@ -16,8 +17,16 @@ const userId = "00000000-0000-4000-8000-000000000010";
 
 beforeEach(() => {
   messages = [];
+  transportError = null;
   answers = {};
   process.env.APP_ENCRYPTION_KEY = Buffer.alloc(32, 7).toString("base64");
+});
+
+test("connection certificate failures keep their server status and never log credentials", async (t) => {
+  const log = t.mock.method(console, "error", () => {});
+  transportError = Object.assign(new Error("synthetic-password must not be logged"), { code: "UNABLE_TO_VERIFY_LEAF_SIGNATURE", source: "socket" });
+  await assert.rejects(syncEmailsForUser(setup(), userId), error => error.status === 502 && /certificate/i.test(error.message));
+  assert.deepEqual(log.mock.calls[0].arguments, ["IMAP connection failed", { code: "UNABLE_TO_VERIFY_LEAF_SIGNATURE", source: "socket" }]);
 });
 
 function setup() {
