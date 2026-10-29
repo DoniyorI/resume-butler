@@ -16,14 +16,56 @@ const CLASSIFY_CONCURRENCY = 10;
 const MAX_CLASSIFIED_PER_SCAN = 100;
 
 async function loadProcessedIds(supabase, userId, messageIds) {
-  if (messageIds.length === 0) return new Set();
-  const { data, error } = await supabase
-    .from("processed_emails")
-    .select("message_id, action_taken")
-    .eq("user_id", userId)
-    .in("message_id", messageIds);
-  if (error) throw error;
-  return new Set(data.filter((row) => row.action_taken !== "error").map((row) => row.message_id));
+  const processed = new Set();
+  const batches = [];
+  const oversized = new Set();
+  let batch = [];
+  let encodedBytes = 0;
+  // PostgREST puts IN filters in the URL. Bound encoded size as well as row
+  // count: 300 normal Message-IDs already exceeded the gateway/header limit.
+  // JSON quoting conservatively accounts for reserved characters and escapes.
+  const filterBudget = 4000;
+  for (const id of new Set(messageIds)) {
+    const bytes = new URLSearchParams({ id: JSON.stringify(id) }).toString().length + 3;
+    if (bytes > filterBudget) {
+      oversized.add(id);
+      continue;
+    }
+    if (batch.length >= 50 || encodedBytes + bytes > filterBudget) {
+      batches.push(batch);
+      batch = [];
+      encodedBytes = 0;
+    }
+    batch.push(id);
+    encodedBytes += bytes;
+  }
+  if (batch.length) batches.push(batch);
+  for (const ids of batches) {
+    const { data, error } = await supabase
+      .from("processed_emails")
+      .select("message_id, action_taken")
+      .eq("user_id", userId)
+      .in("message_id", ids);
+    if (error) throw error;
+    for (const row of data) {
+      if (row.action_taken !== "error") processed.add(row.message_id);
+    }
+  }
+  // An unusually long individual ID cannot safely be placed in any GET URL.
+  // Page only this user\'s history instead; preserve deduplication and retries.
+  if (oversized.size) {
+    for (let from = 0; ; from += 1000) {
+      const { data, error } = await supabase.from("processed_emails")
+        .select("message_id, action_taken").eq("user_id", userId)
+        .order("id").range(from, from + 999);
+      if (error) throw error;
+      for (const row of data) {
+        if (oversized.has(row.message_id) && row.action_taken !== "error") processed.add(row.message_id);
+      }
+      if (data.length < 1000) break;
+    }
+  }
+  return processed;
 }
 
 async function loadApplications(supabase, userId) {
