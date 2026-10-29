@@ -113,7 +113,7 @@ function PayInput({ id, value, onChange, placeholder }) {
   );
 }
 
-export default function ApplicationEditor({ application, statusHistory, resumeContent }) {
+export default function ApplicationEditor({ application, statusHistory, resumeContent, submissionPanel }) {
   const [form, dispatch] = useReducer(formReducer, application, initForm);
   const [saved, setSaved] = useState(() => initForm(application));
   const [editingDescription, setEditingDescription] = useState(!application.jobDescription);
@@ -465,6 +465,11 @@ export default function ApplicationEditor({ application, statusHistory, resumeCo
               />
             </CardContent>
           </Card>
+
+          <fieldset disabled={dirty || isSaving} className="min-w-0 space-y-2">
+            {dirty && <p className="text-xs text-muted-foreground">Save application changes before recording a version. The saved job description will be preserved.</p>}
+            {submissionPanel}
+          </fieldset>
 
           {resumeContent && description && (
             <AtsScanner resumeContent={resumeContent} initialJobDescription={description} />

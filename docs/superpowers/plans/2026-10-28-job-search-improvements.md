@@ -95,11 +95,11 @@ No split changes existing ownership, truthful-content or test requirements. Futu
 
 **Depends on:** RB-01. **Touches:** Application detail/editor and linked documents, `src/features/resumes/actions.js`, resume rendering/download services, new `src/server/applications/submissions.js`, owned submission metadata/private artifact storage and download endpoint.
 
-- [ ] Introduce append-only submission records containing submission time, original posting text/identity, source/provenance, selected document content/schema version, known answers, and confirmation evidence.
-- [ ] Preserve exact PDF bytes when the app generated/uploaded the selected artifact, with a private object key and hash. Regenerating later is not proof of the originally submitted file.
-- [ ] Let manual applications attach an actual file or explicitly record an unverified selected version; never claim the extension observed uploaded bytes when it did not.
-- [ ] Keep a working linked document editable; provide a separate submitted-version preview/download. Record corrections as a new event/version.
-- [ ] Test edit-after-submit, deleted source resume, repeated confirmation, failed upload/transaction, unauthorized reads and renderer changes. Define account deletion and orphan cleanup.
+- [x] Introduce append-only records containing the user-reported submission date, original posting text/identity, source/provenance, selected content/schema version, known answers and notes. Recorded time is separate from the reported submission date.
+- [x] Preserve exact generated/uploaded PDF bytes with a private artifact ID and hash. A4 chooses bounded private Postgres storage instead of object keys so file and capture metadata commit atomically. Regenerating later is not proof of the originally submitted file.
+- [x] Let manual applications attach a file or explicitly record an unverified selected version; never claim the extension observed uploaded bytes when it did not.
+- [x] Keep a working linked document editable; provide separate submitted-version review/download. Corrections append a record.
+- [x] Verify edit/delete-after-capture, replay/concurrent upload, atomic rollback and unauthorized reads. Downloads retrieve stored bytes without invoking the renderer. Profile/account cascade includes file bytes; individual removal currently uses the operator path. [A4 evidence and limits](../../submission-packages-verification.md).
 
 **Done when:** Editing or deleting a working resume leaves the recorded submitted artifact intact, and the UI distinguishes observed, user-confirmed and unknown submission details.
 

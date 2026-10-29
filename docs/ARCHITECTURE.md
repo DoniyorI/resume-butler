@@ -118,7 +118,7 @@ src/
   lib/                       Safe on client and server: constants, dates, redirects, safeUrl,
                              salary, jobDetails, emailCategories, postJson, utils, supabase clients
   server/                    Server-only ("server-only" import), reusable by actions, routes, cron, extension
-supabase/migrations/         SQL schema, applied in order (001–014)
+supabase/migrations/         SQL schema, applied in order (001–015)
 extension/                   Chrome extension (see its README)
 docs/                        This file, the extension plan
 public/image/                Logo, illustrations, Lottie animations
@@ -445,6 +445,10 @@ Schema2 keeps legacy resume arrays and adds certifications, stable-ID custom sec
 ### Document validation and recovery authority
 
 `documentSchema.js` (Zod) is the complete contract for supported document writes. Normalization adapts known legacy reads; SQL deliberately enforces the independent ownership, row-lock, revision/version and coarse size/shape boundary rather than duplicating every Zod rule. The editor detects unsupported data and offers read-only original-data recovery; PDF/scoring must not reinterpret unknown formats. `documentSave.js` serializes revision updates and latches409; recovery downloads retain local edits before an explicit latest-version reload.
+
+### Frozen submission versions (A4)
+
+Migration015 adds private `resume_artifacts` and append-only `application_submissions`. PDF downloads archive the exact returned bytes; page-fit checks do not. Application details explicitly record an app export, uploaded PDF, unverified working snapshot or no-file version, with frozen job context/answers. Corrections append records. Source document/application deletion preserves the archive; account/profile cascade removes it. Service-only write RPCs enforce ownership, hash checks, per-account locking and event/fingerprint replay. Authenticated reads stay owned; file downloads verify SHA-256. `/submissions` is linked from Documents. Bounded private Postgres bytes keep upload/package writes atomic (3MiB/file,200MiB PDF bytes/account); account removal and individual-retention limits are disclosed in `/privacy`. See [verification and decisions](submission-packages-verification.md).
 
 ### Reliability review (October 29, 2026)
 

@@ -17,6 +17,7 @@ The app uses Next.js + Supabase, server-owned auth/data access, a Master CV, res
 - [x] Email review queue and optional daily IMAP scans; locking, retries, hiring-cycle protections and transactional approval implemented locally.
 - [x] Supabase migrations 009–012 applied and synthetic concurrency/isolation checks recorded.
 - [x] Reliability review: fail-closed AI quotas, conflict/recovery UI, read-only newer documents, CI checks, public processing disclosure and cron backlog visibility. [Evidence and retained tradeoffs](docs/review-follow-up-2026-10-29.md).
+- [x] A4: preserved PDF bytes, frozen job descriptions/known answers, explicit source labels, corrections and a submission archive; migration 015 applied. [Verification and limits](docs/submission-packages-verification.md).
 - [x] A3: custom resume/Master CV sections, heading names, certifications and revision-protected saves; visible custom content exported and scanned. Migration 014 applied.
 - [x] A2: saved jobs workspace, corrected extension capture and intended resume selection; saving stays separate from applications. Migration 013 applied.
 - [x] RB-01: posting identity, account-bound retry receipts and explicit matching for ambiguous email/extension events. [Verification and limits](docs/application-identity-verification.md).
@@ -24,7 +25,7 @@ The app uses Next.js + Supabase, server-owned auth/data access, a Master CV, res
 - [x] Local/default model updated to GPT-6 Luna; task overrides remain available.
 - [x] Job-seeker/competitor research and this delivery roadmap prepared.
 
-Checked items describe existence of the recorded work, **not a claim that every local source change is deployed**. RB-01 verification: 152 tests, clean lint, an isolated production build, 32 disposable PostgreSQL assertions, live RPC concurrency/isolation and desktop/mobile browser checks. CSV currently exports loaded rows, not a complete account backup. The larger scoring/sections/onboarding/extension redesign remains planned.
+Checked items describe existence of the recorded work, **not a claim that every local source change is deployed**. RB-01 verification: 152 tests, clean lint, an isolated production build, 32 disposable PostgreSQL assertions, live RPC concurrency/isolation and desktop/mobile browser checks. CSV currently exports loaded rows, not a complete account backup. The wider scoring, guided onboarding and remaining extension work are planned; flexible sections and saved-job capture are implemented.
 
 ## Phase A — Streamline applications without new AI
 
@@ -44,7 +45,7 @@ Checked items describe existence of the recorded work, **not a claim that every 
 | A9 | Fix rule-based document checks and PDF readability | RB-03 plus deterministic PDF checks | Blank/hidden content cannot inflate checks; show what exported text actually contains |
 | A10 | Make records portable and progress understandable | RB-12A/RB-14A | Complete export and descriptive counts/rates, without AI advice or hiring predictions |
 
-A1–A3 are implemented and verified; A4 frozen submission packages is next. A3 evidence: [flexible document verification](docs/flexible-documents-verification.md). Migration 014 is installed. A2 evidence and limits: [saved jobs verification](docs/saved-jobs-verification.md). Migration 013 is installed; extension 0.3.0 requires an unpacked reload. Other items get bounded plans when reached. A3's existing AI compatibility is maintained through adapters, but new custom-section AI selection belongs in Phase B. A2 can select a working resume before applying; A4 adds verified/frozen submission binding. External Gmail setup waits do not block A9/A10. Optional small fixes can move earlier when they unblock daily use; record the reason here.
+A1–A4 are implemented and verified locally; A5 approved reusable answers is next. A4 evidence: [submission package verification](docs/submission-packages-verification.md). Migration 015 is installed; hosted integration state is recorded separately. A3 evidence: [flexible document verification](docs/flexible-documents-verification.md). Migration 014 is installed. A2 evidence and limits: [saved jobs verification](docs/saved-jobs-verification.md). Migration 013 is installed; extension 0.3.0 requires an unpacked reload. Other items get bounded plans when reached. A3's existing AI compatibility is maintained through adapters, but new custom-section AI selection belongs in Phase B. A2 selects a working resume before applying; A4 preserves exact file bytes and user-reported submission details without claiming employer receipt. External Gmail setup waits do not block A9/A10. Optional small fixes can move earlier when they unblock daily use; record the reason here.
 
 ## Phase B — Analyze before applying, then improve the application
 
@@ -65,7 +66,7 @@ References and proposed panel behavior are in [Career Ops and local persona revi
 
 Guided first-login onboarding for other users (RB-05), target-company alerts (RB-13), broader career/mobile polish, public launch, Chrome Web Store distribution, CAPTCHA and commercial billing are retained as later work. Basic ownership, privacy and data integrity apply from the start. Public rollout work does not lead the personal-use queue.
 
-Statuses: RB-01 / A1, RB-07A / A2 and RB-04A / A3 are verified; other Phase A/B product work is **planned** unless specifically recorded as verified in the baseline above. A prepared design is not an implemented feature. Stable RB identifiers are retained for cross-references; the A/B tables above supersede their former numeric execution order.
+Statuses: RB-01 / A1, RB-07A / A2, RB-04A / A3 and RB-02 / A4 are verified locally; other Phase A/B product work is **planned** unless specifically recorded as verified in the baseline above. A prepared design is not an implemented feature. Stable RB identifiers are retained for cross-references; the A/B tables above supersede their former numeric execution order.
 
 ## Completed first milestone: RB-01
 

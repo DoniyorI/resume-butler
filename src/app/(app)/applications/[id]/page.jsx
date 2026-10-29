@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import ApplicationEditor from "@/features/applications/ApplicationEditor";
+import SubmissionPanel from "@/features/applications/SubmissionPanel";
 import { getApplicationDetail } from "@/features/applications/data";
 
 export async function generateMetadata({ params }) {
@@ -18,6 +19,7 @@ export default async function ApplicationDetailPage({ params }) {
       application={detail.application}
       statusHistory={detail.statusHistory}
       resumeContent={detail.resumeContent}
+      submissionPanel={<SubmissionPanel application={detail.application} />}
     />
   );
 }

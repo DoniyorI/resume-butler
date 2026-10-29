@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { FileText, Mail, MoreHorizontal, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { Archive, FileText, Mail, MoreHorizontal, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -193,7 +193,7 @@ export default function DocumentLibrary({ documents }) {
     <div>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Documents</h1>
+          <div className="flex flex-wrap items-center gap-3"><h1 className="text-2xl font-semibold tracking-tight">Documents</h1><Link href="/submissions" className="inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted hover:text-foreground"><Archive className="h-3.5 w-3.5" />Submitted versions</Link></div>
           <p className="mt-1 text-sm text-muted-foreground">
             Resumes and cover letters, tailored to each job.
           </p>

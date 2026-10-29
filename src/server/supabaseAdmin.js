@@ -1,9 +1,9 @@
 import "server-only";
 import { createClient } from "@supabase/supabase-js";
 
-// Supabase client with the service role key: it bypasses row-level security,
-// so it's only for jobs with no signed-in user (the daily email sync). Every
-// query made with it must filter by user_id itself.
+// This client bypasses row-level security. Use only in trusted server jobs or
+// scoped archive RPCs. Derive user_id from auth, never from client input, and
+// enforce ownership independently in every query or service-only RPC.
 export function createAdminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY;

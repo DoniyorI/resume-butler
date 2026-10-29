@@ -43,7 +43,7 @@ Requirements: Node.js 24.x, a Supabase project, and an OpenAI API key.
    CRON_SECRET=                 # any long random string; Vercel Cron sends it
    NEXT_PUBLIC_EXTENSION_ID=    # optional: the published extension's ID
    ```
-3. **Database**: in the Supabase SQL editor, run each file in `supabase/migrations/` in order, `001` to `012`, as its own query. Each should report success. Migration 012 is required for identity-safe extension recording and email approval; missing functions leave work queued for retry.
+3. **Database**: in the Supabase SQL editor, run each file in `supabase/migrations/` in order, `001` to `015`, as its own query. Each should report success. Migration 012 enables identity-safe recording/approval, 013 saved jobs, 014 flexible documents, and 015 preserved submission versions. Run only unapplied migrations; never edit an applied file. Missing archive setup blocks new PDF archival/capture with a retry message.
 4. **Auth settings** in Supabase:
    - Authentication → URL Configuration: set **Site URL** to your production origin (for example, `https://resume-butler.vercel.app`; use `http://localhost:3000` for a local-only project).
    - Add `http://localhost:3000/**` to **Redirect URLs** for local development. For production, add `<your site>/auth/callback` and the glob pattern `<your site>/auth/callback\?next=**`, replacing `<your site>` with your production origin. The backslash makes `?` literal; `**` accepts the `next` value, including paths and encoded slashes. The app uses these query strings for email confirmation (`next=/profile`), password reset (`next=/reset-password`) and Google sign-in. See [Supabase's redirect URL rules](https://supabase.com/docs/guides/auth/redirect-urls).
@@ -88,5 +88,6 @@ Details: [extension/README.md](extension/README.md).
 | [CLAUDE.md](CLAUDE.md) | Coding conventions and rules for working in the codebase (for people and AI assistants) |
 | [ROADMAP.md](ROADMAP.md) | What's done and what's next |
 | [docs/email-sync-reliability.md](docs/email-sync-reliability.md) | Matching rules, model evaluation, QA evidence, migration 011 and remaining reliability limits |
+| [docs/submission-packages-verification.md](docs/submission-packages-verification.md) | Preserved submission files, source labels, ownership/retry checks and storage limits |
 | [docs/chrome-extension-plan.md](docs/chrome-extension-plan.md) | How the extension was designed and what's planned for it |
 | [extension/README.md](extension/README.md) | Installing, testing and how the extension works |
