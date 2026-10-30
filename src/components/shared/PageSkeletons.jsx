@@ -51,7 +51,7 @@ export function DashboardSkeleton() {
         <Skeleton className="h-[420px] rounded-xl" />
       </div>
       <div>
-        <Skeleton className="h-[410px] rounded-xl" />
+        <Skeleton className="h-[480px] rounded-xl" />
       </div>
     </div>
   );

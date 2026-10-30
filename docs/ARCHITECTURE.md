@@ -152,7 +152,7 @@ Redirects in `next.config.mjs`: `/cv` → `/profile`, `/resumes` and `/coverlett
 ## Features in depth
 
 ### Dashboard (`features/dashboard`)
-- `data.js` computes everything server-side from `applications` and `application_status_history`: totals and this week's count, response rate, offer rate, average days from Applied to first Interviewed, follow-ups (still at Applied 14+ days after applying, oldest first), recent applications, applications over time, status breakdown, and Sankey nodes and links (one All applications source feeding current-status counts; every application is counted once, including unchanged records).
+- `data.js` computes everything server-side from `applications` and `application_status_history`: totals and this week's count, response rate, offer rate, average days from Applied to first Interviewed, follow-ups (still at Applied 14+ days after applying, oldest first), recent applications, applications over time, status breakdown, and Sankey nodes and links (Applied/Reached Out entry streams, recorded interview milestone and shared current outcomes; unchanged records remain visible as waiting, missing entry history is explicit, and repeated status edits cannot inflate counts).
 - `GoalCard`: "apply to N jobs a day/week" with progress, streak and what's left (weeks start Monday; saved by `saveGoal` to `profiles.goal_period/goal_target`).
 - `SyncCard`: email connection status, pending suggestions, "Scan now", daily auto-sync toggle.
 - `Charts.jsx` is loaded through `LazyCharts.jsx` (dynamic import) to keep recharts out of the first load.

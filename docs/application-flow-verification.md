@@ -1,5 +1,7 @@
 # Application flow verification — 2026-10-29
 
+Superseded by the [application journey](application-journey-verification.md) on October 30. This records the earlier snapshot implementation.
+
 The former chart aggregated recorded transitions and dropped unlinked statuses. With 34 applications and only 3 recorded transitions it showed 3, split across Applied/Pending sources. The regression test reproduced 3 ≠ 34 before the fix.
 
 The chart now has one **All applications** source and one destination per current status. Each application contributes once; unchanged records count, and repeated/backward changes cannot inflate totals. Missing/unrecognized statuses remain visible as Unknown status. The description/tooltips describe a current-state snapshot rather than an inferred historical journey. Links use destination colors.

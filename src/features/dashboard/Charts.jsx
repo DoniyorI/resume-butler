@@ -273,7 +273,7 @@ function FlowNode({ x, y, width, height, payload }) {
         width={width}
         height={height}
         radius={3}
-        fill={STATUS_COLORS[payload.name] || BRAND_COLOR}
+        fill={STATUS_COLORS[payload.status] || BRAND_COLOR}
         fillOpacity={1}
       />
       <text
@@ -307,7 +307,7 @@ function FlowLink({
     <path
       d={`M${sourceX},${sourceY} C${sourceControlX},${sourceY} ${targetControlX},${targetY} ${targetX},${targetY}`}
       fill="none"
-      stroke={STATUS_COLORS[payload.target.name] || BRAND_COLOR}
+      stroke={STATUS_COLORS[payload.target.status] || BRAND_COLOR}
       strokeOpacity={0.45}
       strokeWidth={Math.max(1, linkWidth)}
     />
@@ -330,16 +330,18 @@ function FlowTooltip({ active, payload }) {
           <p className="font-medium">
             {data.source.name} → {data.target.name}
           </p>
-          <p className="text-muted-foreground">
-            {applicationsCount(value)} currently in {data.target.name}
-          </p>
+          <p className="text-muted-foreground">{applicationsCount(value)} followed this route</p>
         </>
       ) : (
         <>
           <p className="font-medium">{data.name}</p>
           <p className="text-muted-foreground">
             {applicationsCount(value)}{" "}
-            {data.kind === "total" ? "tracked in total" : "currently in this status"}
+            {data.kind === "entry"
+              ? "in this entry stream"
+              : data.kind === "milestone"
+                ? "reached interviews"
+                : "currently here"}
           </p>
         </>
       )}
@@ -361,7 +363,7 @@ function linkedFlow(flow) {
   };
 }
 
-// All tracked applications flowing to their current statuses, counted once.
+// Entry streams → recorded interview milestone → shared current outcomes.
 export function ApplicationFlow({ flow }) {
   const data = useMemo(() => linkedFlow(flow), [flow]);
   const hasFlow = data.links.length > 0;
@@ -369,24 +371,44 @@ export function ApplicationFlow({ flow }) {
     <Card>
       <CardHeader>
         <CardTitle className="text-lg">Application flow</CardTitle>
-        <CardDescription>Every tracked application, counted once at its current status</CardDescription>
+        <CardDescription>
+          {applicationsCount(flow.total)} · Entry → interviews → current outcome
+        </CardDescription>
       </CardHeader>
       <CardContent>
         {!hasFlow ? (
           <EmptyState>No applications yet</EmptyState>
         ) : (
-          <ChartContainer config={statusChartConfig} className="aspect-auto h-[300px] w-full">
-            <Sankey
-              data={data}
-              node={<FlowNode />}
-              link={<FlowLink />}
-              nodePadding={28}
-              nodeWidth={12}
-              margin={FLOW_MARGIN}
+          <>
+            <div
+              className="overflow-x-auto rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              role="region"
+              aria-label="Scrollable application journey"
+              tabIndex={0}
             >
-              <Tooltip content={<FlowTooltip />} />
-            </Sankey>
-          </ChartContainer>
+              <ChartContainer
+                config={statusChartConfig}
+                className="aspect-auto h-[360px] min-w-[640px] w-full"
+              >
+                <Sankey
+                  data={data}
+                  node={<FlowNode />}
+                  link={<FlowLink />}
+                  nodePadding={32}
+                  nodeWidth={12}
+                  margin={FLOW_MARGIN}
+                >
+                  <Tooltip content={<FlowTooltip />} />
+                </Sankey>
+              </ChartContainer>
+            </div>
+            <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+              Interviews reflect recorded history; waiting applications remain included.
+              {flow.unknownStarts > 0 &&
+                ` Unknown start: ${applicationsCount(flow.unknownStarts)} without a recorded entry stream.`}
+              <span className="block sm:hidden">Scroll sideways to see the full journey.</span>
+            </p>
+          </>
         )}
       </CardContent>
     </Card>

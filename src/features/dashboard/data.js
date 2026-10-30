@@ -57,24 +57,61 @@ function responseTimes(applications, historyByApp) {
   return times;
 }
 
-// Current-state Sankey: every application contributes once, including unchanged
-// applications. History is intentionally excluded so repeated moves cannot inflate totals.
-export function buildFlow(applications) {
-  if (!applications.length) return { total: 0, nodes: [], links: [] };
+// Summarize entry → recorded interview milestone → current outcome.
+// Each application enters and exits once; repeated edits cannot create cycles.
+export function buildFlow(applications, historyByApp = new Map()) {
   const known = new Set(APPLICATION_STATUSES);
-  const counts = new Map();
-  for (const application of applications) {
-    const status = known.has(application.status) ? application.status : "Unknown status";
-    counts.set(status, (counts.get(status) || 0) + 1);
+  const edges = new Map();
+  let unknownStarts = 0;
+  const add = (source, target) => {
+    const key = `${source}|${target}`;
+    const edge = edges.get(key) || { source, target, value: 0 };
+    edge.value++;
+    edges.set(key, edge);
+  };
+  for (const app of applications) {
+    const history = [...(historyByApp.get(app.id) || [])]
+      .filter((row) => typeof row.changed_at === "string" && Number.isFinite(Date.parse(row.changed_at)))
+      .sort((a, b) => Date.parse(a.changed_at) - Date.parse(b.changed_at));
+    const first = history.length ? history[0].status : app.status;
+    const start = first === "Applied" || first === "Reached Out" ? first : "unknown";
+    if (start === "unknown") unknownStarts++;
+    const current = known.has(app.status) ? app.status : "unknown";
+    const outcome = current === "Reached Out" ? "Applied" : current;
+    const source = `entry:${start}`,
+      target = `outcome:${outcome}`;
+    if (current === "Interviewed" || history.some((row) => row.status === "Interviewed")) {
+      add(source, "milestone:Interviewed");
+      add("milestone:Interviewed", target);
+    } else {
+      add(source, target);
+    }
   }
-  const destinations = [...APPLICATION_STATUSES, "Unknown status"].filter((status) => counts.has(status));
+  const definitions = [
+    { id: "entry:Applied", name: "Applied", kind: "entry", status: "Applied" },
+    { id: "entry:Reached Out", name: "Reached Out", kind: "entry", status: "Reached Out" },
+    { id: "entry:unknown", name: "Unknown start", kind: "entry" },
+    { id: "milestone:Interviewed", name: "Interviewed", kind: "milestone", status: "Interviewed" },
+    { id: "outcome:Applied", name: "Awaiting response", kind: "outcome", status: "Applied" },
+    { id: "outcome:Pending", name: "Pending", kind: "outcome", status: "Pending" },
+    { id: "outcome:Interviewed", name: "Still interviewing", kind: "outcome", status: "Interviewed" },
+    { id: "outcome:Offered", name: "Offered", kind: "outcome", status: "Offered" },
+    { id: "outcome:Rejected", name: "Rejected", kind: "outcome", status: "Rejected" },
+    { id: "outcome:Withdrew", name: "Withdrew", kind: "outcome", status: "Withdrew" },
+    { id: "outcome:unknown", name: "Unknown status", kind: "outcome" },
+  ];
+  const used = new Set([...edges.values()].flatMap((edge) => [edge.source, edge.target]));
+  const nodes = definitions.filter((node) => used.has(node.id));
+  const index = new Map(nodes.map((node, i) => [node.id, i]));
   return {
     total: applications.length,
-    nodes: [
-      { name: "All applications", kind: "total" },
-      ...destinations.map((name) => ({ name, kind: "status" })),
-    ],
-    links: destinations.map((name, index) => ({ source: 0, target: index + 1, value: counts.get(name) })),
+    unknownStarts,
+    nodes,
+    links: [...edges.values()].map((edge) => ({
+      source: index.get(edge.source),
+      target: index.get(edge.target),
+      value: edge.value,
+    })),
   };
 }
 
@@ -172,7 +209,7 @@ export async function getDashboardStats(supabase, userId) {
       .filter(([, count]) => count > 0)
       .map(([label, value]) => ({ label, value, color: STATUS_COLORS[label] })),
     daily: dailyCounts(applications),
-    flow: buildFlow(applications),
+    flow: buildFlow(applications, historyByApp),
     followUps: followUps(applications, historyByApp),
     // Newest first (the query's order), for the dashboard's mini table
     recent: applications.slice(0, RECENT_LIMIT).map((app) => ({

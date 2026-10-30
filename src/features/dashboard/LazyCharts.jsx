@@ -18,4 +18,4 @@ const load = (name, height) =>
 export const ApplicationsOverTime = load("ApplicationsOverTime", 420);
 export const StatusBreakdown = load("StatusBreakdown", 420);
 export const Pipeline = load("Pipeline", 330);
-export const ApplicationFlow = load("ApplicationFlow", 410);
+export const ApplicationFlow = load("ApplicationFlow", 480);
