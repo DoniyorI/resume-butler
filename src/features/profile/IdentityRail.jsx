@@ -1,8 +1,8 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
+import { summarizeImport } from "./importSummary";
 import {
   Check,
   Circle,
@@ -44,51 +44,47 @@ function ContactLine({ icon: Icon, children, href }) {
   );
 }
 
-function ResumeImport() {
+async function sendResumeFile(file) {
+  const formData = new FormData(); formData.append("file", file);
+  return fetch("/api/parse-resume", { method: "POST", body: formData });
+}
+
+export function ResumeImport({ uploadFile = sendResumeFile }) {
   const router = useRouter();
   const inputRef = useRef(null);
-  const [pending, startTransition] = useTransition();
-
-  const upload = (file) =>
-    startTransition(async () => {
-      const formData = new FormData();
-      formData.append("file", file);
-      const response = await fetch("/api/parse-resume", { method: "POST", body: formData });
+  const [pending, setPending] = useState(false);
+  const inFlight = useRef(false);
+  const [result, setResult] = useState(null);
+  const [error, setError] = useState("");
+  const upload = async file => {
+    if (inFlight.current) return;
+    inFlight.current = true; setPending(true);
+    setResult(null); setError("");
+    try {
+      const response = await uploadFile(file);
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        toast.error(data.error || "Couldn't import that resume");
-        return;
-      }
-      toast.success("Resume imported. Review the new entries below.");
+      if (!response.ok) { setError(data.error || "Couldn't import that resume. Your existing CV is kept."); return; }
+      setResult(summarizeImport(data));
       router.refresh();
-    });
+    } catch { setError("Couldn't reach the server. Keep your resume file and try again."); }
+    finally { inFlight.current = false; setPending(false); }
+  };
 
   return (
     <div>
-      <input
-        ref={inputRef}
-        type="file"
-        accept=".pdf,.txt"
-        className="sr-only"
-        tabIndex={-1}
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          e.target.value = "";
-          if (file) upload(file);
-        }}
-      />
-      <Button
-        variant="outline"
-        className="w-full"
-        onClick={() => inputRef.current?.click()}
-        disabled={pending}
-      >
+      <input ref={inputRef} type="file" accept=".pdf,.txt" className="sr-only" tabIndex={-1}
+        onChange={event => { const file = event.target.files?.[0]; event.target.value = ""; if (file) upload(file); }} />
+      <Button variant="outline" className="w-full" onClick={() => inputRef.current?.click()} disabled={pending}>
         {pending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileUp className="mr-2 h-4 w-4" />}
-        {pending ? "Reading your resume…" : "Import from a resume"}
+        {pending ? "Reading and matching…" : "Import from a resume"}
       </Button>
-      <p className="mt-1.5 text-xs text-muted-foreground">
-        PDF or text. Adds entries; nothing is overwritten.
-      </p>
+      <p className="mt-1.5 text-xs text-muted-foreground">PDF or text. Matches existing entries and adds unique bullets. Your edits are kept.</p>
+      {pending && <p role="status" className="mt-2 text-xs text-muted-foreground">Extracting your resume, then checking your Master CV for matches…</p>}
+      {error && <p role="alert" className="mt-3 text-sm text-destructive">{error}</p>}
+      {result && <div role="status" className="mt-3 space-y-1.5 rounded-lg border bg-muted/30 p-3 text-xs text-muted-foreground">
+        <p className="font-medium text-foreground">{result.headline}</p>
+        {result.lines.map(line => <p key={line}>{line}</p>)}
+      </div>}
     </div>
   );
 }

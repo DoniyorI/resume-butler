@@ -2,6 +2,7 @@ import "server-only";
 import PDFParser from "pdf2json";
 import { HttpError } from "@/server/http";
 import { chatJSON } from "@/server/openai";
+import { normalizeCvDate } from "@/lib/cvDates";
 
 export const MAX_RESUME_FILE_BYTES = 5 * 1024 * 1024;
 const MAX_TEXT_CHARS = 30_000;
@@ -10,12 +11,12 @@ const MAX_TEXT_CHARS = 30_000;
 const LIMITS = { education: 10, experience: 30, projects: 30, bullets: 20, skills: 200 };
 
 function text(value, max = 500) {
-  return typeof value === "string" ? value.slice(0, max) : "";
+  return typeof value === "string" ? value.trim().slice(0, max) : "";
 }
 
 function number(value) {
   const n = typeof value === "string" || typeof value === "number" ? Number(value) : NaN;
-  return value !== "" && Number.isFinite(n) ? n : null;
+  return !(typeof value === "string" && !value.trim()) && Number.isFinite(n) ? n : null;
 }
 
 function list(value, max) {
@@ -84,6 +85,7 @@ Rules:
 - Extract EXACTLY what is written. Do NOT add, embellish, or rephrase anything.
 - For dates, use the first of the month if only month/year is given (e.g. "Jan 2023" -> "2023-01-01")
 - If a date says "Present" or "Current", set end_date to null and currently_working to true
+- If only a year is given, or a date is absent/unknown, return null. Never invent a month.
 - Include ALL bullet points exactly as written
 - If a section doesn't exist in the resume, return an empty array for it
 - Skills should be a flat list of individual skill names`;
@@ -102,108 +104,56 @@ async function extractResumeText(buffer, fileName) {
   return resumeText;
 }
 
-async function saveEducation(supabase, userId, education) {
-  if (education.length === 0) return 0;
-  const rows = education.map((edu, i) => ({
-    user_id: userId,
-    school: text(edu.school),
-    location: text(edu.location),
-    degree_type: text(edu.degree_type, 50),
-    major: text(edu.major),
-    gpa: number(edu.gpa),
-    start_date: text(edu.start_date, 10) || null,
-    end_date: text(edu.end_date, 10) || null,
-    sort_order: i,
-  }));
-  const { error } = await supabase.from("cv_education").insert(rows);
-  return error ? 0 : rows.length;
-}
-
-// Insert parent rows one at a time so each one's bullets can reference its ID.
-// Returns how many parent rows were saved.
-async function saveWithBullets(supabase, { table, bulletTable, foreignKey, entries, toRow }) {
-  let saved = 0;
-  for (let i = 0; i < entries.length; i++) {
-    const entry = entries[i];
-    const { data: inserted, error } = await supabase
-      .from(table)
-      .insert(toRow(entry, i))
-      .select("id")
-      .single();
-    if (error) continue;
-    saved++;
-
-    const bullets = bulletList(entry.bullets);
-    if (bullets.length > 0) {
-      await supabase
-        .from(bulletTable)
-        .insert(bullets.map((content, bi) => ({ [foreignKey]: inserted.id, content, sort_order: bi })));
-    }
-  }
-  return saved;
-}
-
-async function saveSkills(supabase, userId, skills) {
-  const rows = skills
-    .map((s) => text(typeof s === "string" ? s : s?.name, 100))
-    .filter(Boolean)
-    .map((name, i) => ({ user_id: userId, name, sort_order: i }));
-  if (rows.length === 0) return 0;
-  const { error } = await supabase.from("cv_skills").insert(rows);
-  return error ? 0 : rows.length;
+function normalizeImport(raw) {
+  let datesNeedingReview = 0;
+  const date = value => {
+    const normalized = normalizeCvDate(value);
+    if (value && !normalized && !/^(present|current)$/i.test(String(value).trim())) datesNeedingReview++;
+    return normalized;
+  };
+  const unique = values => {
+    const seen = new Set();
+    return values.filter(value => {
+      const key = value.toLowerCase().replace(/\s+/g, " ");
+      if (seen.has(key)) return false;
+      seen.add(key); return true;
+    });
+  };
+  const dates = entry => ({ start_date: date(entry.start_date), end_date: date(entry.end_date) });
+  const input = {
+    education: records(raw?.education, LIMITS.education).map(entry => ({
+      school: text(entry.school, 200), location: text(entry.location, 200), degree_type: text(entry.degree_type, 50),
+      major: text(entry.major, 200), gpa: number(entry.gpa) != null && number(entry.gpa) >= 0 && number(entry.gpa) <= 10 ? number(entry.gpa) : null, ...dates(entry),
+    })),
+    experience: records(raw?.experience, LIMITS.experience).map(entry => ({
+      company: text(entry.company, 200), position: text(entry.position, 200), location: text(entry.location, 200),
+      type: text(entry.type, 50), ...dates(entry), currently_working: entry.currently_working === true,
+      bullets: unique(bulletList(entry.bullets)),
+    })),
+    projects: records(raw?.projects, LIMITS.projects).map(entry => ({
+      name: text(entry.name, 200), description: text(entry.description, 2000), ...dates(entry), bullets: unique(bulletList(entry.bullets)),
+    })),
+    skills: unique(list(raw?.skills, LIMITS.skills).map(entry => text(typeof entry === "string" ? entry : entry?.name, 100)).filter(Boolean)),
+  };
+  return { input, datesNeedingReview };
 }
 
 /**
- * Parse an uploaded resume (PDF or .txt) with the LLM and append it to the
+ * Parse an uploaded resume (PDF or .txt) with the LLM and safely merge it into the
  * user's master CV. Returns the route's response body.
  */
 export async function parseResume(supabase, userId, { buffer, fileName }) {
   const resumeText = await extractResumeText(buffer, fileName);
-
   const raw = await chatJSON({ task: "import", system: PARSE_PROMPT, user: resumeText });
-  const parsed = {
-    education: records(raw.education, LIMITS.education),
-    experience: records(raw.experience, LIMITS.experience),
-    projects: records(raw.projects, LIMITS.projects),
-    skills: list(raw.skills, LIMITS.skills),
-  };
-
-  const results = {
-    education: await saveEducation(supabase, userId, parsed.education),
-    experience: await saveWithBullets(supabase, {
-      table: "cv_experience",
-      bulletTable: "cv_experience_bullets",
-      foreignKey: "experience_id",
-      entries: parsed.experience,
-      toRow: (exp, i) => ({
-        user_id: userId,
-        company: text(exp.company),
-        position: text(exp.position),
-        location: text(exp.location),
-        type: text(exp.type, 50) || "Full-time",
-        start_date: text(exp.start_date, 10) || null,
-        end_date: text(exp.end_date, 10) || null,
-        currently_working: exp.currently_working === true,
-        sort_order: i,
-      }),
-    }),
-    projects: await saveWithBullets(supabase, {
-      table: "cv_projects",
-      bulletTable: "cv_project_bullets",
-      foreignKey: "project_id",
-      entries: parsed.projects,
-      toRow: (proj, i) => ({
-        user_id: userId,
-        name: text(proj.name),
-        description: text(proj.description, 2000),
-        start_date: text(proj.start_date, 10) || null,
-        end_date: text(proj.end_date, 10) || null,
-        currently_working: false,
-        sort_order: i,
-      }),
-    }),
-    skills: await saveSkills(supabase, userId, parsed.skills),
-  };
-
-  return { message: "Resume parsed and saved successfully", results, parsed };
+  const { input, datesNeedingReview } = normalizeImport(raw);
+  const { data, error } = await supabase.rpc("merge_resume_import", { p_input: input });
+  if (["PGRST202", "42883", "42703", "PGRST204"].includes(error?.code)) {
+    throw new HttpError(503, "Resume import is being updated (migration 019). Your existing CV is unchanged. Try again after setup.");
+  }
+  if (error) throw error;
+  const counters = [...Object.values(data?.added || {}), ...Object.values(data?.merged || {}), ...Object.values(data?.needsReview || {}), data?.bulletsAdded];
+  if (!data?.added || !data?.merged || !data?.needsReview || counters.length !== 12 || !counters.every(value => Number.isInteger(value) && value >= 0)) {
+    throw new Error("Invalid resume import result");
+  }
+  return { message: "Resume imported", results: data.added, merged: data.merged, bulletsAdded: data.bulletsAdded, needsReview: data.needsReview, datesNeedingReview };
 }

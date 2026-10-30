@@ -43,8 +43,15 @@ export function DashboardSkeleton() {
         <CardBlock className="h-40 md:col-span-2 xl:col-span-1" />
       </div>
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-        <Skeleton className="h-72 rounded-xl xl:col-span-2" />
-        <Skeleton className="h-72 rounded-xl" />
+        <Skeleton className="h-[330px] rounded-xl xl:col-span-2" />
+        <Skeleton className="h-[330px] rounded-xl" />
+      </div>
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+        <Skeleton className="h-[420px] rounded-xl xl:col-span-2" />
+        <Skeleton className="h-[420px] rounded-xl" />
+      </div>
+      <div>
+        <Skeleton className="h-[410px] rounded-xl" />
       </div>
     </div>
   );
@@ -54,9 +61,9 @@ export function DashboardSkeleton() {
 export function DocumentsSkeleton() {
   return (
     <div className="mx-auto w-full max-w-7xl px-5 pb-16 pt-24 md:px-8" aria-busy="true">
-      <div className="space-y-2">
-        <Skeleton className="h-8 w-44" />
-        <Skeleton className="h-4 w-72" />
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div className="space-y-2"><Skeleton className="h-8 w-44" /><Skeleton className="h-4 w-72" /></div>
+        <div className="flex flex-wrap gap-2"><Skeleton className="h-10 w-32" /><Skeleton className="h-10 w-40" /></div>
       </div>
       <div className="mt-5 flex gap-2">
         <Skeleton className="h-9 w-32" />

@@ -78,7 +78,7 @@ export function ApplicationsOverTime({ series }) {
   const total = data.reduce((sum, day) => sum + day.count, 0);
 
   return (
-    <Card>
+    <Card className="h-full">
       <CardHeader className="flex flex-col gap-3 space-y-0 sm:flex-row sm:items-start sm:justify-between">
         <div className="space-y-1.5">
           <CardTitle className="text-lg">Applications over time</CardTitle>
@@ -101,7 +101,7 @@ export function ApplicationsOverTime({ series }) {
         {data.length === 0 ? (
           <EmptyState />
         ) : (
-          <ChartContainer config={applicationsChartConfig} className="aspect-auto h-[250px] w-full">
+          <ChartContainer config={applicationsChartConfig} className="aspect-auto h-[250px] w-full xl:h-[300px]">
             <AreaChart data={data} margin={{ left: 0, right: 12 }}>
               <defs>
                 <linearGradient id="fillApplications" x1="0" y1="0" x2="0" y2="1">

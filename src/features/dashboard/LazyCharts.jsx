@@ -15,7 +15,7 @@ const load = (name, height) =>
     loading: cardSkeleton(height),
   });
 
-export const ApplicationsOverTime = load("ApplicationsOverTime", 360);
+export const ApplicationsOverTime = load("ApplicationsOverTime", 420);
 export const StatusBreakdown = load("StatusBreakdown", 420);
 export const Pipeline = load("Pipeline", 330);
 export const ApplicationFlow = load("ApplicationFlow", 410);

@@ -119,7 +119,7 @@ export default function AddApplicationDialog() {
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button size="sm" className="h-9 gap-1.5 bg-brand px-3 font-medium text-white hover:bg-brand/90">
+        <Button variant="outline" size="sm" className="h-9 gap-1.5 border-slate-200 bg-white px-3 font-medium text-slate-700 shadow-none hover:bg-slate-50 hover:text-slate-950">
           <Plus className="h-4 w-4" />
           {/* Just the icon on narrow phones, where the header has little room */}
           <span className="hidden min-[400px]:inline">New application</span>

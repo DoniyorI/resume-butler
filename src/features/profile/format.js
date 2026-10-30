@@ -1,8 +1,9 @@
 import { parseDate } from "@/lib/dates";
+import { normalizeCvDate } from "@/lib/cvDates";
 
 // The CV stores dates as "YYYY-MM-DD"; month inputs use "YYYY-MM"
-export const toMonthInput = (value) => (value ? String(value).slice(0, 7) : "");
-export const fromMonthInput = (value) => (value ? `${value}-01` : null);
+export const toMonthInput = (value) => normalizeCvDate(value)?.slice(0, 7) || "";
+export const fromMonthInput = (value) => typeof value === "string" && /^[1-9]\d{3}-\d{2}$/.test(value) ? normalizeCvDate(value) : null;
 
 const monthYear = (value) =>
   parseDate(value)?.toLocaleDateString("en-US", { month: "short", year: "numeric" }) ?? "";

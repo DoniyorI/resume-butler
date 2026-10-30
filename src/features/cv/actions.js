@@ -6,6 +6,7 @@ import { requireUser } from "@/server/auth";
 import { parseInput, runAction } from "@/server/actionResult";
 import { HttpError } from "@/server/http";
 import { normalizeHttpUrl } from "@/lib/safeUrl";
+import { isCalendarDate } from "@/lib/cvDates";
 import { getCertifications, getEducation, getExperience, getProjects } from "@/features/cv/data";
 
 const MAX_ENTRIES = 100;
@@ -14,10 +15,10 @@ const MAX_BULLETS = 50;
 const uuid = z.string().uuid();
 const newOrExistingId = uuid.nullish();
 const text = (max) => z.string().trim().max(max);
-const date = z
-  .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date")
-  .nullable();
+const date = z.preprocess(
+  value => typeof value === "string" && !value.trim() ? null : value,
+  z.string().refine(isCalendarDate, "Use a valid calendar date").nullable()
+);
 const url = text(2048).transform((value) => normalizeHttpUrl(value) || null);
 const bullets = z.array(text(2000)).max(MAX_BULLETS);
 

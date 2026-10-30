@@ -118,7 +118,7 @@ src/
   lib/                       Safe on client and server: constants, dates, redirects, safeUrl,
                              salary, jobDetails, emailCategories, postJson, utils, supabase clients
   server/                    Server-only ("server-only" import), reusable by actions, routes, cron, extension
-supabase/migrations/         SQL schema, applied in order (001–018)
+supabase/migrations/         SQL schema, applied in order (001–019)
 extension/                   Chrome extension (see its README)
 docs/                        This file, the extension plan
 public/image/                Logo, illustrations, Lottie animations
@@ -465,3 +465,8 @@ AI/email quota checks fail closed without an explicit grant; PDF-only quota-serv
 The extension reads the newer LinkedIn layout using current-posting metadata links and its semantic About the job section, rejects stale SPA panels, and preserves captured details through confirmation. Migration018 changes generated source notes without modifying ingestion fingerprints or edited comments. It is installed; the next migration is019.
 
 `POST /api/extension/job-score` uses extension bearer authentication and a dedicated owned-source service. It compares the popup description with a selected resume or Master CV using the existing ATS keyword rules and returns unweighted coverage plus matched/missing terms. It does not return resume contents, call AI or write applications. The popup invalidates changed inputs; the worker checks account, token and tab context. [Verification and limitations](extension-capture-score-verification.md).
+
+
+### Master CV import merge (migration019)
+
+Resume parsing normalizes bounded fields/dates and calls `merge_resume_import` using the signed-in user client. The SQL transaction scopes every row to auth.uid(), serializes per owner, merges unique compatible-date exact matches, preserves existing facts and bullets, and reports ambiguous/capacity cases. New bullets append after existing ones; case/whitespace and terminal-period duplicates are skipped without changing technical symbols such as C++/C#. No existing CV rows are deleted. Migration019 is installed;001–019 are immutable and the next migration is020. The importer fails safely before writes when019 is absent. Optional blank dates are normalized before CV actions validate real calendar dates. [Verification and rollout blockers](interface-import-verification.md).

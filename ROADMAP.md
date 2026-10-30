@@ -112,3 +112,8 @@ The [original 2024 roadmap](docs/archive/roadmap-2024.md) is preserved as histor
 - [x] Explicit popup keyword coverage for selected resume or Master CV, with matched/missing terms, owned-source reads and stale-result checks. This is the deterministic first step; B1's broader evidence-based analysis remains planned.
 
 [Verification and limits](docs/extension-capture-score-verification.md). Stop after this requested scope; A7 is not started.
+
+
+### Requested interface and import fixes (2026-10-29)
+
+Aligned chart cards/loading layouts, made the header action secondary, separated Documents collection links into clear buttons, fixed optional/calendar CV dates, and replaced append-only resume imports with owned atomic matching and unique bullet reuse. Migration019 is installed; the live repeated-import smoke check passed with fixtures rolled back. Existing duplicate rows are preserved and uncertain matches are reported. [Evidence and remaining limits](docs/interface-import-verification.md). A7 remains unstarted.
