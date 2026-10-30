@@ -101,7 +101,10 @@ export function ApplicationsOverTime({ series }) {
         {data.length === 0 ? (
           <EmptyState />
         ) : (
-          <ChartContainer config={applicationsChartConfig} className="aspect-auto h-[250px] w-full xl:h-[300px]">
+          <ChartContainer
+            config={applicationsChartConfig}
+            className="aspect-auto h-[250px] w-full xl:h-[300px]"
+          >
             <AreaChart data={data} margin={{ left: 0, right: 12 }}>
               <defs>
                 <linearGradient id="fillApplications" x1="0" y1="0" x2="0" y2="1">
@@ -261,6 +264,7 @@ function FlowNode({ x, y, width, height, payload }) {
   // First-column nodes are labelled on their right, every other node on its left,
   // so labels stay inside the chart
   const isRight = x > FLOW_MARGIN.left + 1;
+  const labelX = isRight ? x - 6 : x + width + 6;
   return (
     <Layer>
       <Rectangle
@@ -273,15 +277,17 @@ function FlowNode({ x, y, width, height, payload }) {
         fillOpacity={1}
       />
       <text
-        x={isRight ? x - 6 : x + width + 6}
-        y={y + height / 2}
+        x={labelX}
+        y={y + height / 2 - 7}
         textAnchor={isRight ? "end" : "start"}
         dominantBaseline="middle"
         fontSize={12}
         className="fill-foreground"
       >
         {payload.name}
-        <tspan className="fill-muted-foreground"> ({payload.value})</tspan>
+        <tspan x={labelX} dy={15} className="fill-muted-foreground" fontSize={11}>
+          {payload.value}
+        </tspan>
       </text>
     </Layer>
   );
@@ -301,7 +307,7 @@ function FlowLink({
     <path
       d={`M${sourceX},${sourceY} C${sourceControlX},${sourceY} ${targetControlX},${targetY} ${targetX},${targetY}`}
       fill="none"
-      stroke={STATUS_COLORS[payload.source.name] || BRAND_COLOR}
+      stroke={STATUS_COLORS[payload.target.name] || BRAND_COLOR}
       strokeOpacity={0.45}
       strokeWidth={Math.max(1, linkWidth)}
     />
@@ -324,19 +330,24 @@ function FlowTooltip({ active, payload }) {
           <p className="font-medium">
             {data.source.name} → {data.target.name}
           </p>
-          <p className="text-muted-foreground">{applicationsCount(value)} moved between these statuses</p>
+          <p className="text-muted-foreground">
+            {applicationsCount(value)} currently in {data.target.name}
+          </p>
         </>
       ) : (
         <>
           <p className="font-medium">{data.name}</p>
-          <p className="text-muted-foreground">{applicationsCount(value)} passed through this status</p>
+          <p className="text-muted-foreground">
+            {applicationsCount(value)}{" "}
+            {data.kind === "total" ? "tracked in total" : "currently in this status"}
+          </p>
         </>
       )}
     </div>
   );
 }
 
-// Only statuses that appear in a move; recharts would draw the rest as stray zero-height nodes
+// Keep only linked nodes so Recharts never draws stray zero-height nodes.
 function linkedFlow(flow) {
   const used = [...new Set(flow.links.flatMap((link) => [link.source, link.target]))].sort((a, b) => a - b);
   const newIndex = new Map(used.map((oldIndex, i) => [oldIndex, i]));
@@ -350,7 +361,7 @@ function linkedFlow(flow) {
   };
 }
 
-// How applications moved between statuses (from the status history)
+// All tracked applications flowing to their current statuses, counted once.
 export function ApplicationFlow({ flow }) {
   const data = useMemo(() => linkedFlow(flow), [flow]);
   const hasFlow = data.links.length > 0;
@@ -358,11 +369,11 @@ export function ApplicationFlow({ flow }) {
     <Card>
       <CardHeader>
         <CardTitle className="text-lg">Application flow</CardTitle>
-        <CardDescription>How your applications moved between statuses</CardDescription>
+        <CardDescription>Every tracked application, counted once at its current status</CardDescription>
       </CardHeader>
       <CardContent>
         {!hasFlow ? (
-          <EmptyState>No status changes yet</EmptyState>
+          <EmptyState>No applications yet</EmptyState>
         ) : (
           <ChartContainer config={statusChartConfig} className="aspect-auto h-[300px] w-full">
             <Sankey

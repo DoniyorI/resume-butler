@@ -57,57 +57,25 @@ function responseTimes(applications, historyByApp) {
   return times;
 }
 
-// Nodes and links for the Sankey chart: status-to-status transitions from the
-// history, or Applied -> current status when nothing has moved yet.
-function buildFlow(applications, historyByApp) {
-  const transitions = {};
-  for (const history of historyByApp.values()) {
-    const sorted = [...history].sort((a, b) => new Date(a.changed_at) - new Date(b.changed_at));
-    for (let i = 0; i < sorted.length - 1; i++) {
-      const from = sorted[i].status;
-      const to = sorted[i + 1].status;
-      if (from === to) continue;
-      const key = `${from}→${to}`;
-      transitions[key] = (transitions[key] || 0) + 1;
-    }
+// Current-state Sankey: every application contributes once, including unchanged
+// applications. History is intentionally excluded so repeated moves cannot inflate totals.
+export function buildFlow(applications) {
+  if (!applications.length) return { total: 0, nodes: [], links: [] };
+  const known = new Set(APPLICATION_STATUSES);
+  const counts = new Map();
+  for (const application of applications) {
+    const status = known.has(application.status) ? application.status : "Unknown status";
+    counts.set(status, (counts.get(status) || 0) + 1);
   }
-
-  const currentCounts = {};
-  for (const app of applications) {
-    currentCounts[app.status] = (currentCounts[app.status] || 0) + 1;
-  }
-
-  const active = new Set(Object.keys(currentCounts));
-  for (const key of Object.keys(transitions)) {
-    const [from, to] = key.split("→");
-    active.add(from);
-    active.add(to);
-  }
-
-  const nodes = APPLICATION_STATUSES.filter((status) => active.has(status)).map((name) => ({
-    name,
-  }));
-  const index = Object.fromEntries(nodes.map((node, i) => [node.name, i]));
-
-  // Nodes follow APPLICATION_STATUSES order. Keeping only forward links keeps the
-  // graph acyclic: the Sankey layout can't draw cycles, e.g. when a status is moved back.
-  const links = [];
-  if (Object.keys(transitions).length > 0) {
-    for (const [key, value] of Object.entries(transitions)) {
-      const [from, to] = key.split("→");
-      if (index[from] !== undefined && index[to] !== undefined && index[from] < index[to]) {
-        links.push({ source: index[from], target: index[to], value });
-      }
-    }
-  } else if (index.Applied !== undefined) {
-    for (const [status, count] of Object.entries(currentCounts)) {
-      if (status !== "Applied" && index[status] !== undefined) {
-        links.push({ source: index.Applied, target: index[status], value: count });
-      }
-    }
-  }
-
-  return { nodes, links };
+  const destinations = [...APPLICATION_STATUSES, "Unknown status"].filter((status) => counts.has(status));
+  return {
+    total: applications.length,
+    nodes: [
+      { name: "All applications", kind: "total" },
+      ...destinations.map((name) => ({ name, kind: "status" })),
+    ],
+    links: destinations.map((name, index) => ({ source: 0, target: index + 1, value: counts.get(name) })),
+  };
 }
 
 function dailyCounts(applications) {
@@ -204,7 +172,7 @@ export async function getDashboardStats(supabase, userId) {
       .filter(([, count]) => count > 0)
       .map(([label, value]) => ({ label, value, color: STATUS_COLORS[label] })),
     daily: dailyCounts(applications),
-    flow: buildFlow(applications, historyByApp),
+    flow: buildFlow(applications),
     followUps: followUps(applications, historyByApp),
     // Newest first (the query's order), for the dashboard's mini table
     recent: applications.slice(0, RECENT_LIMIT).map((app) => ({
