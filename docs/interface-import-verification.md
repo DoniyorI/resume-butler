@@ -24,3 +24,6 @@ The provided PDF was inspected locally with pdf2json; only date patterns/counts 
 ## Integration
 
 Applied migrations001–018 remain unchanged. Migration019 was applied transactionally through the authenticated Supabase SQL editor, which reported success. A subsequent authenticated-role smoke test used the existing fictional QA account, verified initial/repeated/unique-bullet merges, and rolled back all fixtures; the result showed `live_merge_checks=passed` and `fixtures_rolled_back=true`. Migrations001–019 are now immutable; the next migration is020. A stale browser session was recovered by resetting the tool session. Automatic approval review previously reported a usage-limit failure on a deployment-status request; final commit/deployment status must still be checked before claiming hosted availability.
+
+
+Product commit `fa2dedf3ee6647f14deb824e92f635b656386a06` is pushed and deployed. [GitHub Checks](https://github.com/DoniyorI/resume-butler/actions/runs/40979862847) and [Vercel deployment](https://vercel.com/doniyoris-projects/resume-butler/87qqqyb4zWRuvXCqK7Zn72y1QTPT) both succeeded. The earlier automatic-review usage-limit error cleared and the normal commit/push approval succeeded. Stop at this scope; A7 remains unstarted.

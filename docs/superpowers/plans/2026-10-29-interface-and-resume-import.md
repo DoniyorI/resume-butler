@@ -44,8 +44,11 @@
 
 - [x] Full Node tests, lint, isolated build, available browser checks and fresh independent review.
 - [x] Apply019 and verify live initial/repeated/unique-bullet merge assertions with all fictional fixtures rolled back.
-- [ ] Commit/push and check deployment through the normal approval gate.
+- [x] Commit/push and check deployment through the normal approval gate.
 - [x] Update evidence/handoff, then stop at this requested scope.
 
 
 Execution evidence:229 Node tests,23 disposable SQL checks, lint and a production build using the previously cached fonts pass. Actual desktop/mobile component checks completed via IAB ; the later browser-session failure was recovered with a tool reset. Independent review's React18 pending-state issue was fixed and confirmed. Temporary preview removed; real PDF only read locally. Migration019 is APPLIED and the live rolled-back smoke test passed. Next migration020;001–019 are immutable.
+
+
+Deployment: product commit fa2dedf3ee6647f14deb824e92f635b656386a06 pushed to main; GitHub Checks40979862847 and Vercel87qqqyb4zWRuvXCqK7Zn72y1QTPT both succeeded. Stop here; A7 remains unstarted.
