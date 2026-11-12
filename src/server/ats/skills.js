@@ -28,6 +28,10 @@ export const SKILL_ALIASES = {
   git: ["git"],
   "version control": ["version control"],
   github: ["github"],
+  "github actions": ["github actions"],
+  jenkins: ["jenkins"],
+  "gitlab ci": ["gitlab ci", "gitlab ci/cd"],
+  circleci: ["circleci", "circle ci"],
   "rest api": ["rest", "restful", "rest api", "rest apis"],
   graphql: ["graphql"],
   sql: ["sql"],
@@ -90,6 +94,9 @@ export const SATISFIED_BY = {
   "version control": ["git", "github"],
   "infrastructure as code": ["terraform"],
   serverless: ["lambda"],
+  sql: ["postgresql", "mysql"],
+  javascript: ["typescript"],
+  "ci/cd": ["github actions", "jenkins", "gitlab ci", "circleci"],
 };
 
 // Aliases that are also ordinary English or ordinary letters. The rule:

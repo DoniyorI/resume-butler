@@ -53,8 +53,8 @@ const COMPOUND_PATTERNS = [
   { re: /data engineer(ing)?/i, label: "data engineering" },
   { re: /devops/i, label: "devops" },
   { re: /cloud (engineer|architect)/i, label: "cloud engineering" },
-  { re: /project manage(ment|r)/i, label: "project management" },
-  { re: /product manage(ment|r)/i, label: "product management" },
+  { re: /project management/i, label: "project management" },
+  { re: /product management/i, label: "product management" },
 ];
 
 // Keywords the job description asks for: skills, then degrees, then roles
