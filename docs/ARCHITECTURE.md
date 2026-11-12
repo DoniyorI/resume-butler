@@ -126,7 +126,7 @@ vercel.json                  Cron schedule
 next.config.mjs              Security headers (CSP etc.), redirects, server external packages
 ```
 
-Feature folders: `applications`, `ats`, `auth`, `contact`, `cover-letters`, `cv` (data and actions only), `dashboard`, `documents`, `email-sync`, `extension`, `profile`, `resumes`, `suggestions`.
+Feature folders: `applications`, `ats`, `auth`, `contact`, `cover-letters`, `cv` (data and actions only), `dashboard`, `documents`, `email-sync`, `extension`, `opportunities` (saved jobs), `profile`, `resumes`, `suggestions`.
 
 ## Pages
 
@@ -135,7 +135,7 @@ Feature folders: `applications`, `ats`, `auth`, `contact`, `cover-letters`, `cv`
 | `/` | `(app)/page.jsx` | Dashboard: welcome, stat cards, goal, email sync card, follow-ups, recent applications, charts |
 | `/applications` | `(app)/applications/page.jsx` | Applications table (URL-driven filters, sort, pages of 50), suggestions banner |
 | `/applications/[id]` | `(app)/applications/[id]/page.jsx` | Application detail: facts, editable details, job description, notes, ATS scanner, status timeline, linked documents |
-| `/saved-jobs` | `(app)/saved-jobs/page.jsx` | Searchable shortlist, captured posting details and owned working resume selection; separate from application counts |
+| `/saved-jobs` | `(app)/saved-jobs/page.jsx` | Searchable shortlist, captured posting details and owned working resume selection; each card has "Tailor resume" and "I applied". Separate from application counts until the user applies |
 | `/documents` | `(app)/documents/page.jsx` | Library of resumes and cover letters with page thumbnails, search, tabs, sort |
 | `/profile` | `(app)/profile/page.jsx` | Profile (identity rail, CV strength) and master CV sections, resume import |
 | `/email-sync` | `(app)/email-sync/page.jsx` | IMAP connection, Gmail setup guide, scan options and results, scan history, suggestion review |
@@ -152,14 +152,14 @@ Redirects in `next.config.mjs`: `/cv` → `/profile`, `/resumes` and `/coverlett
 ## Features in depth
 
 ### Dashboard (`features/dashboard`)
-- `data.js` computes everything server-side from `applications` and `application_status_history`: totals and this week's count, response rate, offer rate, average days from Applied to first Interviewed, follow-ups (still at Applied 14+ days after applying, oldest first), recent applications, applications over time, status breakdown, and Sankey nodes and links (Applied/Reached Out entry streams, recorded interview milestone and shared current outcomes; unchanged records remain visible as waiting, missing entry history is explicit, and repeated status edits cannot inflate counts).
+- `data.js` computes everything server-side from `applications` and `application_status_history`: totals and this week's count, response rate (applications whose current status or history includes Reached Out, Interviewed or Offered, via `responseSummary`; the card caption counts the same set), offer rate, average days from Applied to first Interviewed, follow-ups (still at Applied 14+ days after applying, oldest first), recent applications, applications over time, status breakdown, and Sankey nodes and links (Applied/Reached Out entry streams, recorded interview milestone and shared current outcomes; unchanged records remain visible as waiting, missing entry history is explicit, and repeated status edits cannot inflate counts).
 - `GoalCard`: "apply to N jobs a day/week" with progress, streak and what's left (weeks start Monday; saved by `saveGoal` to `profiles.goal_period/goal_target`).
 - `SyncCard`: email connection status, pending suggestions, "Scan now", daily auto-sync toggle.
 - `Charts.jsx` is loaded through `LazyCharts.jsx` (dynamic import) to keep recharts out of the first load.
 
 ### Applications (`features/applications`)
 - **Table** (`ApplicationTable`, `columns.jsx`, `useApplicationsTable`): TanStack Table. The URL is the state (`listParams.js`): `?status=…&q=…&from=…&to=…&sort=applied_date.desc&page=2`. Search, status filter with counts, date range, sorting, column visibility, pages of 50, row selection with bulk status change and delete (`BulkActions`), inline status (`StatusCell`) and comments (`CommentsCell`), row actions (duplicate, delete), CSV export (`csv.js` neutralizes spreadsheet formulas).
-- **Add** (`AddApplication`): dialog from the header; can link a resume or cover letter.
+- **Add** (`AddApplication`): dialog from the header; can link a resume or cover letter and take an optional job description. `createApplication` fills what was left empty (description, job details, working resume if still owned) from the saved job with the same posting link; typed values win, and a blank date is omitted so the column default applies. The insert is `insertApplication` (`server/applications`).
 - **Detail** (`ApplicationEditor`): breadcrumb, status select beside the title, a facts row (pay, workplace, employment type, location, applied date, source, posting link), editable details including the pay range (once migration 010 is applied), job description as readable text with Edit / Show more, notes, the ATS scanner when a resume is linked, status timeline, linked documents. Status saves instantly; everything else saves with Save (an "unsaved changes" hint shows when something changed).
 - **Email scan button** (`ScanEmailsButton`, `useEmailScan`) on the table header.
 
@@ -177,20 +177,22 @@ Redirects in `next.config.mjs`: `/cv` → `/profile`, `/resumes` and `/coverlett
 - `DocumentLibrary` lists resumes and cover letters together with live page thumbnails (`PaperPreview`), tabs (all, resumes, letters), search by name or company, sort, and dialogs to create, rename and delete (`DocumentDialogs`).
 
 ### Resume studio (`features/resumes`)
-- **Content model** (`resumeDocument.js`): `resumes.content` JSONB `{ header, education, experience, projects, skills, order, target }`. `order` lists sections `{ id, title, hidden }`; `target` is the job `{ jobDescription, applicationId, company, role }`.
+- **Content model** (`resumeDocument.js`): `resumes.content` JSONB `{ header, education, experience, projects, skills, order, target }`. `order` lists sections `{ id, title, hidden }`; `target` is the job `{ jobDescription, applicationId, opportunityId, company, role }`; `opportunityId` is the saved job (`job_opportunities`) it came from, null for older documents and for applications or pasted text.
 - **Layout** (`ResumeStudio`): toolbar (`StudioToolbar`: title, fit gauge, download), outline (`OutlinePanel`: drag to reorder sections, hide them), the editable page (`PaperCanvas`, `paper/*`: inline editing on a page styled like the PDF), and the assistant (`AssistantPanel`).
 - **Autosave** (`useResumeDocument`, `useLetterDocument`): debounced, serialized saves with quiet Saved / Saving / Not saved feedback in the shared toolbar, including document-name writes. Failure details are available on the indicator. Routine renames and additions do not toast; unsaved content and names retain close-tab protection.
 - **One-page fit** (`FitGauge`, pure decisions in `features/resumes/pageFit.js`): browser usage is an estimate. Target 90–100% is green; underfill and unverified overflow are amber. On resume overflow, a compiled PDF check (`/api/resume-pages`) starts automatically after a 1.5-second pause, with a 30-second automatic cooldown, bounded per-content caching and manual retry on failure. A server SHA-256 fingerprint must match the current printed content before confirmation. The real page count overrides the estimate: one page is labeled explicitly, multiple pages are red. The canvas boundary is labeled estimated. Screen typography is calibrated to LaTeX (see `.rb-paper`), but the percent is not a measurement of the PDF itself.
-- **Assistant** (`studio/assistant/*`): `JobTarget` (pick an application's job description or paste one), `MatchCard` (ATS score via `/api/ats-score`, re-scored shortly after each edit by `useJobMatch`), `TailorPicks` (`/api/tailor-resume` picks master CV entries that fit; previewed, then applied), `ReviewList` (`/api/suggest-bullets` with focus "match" or "concise"), `CvLibrary` (add entries from the master CV), `BulletRewrite` (`/api/rewrite-bullet`: stronger, tailored, shorter variants).
+- **Assistant** (`studio/assistant/*`): `JobTarget` (pick an application's or a saved job's description, or paste one; saved jobs that already became a listed application are offered once, as the application; `listSavedJobTargets`, newest 100 with a description), `MatchCard` (ATS score via `/api/ats-score`, re-scored shortly after each edit by `useJobMatch`), `TailorPicks` (`/api/tailor-resume` picks master CV entries that fit; previewed, then applied), `ReviewList` (`/api/suggest-bullets` with focus "match" or "concise"), `CvLibrary` (add entries from the master CV), `BulletRewrite` (`/api/rewrite-bullet`: stronger, tailored, shorter variants).
+- **Saved-job deep link**: `/resumes/[id]?job=<saved job id>` (also `/coverletters/[id]`). `getDeepLinkedJob` (`features/resumes/data.js`) returns null for a job that isn't the user's or is already the target; the editor's `useLinkedJob` adopts it when the document has no target yet, and otherwise shows a "Switch / Keep current" prompt, so an existing different target is never replaced silently. The param is dropped from the URL once handled. `loadSavedJob` (action) loads a picked saved job as a target; `saveDocument.js` validates `opportunityId` as a uuid.
 - **Download** (`useResumeDownload`, `/api/download-resume`): PDF, or `.tex` if compiling fails.
 - `/api/generate-resume` creates a new resume from the master CV entries that best fit a job.
 
 ### Cover letter studio (`features/cover-letters`)
 - **Content model** (`letterDocument.js`): `cover_letters.content` JSONB `{ header, date, recipient, greeting, body, signOff, target }`. The body is stored as Draft.js raw JSON (`{ blocks: [{ text }] }`), the format letters were first saved in; the editor reads and writes it as paragraphs (draft-js itself is no longer a dependency).
-- `LetterStudio`: `LetterPaper` (editable letter page, `.rb-letter` styles), `ParagraphList`, `LetterAssistant` (draft a letter from the CV and job via `/api/generate-cover-letter` with tone and length, rewrite one paragraph via `/api/rewrite-paragraph`; flags technologies the CV doesn't have). Autosave via `useLetterDocument`; PDF via `/api/download-cover-letter`, page check via `/api/cover-letter-pages`.
+- `LetterStudio`: `LetterPaper` (editable letter page, `.rb-letter` styles), `ParagraphList`, `LetterAssistant` (shares the resume studio's `JobTarget`, including saved jobs and the `?job=` deep link; draft a letter from the CV and job via `/api/generate-cover-letter` with tone and length, rewrite one paragraph via `/api/rewrite-paragraph`; flags technologies the CV doesn't have). Autosave via `useLetterDocument`; PDF via `/api/download-cover-letter`, page check via `/api/cover-letter-pages`.
 
 ### ATS scanner (`features/ats`, `server/ats`)
-- Heuristic, no AI, cheap enough to rerun on every edit. `scoreResume` combines keyword coverage (`keywords.js`: terms the job asks for, years of experience, crude stemming, `skills.js` aliases), section and header checks (`sections.js`), and bullet quality (`bullets.js`: strong vs weak opening verbs, metrics, length). `AtsScanner` / `AtsResults` / `ScoreRing` show it.
+- Heuristic, no AI, cheap enough to rerun on every edit. `scoreResume` rates keyword coverage (`keywords.js`: skills, degrees matched by level, role phrases), section and header checks (`sections.js`), and bullet quality (`bullets.js`: strong vs weak opening verbs, metrics, length). It returns `status` (`ok`, `empty` when the resume has no body content, `no-keywords` when the posting names no recognised skill), a component score or `null` when that component was not rated (never a stand-in 0 or 100), and `overallScore` only when status is `ok` (a weighted mean of the rated components). `yearsRequired` (`extractYearsRequirement`) is the smallest years-of-experience figure the posting states, shown as a note to check rather than matched as a keyword.
+- **What counts as a skill** (`skills.js`): `matchSkills` reads a posting strictly and a resume leniently. `ALIAS_RULES` makes ambiguous English words (Go, Next, Node, Express, Spring, Swift, Rust, Ruby, Rails) count only with exact capitalisation and technical context in a posting; short forms (JS, TS, AI, ML, REST, React and so on) need their exact spelling. `SATISFIED_BY` lets a related skill satisfy a requirement. `AtsScanner` / `AtsResults` / `ScoreRing` / `MatchCard` show it: an unrated score draws a grey empty ring with a dash and a note explaining why.
 
 ### Email sync (`features/email-sync`)
 - `ConnectionCard`: IMAP host (allowlisted in `server/email/imapHosts.js`: Gmail, Outlook and Office 365, Yahoo, iCloud), email and app password (encrypted at rest, never sent back), with a Gmail app-password guide (`GmailSetupGuide`).
@@ -240,8 +242,9 @@ Per-user limits live in the `consume_rate_limit` database function (migrations 0
 | File | Actions |
 |---|---|
 | `features/applications/actions.js` | `createApplication`, `updateApplication` (incl. optional `jobDetails`), `updateApplicationStatus`, `updateApplicationComments`, `bulkUpdateApplicationStatus`, `deleteApplications`, `deleteApplicationAndReturn`, `duplicateApplication`, `listLinkableDocuments` |
-| `features/resumes/actions.js` | `createResume`, `renameResume`, `deleteResume`, `saveResumeContent`, `loadApplicationJob` |
+| `features/resumes/actions.js` | `createResume`, `renameResume`, `deleteResume`, `saveResumeContent`, `loadApplicationJob`, `loadSavedJob` |
 | `features/cover-letters/actions.js` | `createCoverLetter`, `renameCoverLetter`, `deleteCoverLetter`, `saveCoverLetterContent` |
+| `features/opportunities/actions.js` | `saveJob`, `removeSavedJob`, `tailorSavedJob` ("Tailor resume": opens or creates the working resume, redirects to `/resumes/[id]?job=<id>`), `markSavedJobApplied` ("I applied") |
 | `features/cv/actions.js` | `saveExperience`, `deleteExperience`, `saveProjects`, `deleteProject`, `saveEducation`, `deleteEducation`, `saveCertifications`, `deleteCertification`, `addSkill`, `deleteSkill` |
 | `features/profile/actions.js` | `updateProfile` |
 | `features/dashboard/actions.js` | `saveGoal` |
@@ -265,7 +268,9 @@ Every action is `runAction(context, async () => …)` with `parseInput(zodSchema
 | `crypto.js` | AES-256-GCM `encryptSecret` / `decryptSecret` with `APP_ENCRYPTION_KEY` (email app passwords) |
 | `openai.js` | `chatJSON`: one JSON-mode chat completion |
 | `latex.js` | `generateLatex`, `generateCoverLetterLatex`: every user value goes through `esc()` / `escUrl()` |
-| `ats/*` | `scoreResume` and its parts (keywords, sections, bullets, skills aliases, resume text) |
+| `ats/*` | `scoreResume` (status, nullable component scores, overall score only when `ok`, `yearsRequired`) and its parts (keywords incl. `extractYearsRequirement`, sections, bullets, `skills.js` with `matchSkills`, `ALIAS_RULES`, `SATISFIED_BY`, resume text) |
+| `opportunities/service.js` | Saved jobs: `saveOpportunity(supabase, userId, input, { keepStored })` (only extension captures pass `keepStored`, which keeps a stored description and job details a re-capture lacks; the web editor is authoritative; `resumeId` undefined keeps the stored choice, null clears it), `listSavedJobTargets`, `readSavedJob`, `loadSavedJob`, `startTailoredResume` (no AI: reuses the working resume or creates "Company – Role" aimed at the job and records it), `applyToSavedJob` (see Saved jobs) |
+| `applications/insertApplication.js` | `insertApplication(supabase, userId, fields, details)`: the shared application insert. Derives the posting identity columns from `portal_link`, omits a missing `applied_date`, and retries without the identity columns (012) and then the job details (010) when the database lacks them |
 | `resume/loadCv.js` | The user's profile and master CV as stored (with nested bullets) |
 | `resume/generateResume.js`, `tailorResume.js` | Pick CV entries for a job (model output filtered to ids that exist, in CV order, capped) |
 | `resume/suggestBullets.js`, `rewriteBullet.js`, `rewriteParagraph.js` | Wording suggestions, all passed through `guardrails.js` |
@@ -437,7 +442,7 @@ Branch `claude/keen-roentgen-b7b6a5` (not merged): Next.js 16.4.3 with React 19 
 
 ### Saved jobs (A2, extension 0.3.0)
 
-`job_opportunities` (migration013) stores owned canonical postings, extracted details and optional intended resume. `src/server/opportunities/service.js` supplies app actions and `/api/extension/opportunities` (GET metadata/current save; POST save). The trusted popup corrects capture and chooses resumes; content scripts do not receive resume data. Saves never create an application or status event. A unique exact posting links to an application within120days; contradictory or multiple identities remain unlinked. See [verification and limits](saved-jobs-verification.md).
+`job_opportunities` (migration013) stores owned canonical postings, extracted details and optional intended resume. `src/server/opportunities/service.js` supplies app actions and `/api/extension/opportunities` (GET metadata/current save; POST save). The trusted popup corrects capture and chooses resumes; content scripts do not receive resume data. Saves never create an application or status event. A unique exact posting links to an application within120days; contradictory or multiple identities remain unlinked. Saved jobs are also tailoring targets (see the resume studio's deep link). "I applied" (`applyToSavedJob`) tracks the job as an Applied application on a chosen date with its description, job details and working resume, unless the posting already has an open application from the same hiring cycle (`isSameCycle`), which it returns instead; on a double submit the earliest row in the cycle wins and the later duplicate removes itself. Extension re-captures use `keepStored` so they never erase a stored description or details. `scripts/qa-saved-job-flow.mjs` is the signed-in browser check (save, tailor, apply, re-save, deep link, manual add). See [verification and limits](saved-jobs-verification.md).
 
 ### Flexible documents (A3)
 

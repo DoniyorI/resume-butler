@@ -35,8 +35,9 @@ src/
   features/<feature>/     UI and logic per feature: applications, ats, auth, contact,
                           cover-letters and resumes (the editors live in each one's studio/ folder
                           and share resumes/studio's page canvas and toolbar), cv (data + actions only), dashboard,
-                          documents (resume + cover letter library), email-sync, profile (profile and
-                          master CV page), suggestions (email review queue), extension (connect page)
+                          documents (resume + cover letter library), email-sync, opportunities (saved jobs),
+                          profile (profile and master CV page), suggestions (email review queue),
+                          extension (connect page)
     actions.js            Server Actions for that feature ("use server")
     data.js               Server-only reads and snake_case -> camelCase mapping
     hooks/                Client hooks for that feature
@@ -52,7 +53,9 @@ src/
     actionResult.js       runAction / parseInput for Server Actions
     http.js               HttpError, parseJson, errorResponse for Route Handlers
     openai.js, rateLimit.js (per user), authRateLimit.js (per IP and email, signed out), crypto.js, latex.js
-    ats/                  ATS scoring (scoreResume)
+    ats/                  ATS scoring (scoreResume), keyword and skill matching (matchSkills)
+    applications/         insertApplication (shared insert: posting identity, job details, fail-open)
+    opportunities/        Saved jobs: save, list, tailoring targets, startTailoredResume, applyToSavedJob
     email/                IMAP client, classification, matching, connection settings, syncEmailsForUser,
                           autoSync (the daily job)
     supabaseAdmin.js      Service-role client (bypasses RLS): cron, extension API, auth rate limits
@@ -84,9 +87,11 @@ docs/                     ARCHITECTURE.md (the full map), chrome-extension-plan.
 - **AI edits to user text** go through `checkRewrite` (`@/server/resume/guardrails`): a suggestion may never add or swap a technology, or drop a fact, the user wrote.
 - **Auth flows.** Sign-in, sign-up, reset and password update count against `enforceAuthRateLimit` (`@/server/authRateLimit`), since Supabase sees the server's IP for everyone. Only a fresh recovery session (`hasRecentRecovery`) may set a new password. Redirects after sign-in go through `safeNextPath`.
 - **Auth configuration.** Follow [README.md's setup](README.md#getting-started) for Site URL and redirect patterns, including callback query strings. CAPTCHA is pending: enable Supabase protection only after the sign-in, sign-up and password-reset forms collect challenge tokens and their Server Actions pass `options.captchaToken`.
+- **Scores.** `scoreResume` (`@/server/ats/score`) returns `null` for anything it did not rate and a `status` saying why. Never show a stand-in 0 or 100, and never add a word to `SKILL_ALIASES` that is also ordinary English without an `ALIAS_RULES` entry (`@/server/ats/skills`).
+- **Saved jobs.** A saved job (`job_opportunities`) keeps its context through tailoring and applying: documents target it by `opportunityId`, and applications are created through `insertApplication` so description, pay, workplace and resume carry over. Extension captures merge with the stored job (`keepStored`); the web editor is authoritative.
 - **Matching applications.** New submissions and confirmations only merge into an open application from the same hiring cycle (`isSameCycle`, 120 days); otherwise they're new. Email never changes applications directly: it writes `application_suggestions` for the user to approve.
 - **Loading and layout.** Each `(app)` route has a `loading.js` shaped like its page (`@/components/shared/PageSkeletons`); keep them in step with page layout changes. The header is a fixed 73px, so pages start at `pt-[85px]` and the editors at `top-[73px]`.
-- **Migrations.** Add a new numbered file in `supabase/migrations/`; never edit an applied one. The user runs it in the SQL editor, so code must keep working until it's applied (fail open, or check the column exists, as `writeWithDetails` and `enforceRateLimit` do). Enable RLS on every new table.
+- **Migrations.** Add a new numbered file in `supabase/migrations/`; never edit an applied one. The user runs it in the SQL editor, so code must keep working until it's applied (fail open, or check the column exists, as `insertApplication` (`@/server/applications/insertApplication`) and `enforceRateLimit` do). Enable RLS on every new table.
 - **Page fidelity.** The editors' pages (`.rb-paper` and `.rb-letter` in globals.css) are calibrated to the LaTeX in `src/server/latex.js` (`generateLatex`, `generateCoverLetterLatex`). If you change the LaTeX spacing, margins or fonts, re-measure against a compiled PDF and update the CSS, or the one-page estimate drifts.
 
 ## API Routes (`src/app/api/`)
