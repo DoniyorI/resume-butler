@@ -6,7 +6,7 @@ import { parseDate } from "@/lib/dates";
 // `order` lists the sections in display order as { id, title, hidden }; older
 // rows also stored each section's items in it, which is ignored on load.
 // `target` is the job the resume is tailored for: { jobDescription,
-// applicationId, company, role }.
+// applicationId, opportunityId, company, role }.
 
 export const SECTION_IDS = ["education", "experience", "projects", "skills", "certifications"];
 export const CUSTOM_SECTION_TYPES = ["entries", "text", "list"];
@@ -84,7 +84,7 @@ function normalizeOrder(order, customSections = []) {
   return result;
 }
 
-export const EMPTY_TARGET = { jobDescription: "", applicationId: null, company: "", role: "" };
+export const EMPTY_TARGET = { jobDescription: "", applicationId: null, opportunityId: null, company: "", role: "" };
 
 function normalizeTarget(target) {
   if (!target || typeof target !== "object") return EMPTY_TARGET;
@@ -92,6 +92,8 @@ function normalizeTarget(target) {
   return {
     jobDescription: text(target.jobDescription),
     applicationId: typeof target.applicationId === "string" ? target.applicationId : null,
+    // The saved job (job_opportunities) it came from; documents saved before it existed have none
+    opportunityId: typeof target.opportunityId === "string" ? target.opportunityId : null,
     company: text(target.company),
     role: text(target.role),
   };

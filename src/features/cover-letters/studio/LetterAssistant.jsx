@@ -140,6 +140,7 @@ export default function LetterAssistant({ fit, pdfCheck, onCheckPdf, job, draft,
             target={job.target}
             jobOptions={job.options}
             onChange={job.onChange}
+            linked={job.linked}
             documentLabel="cover letter"
           />
         </div>

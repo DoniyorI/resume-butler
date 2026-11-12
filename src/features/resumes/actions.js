@@ -7,6 +7,7 @@ import { requireUser } from "@/server/auth";
 import { parseInput, runAction } from "@/server/actionResult";
 import { HttpError } from "@/server/http";
 import { saveResumeDocument } from "@/server/resume/saveDocument";
+import { loadSavedJob as readSavedJobTarget } from "@/server/opportunities/service";
 
 const TITLE_MAX = 200;
 const idSchema = z.string().uuid("Invalid resume");
@@ -95,9 +96,20 @@ export async function loadApplicationJob(applicationId) {
 
     return {
       applicationId: data.id,
+      opportunityId: null,
       company: data.company || "",
       role: data.role || "",
       jobDescription: data.job_description || "",
     };
+  });
+}
+
+// One of the user's saved jobs as a tailoring target:
+// { opportunityId, applicationId, company, role, jobDescription }
+export async function loadSavedJob(opportunityId) {
+  return runAction("Error loading the saved job", async () => {
+    const { supabase, user } = await requireUser();
+    const id = parseInput(z.string().uuid("Invalid saved job"), opportunityId);
+    return readSavedJobTarget(supabase, user.id, id);
   });
 }

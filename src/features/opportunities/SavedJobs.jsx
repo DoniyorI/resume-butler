@@ -2,8 +2,10 @@
 import { useId, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Bookmark, Check, ExternalLink, FileText, MapPin, Plus, Trash2 } from "lucide-react";
-import { saveJob, removeSavedJob } from "./actions";
+import { format } from "date-fns";
+import { toast } from "sonner";
+import { Bookmark, Check, ExternalLink, FileText, MapPin, Plus, Sparkles, Trash2 } from "lucide-react";
+import { saveJob, removeSavedJob, tailorSavedJob, markSavedJobApplied } from "./actions";
 import { safeHttpUrl } from "@/lib/safeUrl";
 
 const field = "w-full rounded-lg border border-input bg-white px-3 py-2 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/15 disabled:opacity-60";
@@ -39,10 +41,51 @@ function JobEditor({ job, resumes, onClose }) {
   </form>;
 }
 
+// "Tailor resume": open the working resume aimed at this job, or create one that is
+function TailorButton({ job, resume, onError }) {
+  const [busy, setBusy] = useState(false);
+  const className = "inline-flex items-center gap-1.5 rounded-md bg-brand px-3 py-2 text-white hover:bg-brand/90 disabled:opacity-60";
+  if (resume) return <Link href={`/resumes/${resume.id}?job=${job.id}`} className={className}><Sparkles size={13} />Tailor resume</Link>;
+  async function start() {
+    setBusy(true); onError("");
+    // Redirects to the new resume on success
+    const result = await tailorSavedJob(job.id);
+    if (result && !result.ok) { onError(result.error); setBusy(false); }
+  }
+  return <button type="button" disabled={busy} onClick={start} className={className}><Sparkles size={13} />{busy ? "Creating…" : "Tailor resume"}</button>;
+}
+
+// "I applied": track the job as an application on the chosen date
+function ApplyConfirm({ job, resume, onDone, onCancel }) {
+  const router = useRouter();
+  const [date, setDate] = useState(() => format(new Date(), "yyyy-MM-dd"));
+  const [busy, setBusy] = useState(false), [error, setError] = useState("");
+  async function confirm() {
+    setBusy(true); setError("");
+    const result = await markSavedJobApplied({ opportunityId: job.id, appliedDate: date });
+    setBusy(false);
+    if (!result.ok) { setError(result.error); return; }
+    const { applicationId, created } = result.data;
+    toast(created ? "Tracked as an application" : "Already tracked as an application", {
+      description: created ? `Its description and job details came with it.${resume ? " Your working resume is linked; change it there if you sent a different file." : ""}` : undefined,
+      action: { label: "View", onClick: () => router.push(`/applications/${applicationId}`) },
+    });
+    onDone(applicationId);
+    router.refresh();
+  }
+  return <div className="mt-4 rounded-lg bg-slate-50 p-3 text-xs">
+    <label className="flex flex-wrap items-center gap-2">Applied on<input type="date" required value={date} max="9999-12-31" onChange={e => setDate(e.target.value)} disabled={busy} className="rounded-md border border-input bg-white px-2 py-1" /></label>
+    <div className="mt-2 flex gap-4"><button type="button" disabled={busy || !date} onClick={confirm} className="font-medium text-brand">{busy ? "Tracking…" : "Track application"}</button><button type="button" disabled={busy} onClick={onCancel}>Cancel</button></div>
+    {error ? <p role="alert" className="mt-2 text-red-700">{error}</p> : null}
+  </div>;
+}
+
 function JobCard({ job, resumes }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false), [removing, setRemoving] = useState(false), [busy, setBusy] = useState(false), [error, setError] = useState("");
-  const p = job.payload, resume = resumes.find(r => r.id === job.resume_id), href = safeHttpUrl(p.portal_link);
+  const [applying, setApplying] = useState(false), [applied, setApplied] = useState(null);
+  // The server's link wins. The optimistic one only lasts until the refresh delivers a new job row.
+  const trackedId = job.application_id || (applied?.job === job ? applied.id : null), p = job.payload, resume = resumes.find(r => r.id === job.resume_id), href = safeHttpUrl(p.portal_link);
   async function remove() {
     setBusy(true); setError("");
     const result = await removeSavedJob(job.id);
@@ -51,14 +94,16 @@ function JobCard({ job, resumes }) {
   }
   if (editing) return <JobEditor job={job} resumes={resumes} onClose={() => setEditing(false)} />;
   return <article className="flex flex-col rounded-xl border bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
-    <div className="mb-4 flex items-center justify-between gap-2"><span className={`rounded-full px-2 py-1 text-[11px] font-medium ${job.application_id ? "bg-brand/10 text-brand" : "bg-slate-100 text-slate-600"}`}>{job.application_id ? "Tracked application" : "Saved for later"}</span><button type="button" aria-label={`Remove ${p.role || "job"} at ${p.company}`} onClick={() => setRemoving(!removing)} className="rounded p-1.5 text-muted-foreground hover:bg-red-50 hover:text-red-700"><Trash2 size={15} /></button></div>
+    <div className="mb-4 flex items-center justify-between gap-2"><span className={`rounded-full px-2 py-1 text-[11px] font-medium ${trackedId ? "bg-brand/10 text-brand" : "bg-slate-100 text-slate-600"}`}>{trackedId ? "Tracked application" : "Saved for later"}</span><button type="button" aria-label={`Remove ${p.role || "job"} at ${p.company}`} onClick={() => setRemoving(!removing)} className="rounded p-1.5 text-muted-foreground hover:bg-red-50 hover:text-red-700"><Trash2 size={15} /></button></div>
     <h2 className="text-lg font-semibold leading-snug">{p.role || "Untitled role"}</h2><p className="mt-1 text-sm text-muted-foreground">{p.company}</p>
     {p.location ? <p className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground"><MapPin size={13} />{p.location}</p> : null}
     {p.salary_min != null || p.salary_max != null ? <p className="mt-2 text-xs text-muted-foreground">{p.salary_currency || "USD"} {p.salary_min?.toLocaleString() || "—"} – {p.salary_max?.toLocaleString() || "—"}{p.salary_period ? ` / ${p.salary_period}` : ""}</p> : null}
     <p className="my-4 line-clamp-3 whitespace-pre-line text-sm leading-relaxed text-muted-foreground">{p.job_description || "No description captured. Add it while the posting is available."}</p>
     <div className="mt-auto space-y-4 border-t pt-4"><p className="flex items-center gap-2 text-xs"><FileText size={14} className="text-brand" />{resume ? <Link href={`/resumes/${resume.id}`} className="truncate hover:underline">{resume.title}</Link> : <span className="text-muted-foreground">Master CV / decide later</span>}</p>
-      <div className="flex flex-wrap items-center gap-3 text-xs font-medium"><button type="button" onClick={() => setEditing(true)} className="rounded-md border px-3 py-2 hover:bg-muted">Review details</button>{href ? <a href={href} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-brand hover:underline">Open posting <ExternalLink size={12} /></a> : null}{job.application_id ? <Link href={`/applications/${job.application_id}`} className="text-brand hover:underline">View application →</Link> : null}</div>
+      <div className="flex flex-wrap items-center gap-3 text-xs font-medium"><TailorButton job={job} resume={resume} onError={setError} /><button type="button" onClick={() => setEditing(true)} className="rounded-md border px-3 py-2 hover:bg-muted">Review details</button>{trackedId ? null : <button type="button" onClick={() => setApplying(!applying)} className="rounded-md border px-3 py-2 hover:bg-muted">I applied</button>}</div>
+      <div className="flex flex-wrap items-center gap-3 text-xs font-medium">{href ? <a href={href} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-brand hover:underline">Open posting <ExternalLink size={12} /></a> : null}{trackedId ? <Link href={`/applications/${trackedId}`} className="text-brand hover:underline">View application →</Link> : null}</div>
     </div>
+    {applying && !trackedId ? <ApplyConfirm job={job} resume={resume} onDone={id => { setApplied({ id, job }); setApplying(false); }} onCancel={() => setApplying(false)} /> : null}
     {removing ? <div className="mt-4 rounded-lg bg-slate-50 p-3 text-xs"><p>Remove this saved job? Its application and documents will stay.</p><div className="mt-2 flex gap-4"><button disabled={busy} onClick={remove} className="font-medium text-red-700">{busy ? "Removing…" : "Remove saved job"}</button><button disabled={busy} onClick={() => setRemoving(false)}>Keep it</button></div></div> : null}
     {error ? <p role="alert" className="mt-3 text-xs text-red-700">{error}</p> : null}
   </article>;

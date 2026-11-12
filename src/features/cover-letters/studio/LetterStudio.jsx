@@ -9,6 +9,7 @@ import { renameCoverLetter } from "@/features/cover-letters/actions";
 import { countLetterPages, draftCoverLetter } from "@/features/cover-letters/api";
 import { useLetterDocument } from "@/features/cover-letters/hooks/useLetterDocument";
 import LetterAssistant from "@/features/cover-letters/studio/LetterAssistant";
+import { useLinkedJob } from "@/features/resumes/studio/assistant/JobTarget";
 import LetterPaper from "@/features/cover-letters/studio/LetterPaper";
 
 // 0.75in top and bottom margin at 96 CSS px per inch (.rb-letter in globals.css)
@@ -48,9 +49,10 @@ function plainText(letter) {
 /**
  * The cover letter editor: the editable letter page and an assistant for
  * tailoring it to a job. `coverLetter` and `jobOptions` come from
- * features/cover-letters/data.js and features/resumes/data.js.
+ * features/cover-letters/data.js and features/resumes/data.js. `linkedJob` is a
+ * saved job opened with ?job= (getDeepLinkedJob), or null.
  */
-export default function LetterStudio({ coverLetter, jobOptions }) {
+export default function LetterStudio({ coverLetter, jobOptions, linkedJob = null }) {
   const letterDoc = useLetterDocument({ coverLetterId: coverLetter.id, initialLetter: coverLetter.letter });
   const { letter } = letterDoc;
   const [title, setTitle] = useState(coverLetter.title);
@@ -75,7 +77,7 @@ export default function LetterStudio({ coverLetter, jobOptions }) {
   const [scale, setScale] = useState(1);
   const [fit, setFit] = useState({ usedPx: 0, limitPx: 0 });
   const onMeasure = useCallback((next) => setFit(next), []);
-  const [assistantOpen, setAssistantOpen] = useState(false);
+  const [assistantOpen, setAssistantOpen] = useState(Boolean(linkedJob && !linkedJob.adopt));
 
   // The compiled PDF's page count, valid until the letter changes
   const [pdfCheck, setPdfCheck] = useState({ status: "idle", pages: null, checked: null, error: null });
@@ -131,10 +133,12 @@ export default function LetterStudio({ coverLetter, jobOptions }) {
     toast("Draft applied", { action: { label: "Undo", onClick: () => letterDoc.restore(before) } });
   };
 
-  const changeTarget = (target) => {
-    letterDoc.update({ target });
+  const { update: updateLetter } = letterDoc;
+  const changeTarget = useCallback((target) => {
+    updateLetter({ target });
     setDraft(null);
-  };
+  }, [updateLetter]);
+  const linked = useLinkedJob(linkedJob, changeTarget);
 
   return (
     // Fixed under the 73px nav bar so the editor fills the window; panes scroll on their own
@@ -189,7 +193,7 @@ export default function LetterStudio({ coverLetter, jobOptions }) {
             fit={fit}
             pdfCheck={{ ...pdfCheck, pages: pdfPages }}
             onCheckPdf={checkPdf}
-            job={{ target: letter.target, options: jobOptions, onChange: changeTarget }}
+            job={{ target: letter.target, options: jobOptions, onChange: changeTarget, linked }}
             draft={{
               tone,
               setTone,

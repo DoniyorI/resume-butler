@@ -12,6 +12,7 @@ import { useResumeDownload } from "@/features/resumes/hooks/useResumeDownload";
 import { useAutomaticPdfFit } from "@/features/resumes/hooks/useAutomaticPdfFit";
 import { printableResumeKey, hashPdfContentKey } from "@/features/resumes/pdfContentKey";
 import AssistantPanel from "@/features/resumes/studio/AssistantPanel";
+import { useLinkedJob } from "@/features/resumes/studio/assistant/JobTarget";
 import { pageFit } from "@/features/resumes/studio/FitGauge";
 import PaperCanvas, { PAGE_CONTENT_PX } from "@/features/resumes/studio/PaperCanvas";
 import Paper from "@/features/resumes/studio/paper/Paper";
@@ -61,9 +62,10 @@ function locate(suggestion, itemsOf) {
 /**
  * The resume editor: outline and page fit on the left, the editable page in
  * the middle, tailoring and the master CV on the right. `resume`, `masterCv`
- * and `jobOptions` come from features/resumes/data.js.
+ * and `jobOptions` come from features/resumes/data.js. `linkedJob` is a saved
+ * job opened with ?job= (getDeepLinkedJob), or null.
  */
-export default function ResumeStudio({ resume, masterCv, jobOptions }) {
+export default function ResumeStudio({ resume, masterCv, jobOptions, linkedJob = null }) {
   const resumeDoc = useResumeDocument({
     resumeId: resume.id,
     initialContent: resume.content,
@@ -76,8 +78,8 @@ export default function ResumeStudio({ resume, masterCv, jobOptions }) {
   const [scale, setScale] = useState(1);
   const [fit, setFit] = useState({ usedPx: 0, limitPx: PAGE_CONTENT_PX });
   const [tab, setTab] = useState("tailor");
-  // The assistant is a drawer below the xl breakpoint
-  const [assistantOpen, setAssistantOpen] = useState(false);
+  // The assistant is a drawer below the xl breakpoint. Open it when a saved job asks to switch.
+  const [assistantOpen, setAssistantOpen] = useState(Boolean(linkedJob && !linkedJob.adopt));
 
   const [suggestions, setSuggestions] = useState([]);
   const [reviewing, setReviewing] = useState(null);
@@ -277,12 +279,14 @@ export default function ResumeStudio({ resume, masterCv, jobOptions }) {
   const removeItem = (sectionId, index) =>
     withUndo("Removed from this resume", () => resumeDoc.deleteItem(sectionId, index));
 
-  const changeTarget = (next) => {
-    resumeDoc.setTarget(next);
+  const { setTarget } = resumeDoc;
+  const changeTarget = useCallback((next) => {
+    setTarget(next);
     // Suggestions and picks were for the previous job
     setSuggestions([]);
     setPicks(null);
-  };
+  }, [setTarget]);
+  const linked = useLinkedJob(linkedJob, changeTarget);
 
   const onMeasure = useCallback((next) => setFit(next), []);
 
@@ -354,7 +358,7 @@ export default function ResumeStudio({ resume, masterCv, jobOptions }) {
             onTabChange={setTab}
             onClose={() => setAssistantOpen(false)}
             layout={outline}
-            job={{ target, options: jobOptions, onChange: changeTarget }}
+            job={{ target, options: jobOptions, onChange: changeTarget, linked }}
             match={{ ...match, onAddSkill: addSkill }}
             ai={{
               onReview: () => runReview("match"),

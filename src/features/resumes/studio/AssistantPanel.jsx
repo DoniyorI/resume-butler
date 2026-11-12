@@ -70,7 +70,7 @@ export default function AssistantPanel({ tab, onTabChange, onClose, layout, job,
 
       <div className="min-h-0 flex-1 overflow-y-auto">
         <TabsContent value="tailor" className="mt-0 space-y-4 p-4">
-          <JobTarget target={job.target} jobOptions={job.options} onChange={job.onChange} />
+          <JobTarget target={job.target} jobOptions={job.options} onChange={job.onChange} linked={job.linked} />
 
           {hasJob && (
             <>

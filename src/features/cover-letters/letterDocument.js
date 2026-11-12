@@ -10,7 +10,7 @@ export const HEADER_FIELDS = ["name", "contactEmail", "contactPhone", "linkedin"
 export const DEFAULT_GREETING = "Dear Hiring Manager,";
 export const DEFAULT_SIGN_OFF = "Sincerely,";
 
-export const EMPTY_TARGET = { jobDescription: "", applicationId: null, company: "", role: "" };
+export const EMPTY_TARGET = { jobDescription: "", applicationId: null, opportunityId: null, company: "", role: "" };
 
 const text = (value) => (typeof value === "string" ? value : "");
 
@@ -44,6 +44,8 @@ function normalizeTarget(target) {
   return {
     jobDescription: text(target.jobDescription),
     applicationId: typeof target.applicationId === "string" ? target.applicationId : null,
+    // The saved job (job_opportunities) it came from; documents saved before it existed have none
+    opportunityId: typeof target.opportunityId === "string" ? target.opportunityId : null,
     company: text(target.company),
     role: text(target.role),
   };

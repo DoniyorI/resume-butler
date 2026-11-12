@@ -1,5 +1,13 @@
 import { randomUUID } from "node:crypto";
 
+// A column, or a JSON text path such as payload->>company (null when absent, as in SQL)
+function read(row, key) {
+  const path = /^(\w+)->>(\w+)$/.exec(key);
+  if (!path) return row[key];
+  const value = row[path[1]]?.[path[2]];
+  return value == null ? null : String(value);
+}
+
 // Small PostgREST boundary double. Services, matching and state transitions stay real.
 export function database(seed = {}) {
   const tables = structuredClone(seed);
@@ -24,8 +32,9 @@ export function database(seed = {}) {
       this.filters = [];
     }
     select(columns = "*") { this.columns = columns; return this; }
-    eq(key, value) { this.filters.push((row) => row[key] === value); return this; }
-    neq(key, value) { this.filters.push((row) => row[key] !== value); return this; }
+    eq(key, value) { this.filters.push((row) => read(row, key) === value); return this; }
+    neq(key, value) { this.filters.push((row) => key.includes("->>") ? read(row, key) != null && read(row, key) !== value : row[key] !== value); return this; }
+    not(key, operator, value) { this.filters.push((row) => operator === "is" && value === null ? read(row, key) != null : read(row, key) !== value); return this; }
     in(key, values) { this.filters.push((row) => values.includes(row[key])); return this; }
     gte(key, value) { this.filters.push((row) => row[key] >= value); return this; }
     lt(key, value) { this.filters.push((row) => row[key] < value); return this; }
@@ -72,7 +81,10 @@ export function database(seed = {}) {
       if (this.count != null) selected = selected.slice(0, this.count);
       if (this.bounds) selected = selected.slice(this.bounds[0], this.bounds[1] + 1);
       const projected = selected.map((row) => this.columns && this.columns !== "*"
-        ? Object.fromEntries(this.columns.split(",").map((key) => [key.trim(), row[key.trim()]]))
+        ? Object.fromEntries(this.columns.split(",").map((spec) => {
+          const [alias, key = alias] = spec.trim().split(/:(?!:)/);
+          return [alias.trim(), read(row, key.trim())];
+        }))
         : structuredClone(row));
       if (this.one && projected.length > 1 || this.one === "single" && !projected.length) {
         return { data: null, error: { code: "PGRST116", message: "Unexpected row count" } };

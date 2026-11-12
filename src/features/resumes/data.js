@@ -2,6 +2,7 @@ import "server-only";
 import { cache } from "react";
 import { requirePageUser } from "@/server/auth";
 import { HEADER_FIELDS, readResumeForEditing } from "@/features/resumes/resumeDocument";
+import { listSavedJobTargets, readSavedJob, savedJobTarget } from "@/server/opportunities/service";
 
 // Empty header fields fall back to the profile. needsHeaderSave tells the
 // editor to persist the filled-in header, as the old client code did.
@@ -61,12 +62,13 @@ export { loadMasterCv as getMasterCv } from "@/server/resume/loadCv";
 const JOB_OPTIONS_LIMIT = 100;
 
 // Jobs a resume or cover letter can be tailored to: the user's applications
-// that have a job description (newest first), and the application the
+// that have a job description (newest first), their saved jobs with a
+// description that aren't one of those applications, and the application the
 // document is attached to (applications.resume_id / cover_letter_id), with its
 // description, so the editor can start from it. Pass { resumeId } or { coverLetterId }.
 export async function getJobOptions(supabase, userId, { resumeId, coverLetterId }) {
   const [linkColumn, documentId] = resumeId ? ["resume_id", resumeId] : ["cover_letter_id", coverLetterId];
-  const [optionsRes, linkedRes] = await Promise.all([
+  const [optionsRes, linkedRes, savedJobs] = await Promise.all([
     supabase
       .from("applications")
       .select("id, company, role")
@@ -83,8 +85,11 @@ export async function getJobOptions(supabase, userId, { resumeId, coverLetterId 
       .order("applied_date", { ascending: false, nullsFirst: false })
       .limit(1)
       .maybeSingle(),
+    listSavedJobTargets(supabase, userId),
   ]);
   if (optionsRes.error) throw optionsRes.error;
+  // A saved job that became one of these applications is offered once, as the application
+  const applicationIds = new Set(optionsRes.data.map((app) => app.id));
 
   const linked = linkedRes.data;
   return {
@@ -93,13 +98,34 @@ export async function getJobOptions(supabase, userId, { resumeId, coverLetterId 
       company: app.company || "",
       role: app.role || "",
     })),
+    savedJobs: savedJobs
+      .filter((job) => !job.applicationId || !applicationIds.has(job.applicationId))
+      .map(({ id, company, role }) => ({ id, company, role })),
     linked: linked
       ? {
           applicationId: linked.id,
+          opportunityId: null,
           company: linked.company || "",
           role: linked.role || "",
           jobDescription: linked.job_description || "",
         }
       : null,
   };
+}
+
+/**
+ * A saved job opened with ?job=<id> on a resume or cover letter. Returns null
+ * when it isn't the user's, or the document already targets it; otherwise
+ * { target, adopt }: adopt when the document has no job yet, else the editor
+ * offers to switch.
+ */
+export async function getDeepLinkedJob(supabase, userId, opportunityId, currentTarget) {
+  if (typeof opportunityId !== "string") return null;
+  const job = await readSavedJob(supabase, userId, opportunityId);
+  if (!job || currentTarget?.opportunityId === job.id) return null;
+  const target = savedJobTarget(job);
+  const empty = !currentTarget?.jobDescription?.trim() && !currentTarget?.applicationId && !currentTarget?.opportunityId;
+  if (empty) return { target, adopt: true };
+  // Nothing to switch to without a description
+  return target.jobDescription.trim() ? { target, adopt: false } : null;
 }

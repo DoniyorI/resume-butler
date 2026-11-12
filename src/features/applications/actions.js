@@ -9,6 +9,8 @@ import { parseInput, runAction } from "@/server/actionResult";
 import { HttpError } from "@/server/http";
 import { APPLICATION_STATUSES, DEFAULT_STATUS } from "@/lib/constants";
 import { normalizeHttpUrl } from "@/lib/safeUrl";
+import { insertApplication, payloadDetailColumns } from "@/server/applications/insertApplication";
+import { getOpportunityForUrl } from "@/server/opportunities/service";
 
 const MAX_BULK = 500;
 
@@ -40,6 +42,7 @@ const applicationFields = {
 
 const createSchema = z.object({
   ...applicationFields,
+  jobDescription: optionalText(50_000, "Job description"),
   resumeId: optionalId,
   coverLetterId: optionalId,
 });
@@ -90,36 +93,67 @@ async function assertOwnsDocument(supabase, table, id, userId) {
   if (!data) throw new HttpError(404, "Linked document not found");
 }
 
+// The saved job for a posting link, if any. Filling from it is a convenience,
+// so a lookup failure never blocks adding the application.
+async function savedJobFor(supabase, userId, portalLink) {
+  if (!portalLink) return null;
+  try {
+    return await getOpportunityForUrl(supabase, userId, portalLink);
+  } catch (error) {
+    console.error("createApplication saved job lookup:", error);
+    return null;
+  }
+}
+
+// The saved job's resume, if it still exists and is the user's
+async function ownedResume(supabase, userId, resumeId) {
+  if (!resumeId) return null;
+  const { data, error } = await supabase
+    .from("resumes")
+    .select("id")
+    .eq("id", resumeId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error) throw error;
+  return data?.id ?? null;
+}
+
 export async function createApplication(input) {
   return runAction("createApplication", async () => {
     const { supabase, user } = await requireUser();
     const fields = parseInput(createSchema, input);
 
-    await Promise.all([
+    const [saved] = await Promise.all([
+      savedJobFor(supabase, user.id, fields.portalLink),
       assertOwnsDocument(supabase, "resumes", fields.resumeId, user.id),
       assertOwnsDocument(supabase, "cover_letters", fields.coverLetterId, user.id),
     ]);
+    // What the user left empty comes from the matching saved job; typed values win
+    const savedPayload = saved?.payload || {};
+    const resumeId = fields.resumeId || (await ownedResume(supabase, user.id, saved?.resume_id));
 
-    const { data, error } = await supabase
-      .from("applications")
-      .insert({
-        user_id: user.id,
+    const { id } = await insertApplication(
+      supabase,
+      user.id,
+      {
         company: fields.company,
         role: fields.role,
         location: fields.location,
         portal_link: fields.portalLink,
         status: fields.status,
         comments: fields.comments,
+        // Left out when blank so the column default (today) applies
         applied_date: fields.appliedDate,
-        resume_id: fields.resumeId,
+        job_description: fields.jobDescription || savedPayload.job_description || "",
+        resume_id: resumeId,
         cover_letter_id: fields.coverLetterId,
-      })
-      .select("id")
-      .single();
-    if (error) throw error;
+      },
+      payloadDetailColumns(savedPayload)
+    );
 
     revalidateApplications();
-    return { id: data.id };
+    if (saved) revalidatePath("/saved-jobs");
+    return { id };
   });
 }
 

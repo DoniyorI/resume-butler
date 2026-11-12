@@ -31,6 +31,7 @@ const contentSchema = z.object({
   target: z.object({
     jobDescription: z.string().max(50_000),
     applicationId: z.string().uuid().nullable(),
+    opportunityId: z.string().uuid().nullable().optional(),
     company: z.string().max(200),
     role: z.string().max(200),
   }),

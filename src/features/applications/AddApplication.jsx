@@ -40,6 +40,7 @@ const emptyForm = () => ({
   location: "",
   date: new Date(),
   comments: "",
+  jobDescription: "",
   resumeId: "",
   coverLetterId: "",
 });
@@ -100,6 +101,7 @@ export default function AddApplicationDialog() {
         location: form.location,
         appliedDate: isValid(form.date) ? format(form.date, "yyyy-MM-dd") : null,
         comments: form.comments,
+        jobDescription: form.jobDescription,
         resumeId: form.resumeId,
         coverLetterId: form.coverLetterId,
       });
@@ -242,6 +244,21 @@ export default function AddApplicationDialog() {
                 </Popover>
               </div>
             </div>
+            <details>
+              <summary className="cursor-pointer text-sm font-medium">Job description</summary>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Optional. Left empty, it comes from your saved job with the same posting link.
+              </p>
+              <Textarea
+                id="job-description"
+                aria-label="Job description"
+                value={form.jobDescription}
+                onChange={setFieldFromEvent("jobDescription")}
+                maxLength={50000}
+                className="mt-2 min-h-32"
+                placeholder="Paste the posting to keep it with this application."
+              />
+            </details>
             <div>
               <Label htmlFor="comments" className="text-right">
                 Comments

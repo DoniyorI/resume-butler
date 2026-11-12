@@ -18,7 +18,7 @@ export async function POST(request) {
   try {
     const { admin, userId } = await authenticateExtension(request);
     const input = await parseJson(request, opportunityInput, { maxBytes: 120_000 });
-    const opportunity = await saveOpportunity(admin, userId, input);
+    const opportunity = await saveOpportunity(admin, userId, input, { keepStored: true });
     revalidatePath("/saved-jobs");
     return NextResponse.json({ opportunity });
   } catch (error) { return errorResponse(error, "Extension save job"); }
