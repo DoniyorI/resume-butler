@@ -1,6 +1,6 @@
 # Resume Butler Roadmap
 
-Updated October 29, 2026 — personal-workflow revision. Streamline the owner's applications first, complete non-AI work before expanding AI, and implement one bounded task at a time. Public release is not the current objective.
+Updated November 12, 2026 — reordered after the [gap analysis](docs/research/2026-11-12-gap-analysis.md). The "Current order" section below is the delivery order; the Phase A and Phase B tables are kept for scope and identifiers. Implement one bounded milestone at a time. Public release is not the current objective.
 
 **Direction:** Capture a job, prepare the right truthful resume, apply with less repeated work, preserve the submission, and keep the next action visible. Keep the earlier tracking, extension, resume-building, setup, email and reusable-answer ideas; change their order and scope around personal CS/software use.
 
@@ -29,7 +29,41 @@ The app uses Next.js + Supabase, server-owned auth/data access, a Master CV, res
 
 Checked items describe existence of the recorded work, **not a claim that every local source change is deployed**. RB-01 verification: 152 tests, clean lint, an isolated production build, 32 disposable PostgreSQL assertions, live RPC concurrency/isolation and desktop/mobile browser checks. CSV currently exports loaded rows, not a complete account backup. The wider scoring, guided onboarding and remaining extension work are planned; flexible sections and saved-job capture are implemented.
 
+## Current order (November 12, 2026)
+
+The goal is one place to learn whether a job fits, tailor a resume to it, apply, track it and know the next step until an offer is accepted. A milestone is done when it works end to end, is tested, and is committed and pushed.
+
+| Order | Milestone | Was | Status |
+| --- | --- | --- | --- |
+| M1 | Honest feedback: no score for empty content, correct keyword extraction, an honest response rate | A9 (part) | Next |
+| M2 | One job, one thread: saved jobs feed tailoring and carry their context into the application | Audit item 1 | Planned |
+| M3 | Fit with evidence on saved jobs, scored against the Master CV | B1 | Planned |
+| M4 | Next actions: dated activities and a Today list | A7 | Planned |
+| M5 | Tailoring driven by fit evidence; missing facts are asked for | B3 | Planned |
+| M6 | The same fit result in the extension and on application pages | B1 (extension half) | Planned |
+| M7 | Watchlist: target companies' public boards, new postings scored for fit | RB-13 | Planned |
+| M8 | Offer closure, full export and spreadsheet import | A10 | Planned |
+| M9 | More reviewed autofill adapters | A6 (continued) | Planned |
+| M10 | Gmail connection | A8 | Waits on the owner's Google Cloud setup |
+| M11 | Interview preparation from the submitted package | B5 | Planned |
+
+Why the order changed, one line each:
+
+- **M1 ahead of everything:** a score that rewards an empty resume, or reads "go above and beyond" as the Go language, misleads now, and fit is built on the same extraction.
+- **M2 ahead of A7:** context lost between saving a job and applying breaks the flow every day; it needs no migration.
+- **Fit (B1) moved from Phase B to M3:** it is the largest gap against both Jobright and Simplify and against the stated goal; it is deterministic, so the "no new AI in Phase A" rule is not what it was protecting.
+- **A7 moved to M4, not dropped:** neither competitor documents reminders or round tracking, so it stays high, but it needs a migration and fit does not.
+- **B3 moved up to M5 and B2 (persona review) left unscheduled:** tailoring from fit evidence completes "fit, then a resume for it"; multi-persona review adds opinions, not evidence.
+- **RB-13 redefined as the M7 watchlist and moved up from Later:** it is the proportionate answer to job discovery without building a job board.
+- **A8 Gmail moved down to M10:** it depends on setup only the owner can do; IMAP sync works today.
+- **A9's PDF readability checks and A10's descriptive rates stay in scope** but follow M8; the misleading parts of A9 are in M1.
+- **"Complete Phase A before new AI" is retired** by the owner's instruction of November 12: order now follows user value, with misleading bugs first.
+
+Out of scope for this work: billing, unattended mass apply, native mobile apps and framework upgrades.
+
 ## Phase A — Streamline applications without new AI
+
+*Superseded for ordering by "Current order" above; kept for scope and work-package identifiers.*
 
 “Non-AI first” means no new model-based features, prompts, persona calls or scoring engines in Phase A. Existing AI features may continue working. Fixing deterministic matching around the existing email classifier does not require changing that classifier. Work packages are split so an AI dependency cannot block a useful non-AI improvement.
 
@@ -47,7 +81,7 @@ Checked items describe existence of the recorded work, **not a claim that every 
 | A9 | Fix rule-based document checks and PDF readability | RB-03 plus deterministic PDF checks | Blank/hidden content cannot inflate checks; show what exported text actually contains |
 | A10 | Make records portable and progress understandable | RB-12A/RB-14A | Complete export and descriptive counts/rates, without AI advice or hiring predictions |
 
-A1–A5 and A6's first reviewed Lever adapter are implemented and verified locally; **A7 tracking and next actions is next**. [A6 evidence](docs/reviewed-autofill-verification.md) distinguishes real MV3 fixtures, live API checks and manual-upload limits. Extension0.5.0 requires an unpacked reload; more platforms/Workday and human correction-time measurement remain separate RB-10 work. A5 evidence: [approved answer verification](docs/approved-answers-verification.md). Migrations016–017 are installed; hosted integration state is recorded separately. A4 evidence: [submission package verification](docs/submission-packages-verification.md). Migration015 is installed. A3 evidence: [flexible document verification](docs/flexible-documents-verification.md), migration014. A2 evidence: [saved jobs verification](docs/saved-jobs-verification.md), migration013. A2/A6 select and open a working resume for preparation; A4 preserves exact file bytes and user-reported details without claiming employer receipt. New custom-section AI selection remains PhaseB. External Gmail setup waits do not block A9/A10. Optional fixes may move earlier when they unblock daily use; the development certificate-trust fix7630516 addressed an observed pre-authentication IMAP failure.
+A1–A5 and A6's first reviewed Lever adapter are implemented and verified locally; **the next milestone is set by "Current order" above**. [A6 evidence](docs/reviewed-autofill-verification.md) distinguishes real MV3 fixtures, live API checks and manual-upload limits. Extension0.5.0 requires an unpacked reload; more platforms/Workday and human correction-time measurement remain separate RB-10 work. A5 evidence: [approved answer verification](docs/approved-answers-verification.md). Migrations016–017 are installed; hosted integration state is recorded separately. A4 evidence: [submission package verification](docs/submission-packages-verification.md). Migration015 is installed. A3 evidence: [flexible document verification](docs/flexible-documents-verification.md), migration014. A2 evidence: [saved jobs verification](docs/saved-jobs-verification.md), migration013. A2/A6 select and open a working resume for preparation; A4 preserves exact file bytes and user-reported details without claiming employer receipt. New custom-section AI selection remains PhaseB. External Gmail setup waits do not block A9/A10. Optional fixes may move earlier when they unblock daily use; the development certificate-trust fix7630516 addressed an observed pre-authentication IMAP failure.
 
 ## Phase B — Analyze before applying, then improve the application
 
@@ -96,7 +130,7 @@ Proposed feature name: **Application Updates**, retaining the current `/email-sy
 
 ## Working rules
 
-Complete Phase A before beginning new AI features unless the user changes that priority. Implement and verify one bounded task at a time. Before each milestone, refresh its detailed plan against the current source. Keep synthetic tests separate from real job applications and private inboxes. Review material findings before marking complete. Record local code, applied database migrations and deployed behavior separately. Keep commits/pushes/deployments within the user's authorized integration scope.
+Follow the "Current order" section; the earlier "Phase A before new AI" rule was retired on November 12, 2026. Implement and verify one bounded task at a time. Before each milestone, refresh its detailed plan against the current source. Keep synthetic tests separate from real job applications and private inboxes. Review material findings before marking complete. Record local code, applied database migrations and deployed behavior separately. Keep commits/pushes/deployments within the user's authorized integration scope.
 
 ## Later decisions
 
