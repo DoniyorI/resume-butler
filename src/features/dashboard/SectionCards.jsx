@@ -43,7 +43,7 @@ export default function SectionCards({ stats }) {
         icon={TrendingUp}
         label="Response rate"
         value={`${stats.responseRate}%`}
-        footer={`${stats.responses} interviews or offers`}
+        footer={`${stats.responses} heard back from an employer`}
       />
       <SectionCard
         icon={Target}

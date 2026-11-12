@@ -1,6 +1,10 @@
 import { useState } from "react";
 import { Loader2, Plus } from "lucide-react";
+import { UNSCORED_MESSAGES, yearsNote } from "@/features/ats/AtsResults";
 import { ScoreRing } from "@/features/ats/ScoreRing";
+
+// Degrees are earned, not typed into Skills, so they get no add button
+const NOT_ADDABLE = new Set(["bachelor's degree", "master's degree", "PhD"]);
 
 function Chip({ children, onAdd }) {
   if (!onAdd) {
@@ -39,36 +43,41 @@ export default function MatchCard({ result, loading, error, onAddSkill }) {
   }
 
   const needsWork = (result.bulletFeedback || []).filter((fb) => fb.severity !== "ok").length;
+  const hasScore = typeof result.overallScore === "number";
+  const years = yearsNote(result.yearsRequired);
 
   return (
     <section className="space-y-3 rounded-lg border p-3">
       <div className="flex items-center gap-3">
-        <ScoreRing score={result.overallScore} size={52} strokeWidth={5} textClassName="text-sm" />
+        {hasScore && <ScoreRing score={result.overallScore} size={52} strokeWidth={5} textClassName="text-sm" />}
         <div className="min-w-0 flex-1">
           <p className="flex items-center gap-2 text-sm font-semibold">
             Job match
             {loading && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
           </p>
           <p className="text-xs text-muted-foreground">
-            {result.totalKeywords
-              ? `${result.matched.length} of ${result.totalKeywords} keywords from the job are on the page`
-              : "No known keywords found in the job description"}
+            {UNSCORED_MESSAGES[result.status] ||
+              (result.totalKeywords
+                ? `${result.matched.length} of ${result.totalKeywords} keywords from the job are on the page`
+                : "No known keywords found in the job description")}
           </p>
         </div>
       </div>
+
+      {years && <p className="text-xs text-muted-foreground">{years}</p>}
 
       {result.missing.length > 0 && (
         <div className="space-y-1.5">
           <p className="text-xs font-medium">Missing from the page</p>
           <div className="flex flex-wrap gap-1.5">
             {result.missing.map((keyword) => (
-              <Chip key={keyword} onAdd={() => onAddSkill(keyword)}>
+              <Chip key={keyword} onAdd={NOT_ADDABLE.has(keyword) ? undefined : () => onAddSkill(keyword)}>
                 {keyword}
               </Chip>
             ))}
           </div>
           <p className="text-[11px] text-muted-foreground">
-            Click one you really have to add it to Skills, or work it into a bullet.
+            Click a skill you really have to add it to Skills, or work it into a bullet.
           </p>
         </div>
       )}

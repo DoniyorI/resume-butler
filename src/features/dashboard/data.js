@@ -15,6 +15,20 @@ function groupHistoryByApplication(statusHistory) {
   return byApp;
 }
 
+// Statuses that mean an employer replied. "Reached Out" is a recruiter
+// reaching out, so it counts as a reply too.
+export const RESPONSE_STATUSES = ["Reached Out", "Interviewed", "Offered"];
+
+// Applications that ever heard back: the current status or any earlier one in
+// the history is a reply (interviewed then rejected still heard back)
+export function responseSummary(applications, historyByApp = new Map()) {
+  const replied = new Set(RESPONSE_STATUSES);
+  const responses = applications.filter(
+    (app) => replied.has(app.status) || (historyByApp.get(app.id) || []).some((h) => replied.has(h.status))
+  ).length;
+  return { responses, responseRate: percent(responses, applications.length) };
+}
+
 // Applied -> first "Interviewed" entry, in whole days
 // No reply after this long is worth a follow-up email
 export const FOLLOW_UP_AFTER_DAYS = 14;
@@ -179,14 +193,13 @@ export async function getDashboardStats(supabase, userId) {
   const avgResponseDays =
     times.length > 0 ? Math.round(times.reduce((sum, days) => sum + days, 0) / times.length) : null;
 
+  const { responses, responseRate } = responseSummary(applications, historyByApp);
+
   return {
     total,
     statusCounts,
-    responseRate: percent(
-      statusCounts.Interviewed + statusCounts.Offered + statusCounts["Reached Out"],
-      total
-    ),
-    responses: statusCounts.Interviewed + statusCounts.Offered,
+    responseRate,
+    responses,
     offerRate: percent(statusCounts.Offered, total),
     thisWeek,
     avgResponseDays,

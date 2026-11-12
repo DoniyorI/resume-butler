@@ -7,12 +7,16 @@ function scoreColor(score) {
   return "#ef4444"; // red
 }
 
-// Circular 0-100 score gauge
+const UNRATED_COLOR = "#9ca3af";
+
+// Circular 0-100 score gauge. A score that wasn't rated (null) draws an empty
+// grey ring with a dash, never a red 0.
 export function ScoreRing({ score, size = 80, strokeWidth = 6, textClassName = "text-lg" }) {
+  const rated = typeof score === "number" && Number.isFinite(score);
   const radius = (size - strokeWidth) / 2;
   const circumference = radius * 2 * Math.PI;
-  const offset = circumference - (score / 100) * circumference;
-  const color = scoreColor(score);
+  const offset = rated ? circumference - (score / 100) * circumference : circumference;
+  const color = rated ? scoreColor(score) : UNRATED_COLOR;
 
   return (
     <div className="relative inline-flex items-center justify-center">
@@ -39,7 +43,7 @@ export function ScoreRing({ score, size = 80, strokeWidth = 6, textClassName = "
         />
       </svg>
       <span className={`absolute font-bold ${textClassName}`} style={{ color }}>
-        {score}
+        {rated ? score : "–"}
       </span>
     </div>
   );
