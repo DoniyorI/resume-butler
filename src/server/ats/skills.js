@@ -160,9 +160,17 @@ const CANDIDATE_PATTERNS = Object.entries(SKILL_ALIASES).flatMap(([skill, aliase
   aliases.map((alias) => ({ skill, re: termPattern(alias), rule: ALIAS_RULES[alias] }))
 );
 
+// How many hits either side of one are compared, and how far apart two listed
+// skills may be. Both bound the work on a long or repetitive posting.
+const NEIGHBOURS = 6;
+const MAX_LIST_GAP = 12;
+const CONTEXT_AFTER = 60;
+
 function adjacent(a, b, gapPattern, text) {
   if (a.start < b.end && b.start < a.end) return true; // overlapping: "Ruby" in "Ruby on Rails"
-  const gap = a.end <= b.start ? text.slice(a.end, b.start) : text.slice(b.end, a.start);
+  const [from, to] = a.end <= b.start ? [a.end, b.start] : [b.end, a.start];
+  if (to - from > MAX_LIST_GAP) return false;
+  const gap = text.slice(from, to);
   return gap.trim() !== "" && gapPattern.test(gap);
 }
 
@@ -172,49 +180,59 @@ function adjacent(a, b, gapPattern, text) {
 // surrounding context, so "Built APIs with Node and Express" is not reported
 // as missing Node or Express.
 export function matchSkills(text, { technical = false } = {}) {
-  const accepted = [];
-  const pending = [];
+  const hits = [];
   for (const { skill, re, rule } of CANDIDATE_PATTERNS) {
     re.lastIndex = 0;
     for (const m of text.matchAll(re)) {
-      const hit = { skill, start: m.index, end: m.index + m[0].length };
-      if (!rule) {
-        accepted.push(hit);
-        continue;
+      const hit = { skill, start: m.index, end: m.index + m[0].length, exact: true, accepted: !rule };
+      if (rule) {
+        hit.exact = rule.forms.includes(m[0]);
+        const inContext =
+          INTRO_BEFORE.test(text.slice(Math.max(0, hit.start - 40), hit.start)) ||
+          TECH_AFTER.test(text.slice(hit.end, hit.end + CONTEXT_AFTER));
+        hit.accepted = hit.exact && (!rule.context || inContext || technical);
       }
-      hit.exact = rule.forms.includes(m[0]);
-      const inContext =
-        INTRO_BEFORE.test(text.slice(Math.max(0, hit.start - 40), hit.start)) || TECH_AFTER.test(text.slice(hit.end));
-      if (hit.exact && (!rule.context || inContext || technical)) accepted.push(hit);
-      else pending.push(hit);
+      hits.push(hit);
     }
   }
 
-  // Listed next to an accepted skill; repeat so "Python, Go, and Rust" chains
-  let changed = true;
-  while (changed && pending.length) {
-    changed = false;
-    for (let i = pending.length - 1; i >= 0; i--) {
-      const hit = pending[i];
-      const gap = hit.exact ? LIST_GAP : STRONG_LIST_GAP;
-      if (accepted.some((other) => other.skill !== hit.skill && adjacent(hit, other, gap, text))) {
-        accepted.push(hit);
-        pending.splice(i, 1);
-        changed = true;
-      }
+  // Listed skills sit next to each other in the text, so each hit is compared
+  // only with its few neighbours in position order. That keeps the work linear
+  // in the text length however many times a word repeats.
+  hits.sort((a, b) => a.start - b.start || a.end - b.end);
+  const neighbour = (i, test) => {
+    const last = Math.min(hits.length - 1, i + NEIGHBOURS);
+    for (let j = Math.max(0, i - NEIGHBOURS); j <= last; j++) {
+      if (j !== i && hits[j].skill !== hits[i].skill && test(hits[j])) return true;
     }
-  }
+    return false;
+  };
+  // Accept a hit listed next to an accepted skill. A forward then a backward
+  // pass carries acceptance along a whole list ("Python, Go, and Rust").
+  const spread = () => {
+    const visit = (i) => {
+      const hit = hits[i];
+      if (hit.accepted) return;
+      const gap = hit.exact ? LIST_GAP : STRONG_LIST_GAP;
+      if (neighbour(i, (other) => other.accepted && adjacent(hit, other, gap, text))) hit.accepted = true;
+    };
+    for (let i = 0; i < hits.length; i++) visit(i);
+    for (let i = hits.length - 1; i >= 0; i--) visit(i);
+  };
+  spread();
 
   // Two exact spellings joined as a list vouch for each other: "Node and
   // Express", "Go, Rust"
-  const paired = pending.filter(
-    (hit) =>
-      hit.exact &&
-      pending.some((other) => other.exact && other.skill !== hit.skill && adjacent(hit, other, LIST_GAP, text))
+  const paired = hits.filter(
+    (hit, i) =>
+      !hit.accepted && hit.exact && neighbour(i, (other) => !other.accepted && other.exact && adjacent(hit, other, LIST_GAP, text))
   );
-  accepted.push(...paired);
+  if (paired.length) {
+    for (const hit of paired) hit.accepted = true;
+    spread();
+  }
 
   // In SKILL_ALIASES order, so results are stable
-  const found = new Set(accepted.map((hit) => hit.skill));
+  const found = new Set(hits.filter((hit) => hit.accepted).map((hit) => hit.skill));
   return new Set(Object.keys(SKILL_ALIASES).filter((skill) => found.has(skill)));
 }

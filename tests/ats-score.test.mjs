@@ -215,3 +215,13 @@ test("a posting that says Scrum is reported as scrum, not as a word it never use
   assert.ok(keywords.includes("scrum"));
   assert.ok(!keywords.includes("agile"));
 });
+
+test("a long repetitive posting is matched in linear time", () => {
+  const text = "go, ".repeat(12_000) + "Python";
+  const started = performance.now();
+  const found = matchSkills(text);
+  assert.ok(performance.now() - started < 2000, "matchSkills took too long");
+  assert.ok(found.has("python"));
+  const spaced = ("Go and " + " ".repeat(40) + "Express ").repeat(500);
+  assert.ok(!matchSkills(spaced).has("go"));
+});
