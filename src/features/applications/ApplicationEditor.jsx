@@ -113,7 +113,13 @@ function PayInput({ id, value, onChange, placeholder }) {
   );
 }
 
-export default function ApplicationEditor({ application, statusHistory, resumeContent, submissionPanel }) {
+export default function ApplicationEditor({
+  application,
+  statusHistory,
+  resumeContent,
+  submissionPanel,
+  nextSteps,
+}) {
   const [form, dispatch] = useReducer(formReducer, application, initForm);
   const [saved, setSaved] = useState(() => initForm(application));
   const [editingDescription, setEditingDescription] = useState(!application.jobDescription);
@@ -477,6 +483,7 @@ export default function ApplicationEditor({ application, statusHistory, resumeCo
         </div>
 
         <aside className="space-y-5">
+          {nextSteps}
           <StatusTimeline history={statusHistory} />
           <LinkedDocuments resumeId={application.resumeId} coverLetterId={application.coverLetterId} />
         </aside>

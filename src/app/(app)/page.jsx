@@ -3,8 +3,14 @@ import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { requirePageUser } from "@/server/auth";
 import { getConnection } from "@/server/email/connection";
-import { getDashboardStats, getGoalAndName } from "@/features/dashboard/data";
+import {
+  getDashboardStats,
+  getGoalAndName,
+  groupHistoryByApplication,
+  loadDashboardRows,
+} from "@/features/dashboard/data";
 import FollowUps from "@/features/dashboard/FollowUps";
+import TodayCard from "@/features/dashboard/TodayCard";
 import GoalCard from "@/features/dashboard/GoalCard";
 import RecentApplications from "@/features/dashboard/RecentApplications";
 import SyncCard from "@/features/dashboard/SyncCard";
@@ -17,6 +23,13 @@ import {
 } from "@/features/dashboard/LazyCharts";
 import { toConnection } from "@/features/email-sync/data";
 import { getPendingSummary } from "@/features/suggestions/data";
+import {
+  listForSuggestions,
+  listSavedJobsToDecide,
+  listUpcoming,
+  todayKey,
+} from "@/server/activities/service";
+import { suggestNextSteps } from "@/server/activities/suggest";
 
 export const metadata = { title: "Dashboard" };
 
@@ -30,16 +43,43 @@ async function loadConnection(supabase, userId) {
   }
 }
 
-// The home page: today's to-dos first (goal, email updates, follow-ups),
-// then the newest applications, then the trends
+// Next steps and the saved jobs behind a suggestion fail soft as well
+async function softly(load, fallback, what) {
+  try {
+    return await load;
+  } catch (error) {
+    console.warn(`Could not load ${what}:`, error.message);
+    return fallback;
+  }
+}
+
+// The home page: today's to-dos first (dated next steps and suggestions, goal,
+// email updates, follow-ups), then the newest applications, then the trends
 export default async function DashboardPage() {
   const { supabase, user } = await requirePageUser();
-  const [stats, { firstName, goal }, connection, pending] = await Promise.all([
-    getDashboardStats(supabase, user.id),
+  const [rows, { firstName, goal }, connection, pending, upcoming, activities, savedJobs] = await Promise.all([
+    loadDashboardRows(supabase, user.id),
     getGoalAndName(supabase, user.id),
     loadConnection(supabase, user.id),
     getPendingSummary(supabase, user.id),
+    // Before migration 020 these two are { items: [], setupPending: true }
+    softly(
+      listUpcoming(supabase, user.id, { withinDays: 7 }),
+      { items: [], olderOverdue: 0, setupPending: false },
+      "next steps"
+    ),
+    softly(listForSuggestions(supabase, user.id), { items: [], setupPending: false }, "next steps"),
+    softly(listSavedJobsToDecide(supabase, user.id), [], "saved jobs"),
   ]);
+  const stats = await getDashboardStats(supabase, user.id, rows);
+  const suggestions = suggestNextSteps({
+    applications: rows.applications,
+    historyByApp: groupHistoryByApplication(rows.history),
+    activities: activities.items,
+    savedJobs,
+    pendingEmailCount: pending.count,
+    today: todayKey(),
+  });
 
   return (
     <div className="flex w-full flex-col gap-4 px-4 pb-10 pt-[85px] md:px-6">
@@ -54,6 +94,13 @@ export default async function DashboardPage() {
           </Link>
         </Button>
       </div>
+
+      <TodayCard
+        upcoming={upcoming.items}
+        olderOverdue={upcoming.olderOverdue}
+        suggestions={suggestions}
+        setupPending={upcoming.setupPending}
+      />
 
       <SectionCards stats={stats} />
 

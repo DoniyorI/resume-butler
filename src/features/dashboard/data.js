@@ -6,7 +6,7 @@ const DAY_MS = 1000 * 60 * 60 * 24;
 
 const percent = (part, whole) => (whole > 0 ? Math.round((part / whole) * 100) : 0);
 
-function groupHistoryByApplication(statusHistory) {
+export function groupHistoryByApplication(statusHistory) {
   const byApp = new Map();
   for (const entry of statusHistory) {
     if (!byApp.has(entry.application_id)) byApp.set(entry.application_id, []);
@@ -36,10 +36,10 @@ const FOLLOW_UP_LIMIT = 6;
 const RECENT_LIMIT = 8;
 
 // Applications still at "Applied" (never moved on) two weeks or more after
-// applying, oldest first: the ones to nudge
-function followUps(applications, historyByApp) {
-  const now = Date.now();
-  const waiting = applications
+// applying, oldest first: the ones to nudge. Also the rule behind the
+// dashboard's "Suggested next steps" (server/activities/suggest.js).
+export function waitingOnReply(applications, historyByApp, now = Date.now()) {
+  return applications
     .filter((app) => app.status === "Applied")
     .filter((app) => (historyByApp.get(app.id) || []).every((h) => h.status === "Applied"))
     .map((app) => {
@@ -55,6 +55,10 @@ function followUps(applications, historyByApp) {
     })
     .filter((app) => app && app.daysWaiting >= FOLLOW_UP_AFTER_DAYS)
     .sort((a, b) => b.daysWaiting - a.daysWaiting);
+}
+
+function followUps(applications, historyByApp) {
+  const waiting = waitingOnReply(applications, historyByApp);
   return { total: waiting.length, items: waiting.slice(0, FOLLOW_UP_LIMIT) };
 }
 
@@ -153,8 +157,9 @@ async function fetchAll(buildQuery) {
   }
 }
 
-// Everything the dashboard shows, computed from the user's applications and history
-export async function getDashboardStats(supabase, userId) {
+// Every application and status history row of the user. The dashboard loads
+// them once and shares them between the stats and the suggested next steps.
+export async function loadDashboardRows(supabase, userId) {
   const [applications, history] = await Promise.all([
     fetchAll(() =>
       supabase
@@ -174,7 +179,13 @@ export async function getDashboardStats(supabase, userId) {
         .order("id")
     ),
   ]);
+  return { applications, history };
+}
 
+// Everything the dashboard shows, computed from the user's applications and
+// history (pass loadDashboardRows' result to reuse rows already loaded)
+export async function getDashboardStats(supabase, userId, rows) {
+  const { applications, history } = rows || (await loadDashboardRows(supabase, userId));
   const historyByApp = groupHistoryByApplication(history);
   const total = applications.length;
 

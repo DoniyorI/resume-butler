@@ -1,7 +1,7 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
 // Same layout as ApplicationEditor: breadcrumb, title and facts, then the
-// details column and the status timeline beside it
+// details column and, beside it, next steps and the status timeline
 export default function ApplicationDetailLoading() {
   return (
     <div
@@ -29,6 +29,8 @@ export default function ApplicationDetailLoading() {
           <Skeleton className="h-80 w-full rounded-xl" />
         </div>
         <div className="space-y-5">
+          {/* Next steps */}
+          <Skeleton className="h-32 w-full rounded-xl" />
           <Skeleton className="h-56 w-full rounded-xl" />
           <Skeleton className="h-36 w-full rounded-xl" />
         </div>

@@ -32,6 +32,8 @@ export function DashboardSkeleton() {
   return (
     <div className="flex w-full flex-col gap-4 px-4 pb-10 pt-[85px] md:px-6" aria-busy="true">
       <PageTitle />
+      {/* Today: due steps and suggested next steps */}
+      <CardBlock className="h-44" lines={3} />
       <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
         {Array.from({ length: 4 }, (_, i) => (
           <CardBlock key={i} lines={2} />
