@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { Bookmark, Check, ExternalLink, FileText, MapPin, Plus, Sparkles, Trash2 } from "lucide-react";
 import { saveJob, removeSavedJob, tailorSavedJob, markSavedJobApplied } from "./actions";
 import { safeHttpUrl } from "@/lib/safeUrl";
+import JobFit from "./JobFit";
 
 const field = "w-full rounded-lg border border-input bg-white px-3 py-2 text-sm outline-none focus:border-brand focus:ring-2 focus:ring-brand/15 disabled:opacity-60";
 
@@ -80,7 +81,7 @@ function ApplyConfirm({ job, resume, onDone, onCancel }) {
   </div>;
 }
 
-function JobCard({ job, resumes }) {
+function JobCard({ job, resumes, fit }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false), [removing, setRemoving] = useState(false), [busy, setBusy] = useState(false), [error, setError] = useState("");
   const [applying, setApplying] = useState(false), [applied, setApplied] = useState(null);
@@ -99,6 +100,7 @@ function JobCard({ job, resumes }) {
     {p.location ? <p className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground"><MapPin size={13} />{p.location}</p> : null}
     {p.salary_min != null || p.salary_max != null ? <p className="mt-2 text-xs text-muted-foreground">{p.salary_currency || "USD"} {p.salary_min?.toLocaleString() || "—"} – {p.salary_max?.toLocaleString() || "—"}{p.salary_period ? ` / ${p.salary_period}` : ""}</p> : null}
     <p className="my-4 line-clamp-3 whitespace-pre-line text-sm leading-relaxed text-muted-foreground">{p.job_description || "No description captured. Add it while the posting is available."}</p>
+    <JobFit fit={fit} described={(p.job_description || "").trim().length >= 40} tailor={<TailorButton job={job} resume={resume} onError={setError} />} />
     <div className="mt-auto space-y-4 border-t pt-4"><p className="flex items-center gap-2 text-xs"><FileText size={14} className="text-brand" />{resume ? <Link href={`/resumes/${resume.id}`} className="truncate hover:underline">{resume.title}</Link> : <span className="text-muted-foreground">Master CV / decide later</span>}</p>
       <div className="flex flex-wrap items-center gap-3 text-xs font-medium"><TailorButton job={job} resume={resume} onError={setError} /><button type="button" onClick={() => setEditing(true)} className="rounded-md border px-3 py-2 hover:bg-muted">Review details</button>{trackedId ? null : <button type="button" onClick={() => setApplying(!applying)} className="rounded-md border px-3 py-2 hover:bg-muted">I applied</button>}</div>
       <div className="flex flex-wrap items-center gap-3 text-xs font-medium">{href ? <a href={href} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-brand hover:underline">Open posting <ExternalLink size={12} /></a> : null}{trackedId ? <Link href={`/applications/${trackedId}`} className="text-brand hover:underline">View application →</Link> : null}</div>
@@ -109,11 +111,11 @@ function JobCard({ job, resumes }) {
   </article>;
 }
 
-export default function SavedJobs({ jobs, resumes }) {
+export default function SavedJobs({ jobs, resumes, fits = {} }) {
   const [adding, setAdding] = useState(false);
   return <>
     <div className="flex items-center justify-between gap-4 rounded-xl border border-brand/15 bg-brand/5 px-4 py-3"><p className="text-xs leading-relaxed text-muted-foreground">Saved openings stay out of your application counts until you apply.</p><button onClick={() => setAdding(!adding)} className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-brand px-3 py-2 text-xs font-medium text-white hover:bg-brand/90"><Plus size={14} /> Save a job</button></div>
     {adding ? <JobEditor resumes={resumes} onClose={() => setAdding(false)} /> : null}
-    {jobs.length ? <div className="grid items-start gap-4 md:grid-cols-2">{jobs.map(job => <JobCard key={`${job.id}:${job.updated_at}`} job={job} resumes={resumes} />)}</div> : <div className="rounded-xl border border-dashed bg-white px-6 py-14 text-center"><Bookmark className="mx-auto mb-4 text-brand/70" size={30} /><h2 className="text-lg font-semibold">A shortlist worth coming back to</h2><p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-muted-foreground">Save an opening from the extension, or paste a posting here. Keep its description and your resume choice together.</p></div>}
+    {jobs.length ? <div className="grid items-start gap-4 md:grid-cols-2">{jobs.map(job => <JobCard key={`${job.id}:${job.updated_at}`} job={job} resumes={resumes} fit={fits[job.id] ?? null} />)}</div> : <div className="rounded-xl border border-dashed bg-white px-6 py-14 text-center"><Bookmark className="mx-auto mb-4 text-brand/70" size={30} /><h2 className="text-lg font-semibold">A shortlist worth coming back to</h2><p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-muted-foreground">Save an opening from the extension, or paste a posting here. Keep its description and your resume choice together.</p></div>}
   </>;
 }

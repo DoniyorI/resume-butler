@@ -366,7 +366,7 @@ test("short years step the band down one and say so", () => {
   assert.equal(result.band, "good");
   assert.match(
     result.reason,
-    /The posting asks for 5\+ years; your dated experience covers about 3, so this is rated one band lower\./
+    /The posting asks for 5\+ years; your dated experience covers about 3 years, so this is rated one band lower\./
   );
   cv.experience[0].startDate = "2018-01-01";
   assert.equal(fit(posting, cv).band, "strong");

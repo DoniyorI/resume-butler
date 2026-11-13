@@ -22,6 +22,7 @@ import {
 const NAV_LINKS = [
   { href: "/", label: "Dashboard" },
   { href: "/applications", label: "Applications" },
+  { href: "/saved-jobs", label: "Saved jobs" },
   { href: "/documents", label: "Documents" },
   { href: "/email-sync", label: "Inbox" },
 ];

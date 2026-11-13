@@ -83,21 +83,33 @@ export async function saveOpportunity(supabase, userId, input, { keepStored = fa
   return data;
 }
 
-export async function listOpportunities(supabase, userId, page = 1, search = "") {
-  const size = 20;
+export const SAVED_JOBS_PAGE_SIZE = 20;
+
+/**
+ * The user's saved jobs, newest first, matching `search` on company, role or
+ * location, with an exact count. Callers add .range() or .limit().
+ */
+export function savedJobsQuery(supabase, userId, search = "") {
   let query = supabase.from("job_opportunities")
     .select("id,payload,resume_id,application_id,created_at,updated_at", { count: "exact" })
-    .eq("user_id", userId).order("updated_at", { ascending: false }).order("id")
-    .range((page - 1) * size, page * size - 1);
+    .eq("user_id", userId).order("updated_at", { ascending: false }).order("id");
   if (search) {
     const pattern = "%" + search.slice(0, 100).replace(/[\\%_]/g, "\\$&") + "%";
     const quoted = '"' + pattern.replace(/["\\]/g, "\\$&") + '"';
     query = query.or(["company", "role", "location"].map(key => `payload->>${key}.ilike.${quoted}`).join(","));
   }
-  const { data, error, count } = await query;
+  return query;
+}
+
+export function savedJobsResult({ data, error, count }) {
   if (TABLE_MISSING.includes(error?.code)) return { jobs: [], total: 0, setupPending: true };
   if (error) throw error;
-  return { jobs: data, total: count || 0, setupPending: false };
+  return { jobs: data, total: count ?? data.length, setupPending: false };
+}
+
+export async function listOpportunities(supabase, userId, page = 1, search = "") {
+  const size = SAVED_JOBS_PAGE_SIZE;
+  return savedJobsResult(await savedJobsQuery(supabase, userId, search).range((page - 1) * size, page * size - 1));
 }
 
 export async function getOpportunityForUrl(supabase, userId, url) {

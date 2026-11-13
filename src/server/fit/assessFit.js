@@ -112,7 +112,7 @@ function bandFor(counts, years, degree) {
   if (years.status === "short") {
     const lowered = BANDS[Math.max(0, BANDS.indexOf(band) - 1)];
     sentences.push(
-      `The posting asks for ${years.required}+ years; your dated experience covers about ${years.have}` +
+      `The posting asks for ${years.required}+ years; your dated experience covers about ${years.have} ${plural(years.have, "year", "years")}` +
         (lowered !== band ? `, so this is rated one band lower.` : ".")
     );
     band = lowered;
