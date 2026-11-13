@@ -2,6 +2,7 @@
 import { Loader2, Sparkles, WandSparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import FitCard from "@/features/resumes/studio/assistant/FitCard";
 import CvLibrary from "@/features/resumes/studio/assistant/CvLibrary";
 import JobTarget from "@/features/resumes/studio/assistant/JobTarget";
 import MatchCard from "@/features/resumes/studio/assistant/MatchCard";
@@ -33,7 +34,7 @@ function AiAction({ icon: Icon, title, description, onClick, busy, disabled }) {
  * Right-hand panel: tailoring to a job (match score and AI) and the master
  * CV. On narrow screens it's a drawer and also holds the page layout tab.
  */
-export default function AssistantPanel({ tab, onTabChange, onClose, layout, job, match, ai, review, cv }) {
+export default function AssistantPanel({ tab, onTabChange, onClose, layout, job, match, fit, ai, review, cv }) {
   const hasJob = Boolean(job.target.jobDescription.trim());
 
   return (
@@ -74,12 +75,9 @@ export default function AssistantPanel({ tab, onTabChange, onClose, layout, job,
 
           {hasJob && (
             <>
-              <MatchCard
-                result={match.result}
-                loading={match.loading}
-                error={match.error}
-                onAddSkill={match.onAddSkill}
-              />
+              <FitCard fit={fit} skills={fit.skills} onAdd={fit.onAdd} />
+
+              <MatchCard result={match.result} loading={match.loading} error={match.error} />
 
               <section className="space-y-2" aria-label="AI tools">
                 <AiAction
@@ -92,7 +90,7 @@ export default function AssistantPanel({ tab, onTabChange, onClose, layout, job,
                 <AiAction
                   icon={WandSparkles}
                   title="Pick the best CV entries for this job"
-                  description="Chooses experience, projects and skills from your Master CV"
+                  description="Chooses the entries that back this posting and says why. No AI."
                   onClick={ai.onPick}
                   busy={ai.picking}
                 />

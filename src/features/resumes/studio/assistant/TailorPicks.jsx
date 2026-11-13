@@ -17,9 +17,9 @@ function PickList({ title, picks }) {
   );
 }
 
-// The AI's choice of master CV entries for the job, shown before it replaces anything
+// The Master CV entries chosen for the job for the job, shown before it replaces anything
 export default function TailorPicks({ result, onApply, onDiscard }) {
-  const { content, picks } = result;
+  const { content, picks, note } = result;
   const skillCount = content.skills.reduce((sum, line) => sum + line.skills.split(",").length, 0);
 
   return (
@@ -36,6 +36,7 @@ export default function TailorPicks({ result, onApply, onDiscard }) {
           from your Master CV. You can undo it.
         </p>
       </div>
+      {note && <p className="text-xs text-muted-foreground">{note}</p>}
       <PickList title="Experience" picks={picks.experience} />
       <PickList title="Projects" picks={picks.projects} />
       <p className="text-xs text-muted-foreground">

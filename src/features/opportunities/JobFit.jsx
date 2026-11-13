@@ -7,7 +7,7 @@ import { ChevronDown, CircleCheck, CircleDashed, CircleHelp, CircleMinus, Circle
 // Decision support only: it never predicts an interview, suggests wording or
 // adds a term anywhere.
 
-const BANDS = {
+export const BANDS = {
   strong: { label: "Strong fit", tone: "bg-brand text-white", Icon: CircleCheck },
   good: { label: "Good fit", tone: "bg-brand/10 text-brand ring-1 ring-inset ring-brand/25", Icon: CircleDot },
   stretch: { label: "Stretch", tone: "bg-amber-50 text-amber-800 ring-1 ring-inset ring-amber-200", Icon: CircleDashed },
@@ -21,7 +21,7 @@ const STRENGTH = {
   missing: { label: "Not in your Master CV", tone: "text-slate-500" },
 };
 
-const CHECK_KINDS = {
+export const CHECK_KINDS = {
   "work-authorization": "Work authorisation",
   clearance: "Clearance",
   citizenship: "Citizenship",
@@ -31,7 +31,7 @@ const CHECK_KINDS = {
 };
 
 const PREFERRED_SHOWN = 4;
-const EMPTY_CV = /Master CV has no experience/i;
+export const EMPTY_CV = /Master CV has no experience/i;
 const article = (term) => (/^[aeiou]/i.test(term) ? "an" : "a");
 
 function termName(req) {
@@ -98,14 +98,14 @@ function PreferredList({ list }) {
   );
 }
 
-function yearsLine(years) {
+export function yearsLine(years) {
   if (!years || years.status === "not-stated" || years.required == null) return null;
   if (years.status === "unknown")
     return `Asks for ${years.required}+ years; add dates to your experience to compare.`;
   return `Asks for ${years.required}+ years; your dated experience covers about ${years.have} ${years.have === 1 ? "year" : "years"}.`;
 }
 
-function degreeLine(degree) {
+export function degreeLine(degree) {
   if (!degree || degree.status === "not-stated" || !degree.required) return null;
   const asks = `Asks for ${article(degree.required)} ${degree.required}`;
   if (degree.status === "unknown") return `${asks}: add your education to compare.`;

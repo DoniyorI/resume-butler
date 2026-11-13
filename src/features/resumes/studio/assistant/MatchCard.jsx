@@ -1,36 +1,21 @@
 import { useState } from "react";
-import { Loader2, Plus } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { UNSCORED_MESSAGES, yearsNote } from "@/features/ats/AtsResults";
 import { ScoreRing } from "@/features/ats/ScoreRing";
 
-// Degrees are earned, not typed into Skills, so they get no add button
-const NOT_ADDABLE = new Set(["bachelor's degree", "master's degree", "PhD"]);
-
-function Chip({ children, onAdd }) {
-  if (!onAdd) {
-    return (
-      <span className="rounded-full border bg-muted/50 px-2 py-0.5 text-xs text-muted-foreground">
-        {children}
-      </span>
-    );
-  }
+function Chip({ children }) {
   return (
-    <button
-      type="button"
-      onClick={onAdd}
-      title={`Add "${children}" to your skills (only if you have it)`}
-      className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-xs text-amber-900 hover:border-amber-300 hover:bg-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-    >
-      <Plus className="h-3 w-3" /> {children}
-    </button>
+    <span className="rounded-full border bg-muted/50 px-2 py-0.5 text-xs text-muted-foreground">
+      {children}
+    </span>
   );
 }
 
 /**
  * How well the page matches the job, re-scored as you edit (keyword and
- * structure checks, no AI). Missing keywords can be added to the skills.
+ * structure checks, no AI). Adding what the Master CV backs is the Fit card's job.
  */
-export default function MatchCard({ result, loading, error, onAddSkill }) {
+export default function MatchCard({ result, loading, error }) {
   const [showMatched, setShowMatched] = useState(false);
 
   if (!result) {
@@ -71,13 +56,11 @@ export default function MatchCard({ result, loading, error, onAddSkill }) {
           <p className="text-xs font-medium">Missing from the page</p>
           <div className="flex flex-wrap gap-1.5">
             {result.missing.map((keyword) => (
-              <Chip key={keyword} onAdd={NOT_ADDABLE.has(keyword) ? undefined : () => onAddSkill(keyword)}>
-                {keyword}
-              </Chip>
+              <Chip key={keyword}>{keyword}</Chip>
             ))}
           </div>
           <p className="text-[11px] text-muted-foreground">
-            Click a skill you really have to add it to Skills, or work it into a bullet.
+            Use Fit for this job above to add what your Master CV backs.
           </p>
         </div>
       )}

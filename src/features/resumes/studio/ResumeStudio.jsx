@@ -4,9 +4,9 @@ import { useCallback, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { itemBullets } from "@/features/resumes/resumeDocument";
+import { findResumeItem, itemBullets, resumeItemAsCv } from "@/features/resumes/resumeDocument";
 import { renameResume } from "@/features/resumes/actions";
-import { checkResumePages, reviewBullets, tailorFromCv } from "@/features/resumes/api";
+import { checkResumePages, reviewBullets } from "@/features/resumes/api";
 import { useResumeDocument } from "@/features/resumes/hooks/useResumeDocument";
 import { useResumeDownload } from "@/features/resumes/hooks/useResumeDownload";
 import { useAutomaticPdfFit } from "@/features/resumes/hooks/useAutomaticPdfFit";
@@ -17,6 +17,7 @@ import { pageFit } from "@/features/resumes/studio/FitGauge";
 import PaperCanvas, { PAGE_CONTENT_PX } from "@/features/resumes/studio/PaperCanvas";
 import Paper from "@/features/resumes/studio/paper/Paper";
 import StudioToolbar from "@/features/resumes/studio/StudioToolbar";
+import { useJobFit } from "@/features/resumes/studio/useJobFit";
 import { useJobMatch } from "@/features/resumes/studio/useJobMatch";
 
 // Client-only: the drag-and-drop library
@@ -102,6 +103,7 @@ export default function ResumeStudio({ resume, masterCv, jobOptions, linkedJob =
   const { sections, target } = resumeDoc;
   const jobDescription = target.jobDescription;
   const match = useJobMatch(resumeDoc.resumeContent, jobDescription);
+  const jobFit = useJobFit(resumeDoc.resumeContent, jobDescription);
 
   const itemsOf = useCallback((id) => sections.find((section) => section.id === id)?.items || [], [sections]);
   const sectionOf = (id) => sections.find((section) => section.id === id);
@@ -117,10 +119,12 @@ export default function ResumeStudio({ resume, masterCv, jobOptions, linkedJob =
   };
 
   // Changes that replace a lot at once get an Undo
+  // (a change that returns false did nothing, so there is nothing to undo)
   const withUndo = (message, change) => {
     const before = resumeDoc.snapshot();
-    change();
+    if (change() === false) return false;
     toast(message, { action: { label: "Undo", onClick: () => resumeDoc.restore(before) } });
+    return true;
   };
 
   // --- What the page shows on bullets: ATS feedback and AI suggestions ---
@@ -217,9 +221,16 @@ export default function ResumeStudio({ resume, masterCv, jobOptions, linkedJob =
   const pickFromCv = async () => {
     setPicking(true);
     try {
-      const result = await tailorFromCv({ jobDescription });
-      if (!result.content) toast("Add entries to your Master CV first");
-      else setPicks(result);
+      // The fit result carries the plan: the entries whose own text backs the posting, no AI
+      // A result still loading is for an earlier page or job description: ask again now
+      const result = jobFit.loading || !jobFit.result ? await jobFit.refresh() : jobFit.result;
+      const plan = result?.plan;
+      if (!plan) {
+        toast.error("Could not check the fit. Try again.");
+        return;
+      }
+      if (plan.content.experience.length + plan.content.projects.length === 0) toast("Add entries to your Master CV first");
+      else setPicks(plan);
     } catch (error) {
       toast.error(error.message);
     } finally {
@@ -274,6 +285,32 @@ export default function ResumeStudio({ resume, masterCv, jobOptions, linkedJob =
     if (itemsOf(sectionId).length === 0 && masterCv.sectionTitles?.[sectionId]) resumeDoc.updateSectionMeta(sectionId, { title: masterCv.sectionTitles[sectionId] });
     resumeDoc.addItem(sectionId, item);
     showSection(sectionId);
+  };
+
+  // A row of the Fit card: adds exactly what the Master CV holds. True when the page changed.
+  const addFromFit = (row) => {
+    if (row.kind === "entry") {
+      // The fit sees only visible sections, so look in the whole document first
+      const existing = findResumeItem[row.sectionId]?.(resumeItemAsCv[row.sectionId](row.item), resumeDoc.content[row.sectionId] || []);
+      if (existing) {
+        const section = sectionOf(row.sectionId);
+        if (!section?.hidden) {
+          toast("That entry is already on the page");
+          return false;
+        }
+        const name = section.title || row.sectionId[0].toUpperCase() + row.sectionId.slice(1);
+        return withUndo(`Your ${name} section was hidden. It is shown again.`, () => showSection(row.sectionId));
+      }
+      return withUndo(`${row.title} added`, () => addFromCv(row.sectionId, row.item));
+    }
+    if (row.kind === "skill") return withUndo(`${row.skill} added to Skills`, () => addSkill(row.skill));
+    // addBullet looks in the whole document, so an entry in a hidden section is found, not duplicated
+    const added = withUndo("Bullet added", () => {
+      if (!resumeDoc.addBullet(row.sectionId, row.match, row.bullet)) return false;
+      showSection(row.sectionId);
+    });
+    if (!added) toast("That bullet is already on the page");
+    return added;
   };
 
   const removeItem = (sectionId, index) =>
@@ -359,7 +396,8 @@ export default function ResumeStudio({ resume, masterCv, jobOptions, linkedJob =
             onClose={() => setAssistantOpen(false)}
             layout={outline}
             job={{ target, options: jobOptions, onChange: changeTarget, linked }}
-            match={{ ...match, onAddSkill: addSkill }}
+            match={match}
+            fit={{ ...jobFit, skills: masterCv.skills || [], onAdd: addFromFit }}
             ai={{
               onReview: () => runReview("match"),
               reviewing: reviewing === "match",

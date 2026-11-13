@@ -13,9 +13,10 @@ export async function rewriteBullet({ text, context, jobDescription }) {
   return data.variants || [];
 }
 
-// { content, picks }, or { content: null } when the master CV is empty
-export function tailorFromCv({ jobDescription }) {
-  return postJson("/api/tailor-resume", { jobDescription });
+// How the job fits the Master CV, the entries that back it, and what the page could still show.
+// { fit, plan, gaps }. Computed locally on the server: no AI.
+export function fetchResumeFit({ jobDescription, resumeContent }) {
+  return postJson("/api/resume-fit", { jobDescription, resumeContent });
 }
 
 // Page count plus the fingerprint of the saved content actually compiled.

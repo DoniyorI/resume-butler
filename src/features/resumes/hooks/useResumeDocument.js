@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createDocumentSaver } from "@/features/resumes/documentSave";
 import { saveResumeContent } from "@/features/resumes/actions";
-import { DATED_SECTIONS, SECTION_IDS, blankItem, sectionItems, withSectionItems, visibleResumeContent, sortByDateDesc } from "@/features/resumes/resumeDocument";
+import { DATED_SECTIONS, SECTION_IDS, appendBullet, blankItem, sectionItems, withSectionItems, visibleResumeContent, sortByDateDesc } from "@/features/resumes/resumeDocument";
 
 const AUTOSAVE_DELAY_MS = 500;
 const BULLET_SECTIONS = new Set(["experience", "projects"]);
@@ -116,6 +116,14 @@ export function useResumeDocument({ resumeId, initialContent, needsInitialSave =
     });
   }, []);
 
+  // Adds a Master CV bullet to the entry already on the page. True when it added one.
+  const addBullet = useCallback((sectionId, match, text) => {
+    const next = appendBullet(sectionId, sectionItems(latestDocRef.current, sectionId), match, text);
+    if (!next) return false;
+    updateSection(sectionId, () => next);
+    return true;
+  }, [updateSection]);
+
   const moveSection = useCallback((fromIndex, toIndex) => {
     setDoc((prev) => {
       const order = [...prev.order];
@@ -200,6 +208,7 @@ export function useResumeDocument({ resumeId, initialContent, needsInitialSave =
     addItem,
     deleteItem,
     replaceBullet,
+    addBullet,
     moveSection,
   };
 }
