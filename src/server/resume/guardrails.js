@@ -1,58 +1,22 @@
 import "server-only";
-import { SKILL_ALIASES } from "@/server/ats/skills";
+import { PRACTICE_SKILLS, matchSkills } from "@/server/ats/skills";
 
 // Checks on AI edits to the user's own bullets. The model is told to keep the
 // facts; these make sure it did, so a suggestion can never put a technology or
 // a claim on someone's resume that they didn't write.
 
-// Aliases that are also everyday words ("rest", "testing", "go"), so seeing
-// them in a suggestion isn't proof the model added a technology
-const GENERIC_ALIASES = new Set([
-  "api",
-  "rest",
-  "restful",
-  "testing",
-  "unit testing",
-  "integration testing",
-  "e2e testing",
-  "authentication",
-  "real-time",
-  "containers",
-  "containerization",
-  "version control",
-  "serverless",
-  "ai",
-  "ml",
-  "dl",
-  "data structures",
-  "algorithms",
-  "go",
-  "next",
-  "node",
-  "express",
-  "spring",
-  "swift",
-  "rust",
-  "ruby",
-  "lambda",
-]);
-
-const TECH_PATTERNS = Object.entries(SKILL_ALIASES).map(([skill, aliases]) => ({
-  skill,
-  patterns: aliases
-    .filter((alias) => !GENERIC_ALIASES.has(alias))
-    .map(
-      (alias) =>
-        new RegExp(`(^|[^a-z0-9+#.])${alias.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}($|[^a-z0-9+#])`, "i")
-    ),
-}));
-
 // Technologies a bullet names (canonical names, e.g. "react native"), so the
-// prompt can tell the model to keep them
+// prompt can tell the model to keep them. Uses the resume rules of
+// matchSkills: plain technology names match in any case, but a name that is
+// also an ordinary word counts only in its exact spelling ("Excel", "Spark",
+// "Unity", "Go"), so "excel at", "sparked" or "shell out" in a rewrite are not
+// an added technology, while "Rewrote it in Go" is. Ways of working
+// ("testing", "system design", "concurrency") are left to the word checks
+// below rather than treated as technologies.
 export function technologies(text) {
   const found = new Set();
-  for (const { skill, patterns } of TECH_PATTERNS) {
-    if (patterns.some((re) => re.test(text))) found.add(skill);
+  for (const skill of matchSkills(String(text || ""), { technical: true })) {
+    if (!PRACTICE_SKILLS.has(skill)) found.add(skill);
   }
   return found;
 }

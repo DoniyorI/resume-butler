@@ -225,3 +225,111 @@ test("a long repetitive posting is matched in linear time", () => {
   const spaced = ("Go and " + " ".repeat(40) + "Express ").repeat(500);
   assert.ok(!matchSkills(spaced).has("go"));
 });
+
+// Bulleted and one-per-line lists
+test("a bulleted requirements list counts each whole-line skill", () => {
+  const found = matchSkills("Requirements\n- Rust\n- Swift\n- Kotlin\n- 8+ years");
+  for (const skill of ["rust", "swift", "kotlin"]) assert.ok(found.has(skill), skill);
+  const bare = matchSkills("What you need\nRust\nGo\nSwift");
+  for (const skill of ["rust", "go", "swift"]) assert.ok(bare.has(skill), skill);
+  const numbered = matchSkills("1. Spark\n2. Airflow\n3) dbt");
+  for (const skill of ["spark", "airflow", "dbt"]) assert.ok(numbered.has(skill), skill);
+  // A lower-case word on its own line counts only between listed skills
+  assert.ok(matchSkills("• Python\n• go\n• SQL").has("go"));
+  assert.ok(!matchSkills("Python\ngo above and beyond").has("go"));
+  assert.ok(!matchSkills("Our values\nWe go above and beyond\nwhat comes next").size);
+});
+
+// Each ambiguous alias: a sentence where it must not count and one where it must
+const AMBIGUOUS = [
+  ["r", "Our R&D team ships monthly. Grade R students.", "Experience in Python, R and SQL"],
+  ["r", "Plan R is our backup.", "Strong R programming skills"],
+  ["c", "C-suite reporting. Series C startup.", "C, C++ and Rust"],
+  ["dart", "We play dart games on Fridays. Dart over to the office.", "Mobile apps in Flutter and Dart"],
+  ["julia", "Julia leads the hiring panel.", "Experience with Julia or Python"],
+  ["elixir", "Coffee is our elixir.", "Backend services written in Elixir"],
+  ["solidity", "The solidity of our finances. Solidity matters here.", "Smart contracts in Solidity developer role: Solidity, Rust"],
+  ["groovy", "A groovy office. Groovy vibes.", "Jenkins pipelines using Groovy"],
+  ["bash", "Our summer bash is legendary. Bash on the roof.", "Scripting in Bash, Python"],
+  ["shell scripting", "Shell out for snacks. We came out of our shell.", "Linux, Shell, Python"],
+  ["flutter", "Hearts flutter at launch. Flutter of activity.", "Experience with Flutter"],
+  ["core data", "Our core data platform. Core Data is a team name here.", "Using Core Data and UIKit"],
+  ["remix", "Remix the playlist. remix your ideas.", "Frameworks: Remix, Next.js"],
+  ["bootstrap", "We bootstrap new hires. Bootstrap the startup.", "Responsive pages with Bootstrap, Sass"],
+  ["storybook", "A storybook ending. Storybook moment.", "Component docs using Storybook"],
+  ["hibernate", "Bears hibernate in winter. Hibernate mode.", "Java, Spring and Hibernate"],
+  ["d3", "Vitamin D3 included. Take D3 daily.", "Charts in D3 and React"],
+  ["oracle", "Oracle is one of our clients. Ask the oracle.", "Databases: Oracle, PostgreSQL"],
+  ["cassandra", "Cassandra runs recruiting.", "Experience with Cassandra or DynamoDB"],
+  ["snowflake", "Every snowflake is unique. Snowflake season.", "Warehousing in Snowflake, BigQuery"],
+  ["spark", "Spark joy in our customers. Be the spark.", "Using Spark and Kafka"],
+  ["hive", "A hive of activity. Hive mind.", "Hadoop, Hive and Spark"],
+  ["airflow", "Airflow in the server room matters. Good airflow.", "Orchestration using Airflow"],
+  ["pandas", "We sponsor pandas at the zoo.", "Analysis with pandas, NumPy"],
+  ["rag", "A RAG status report. Use a rag to wipe.", "Experience with RAG, LLMs"],
+  ["looker", "She is a looker. Looker of the year.", "Dashboards using Looker"],
+  ["excel", "We excel at service. Excel at what you do.", "Proficient in Excel"],
+  ["chef", "Our chef makes lunch. Chef's kiss.", "Configuration using Chef, Ansible"],
+  ["puppet", "Not a puppet of management. Puppet show.", "Ansible, Puppet"],
+  ["helm", "Take the helm of the team. Helm of the project.", "Deploys with Helm, Kubernetes"],
+  ["vagrant", "No vagrant thoughts. Vagrant Story fans.", "Local boxes using Vagrant"],
+  ["packer", "Warehouse packer wanted. Packer shifts.", "Images built with Packer, Terraform"],
+  ["consul", "Consul general visit. The Consul attends.", "Service discovery using Consul"],
+  ["envoy", "Our envoy to Europe. Envoy program.", "Proxies: Envoy, Nginx"],
+  ["sentry", "The sentry at the gate. Sentry duty.", "Error tracking with Sentry, Datadog"],
+  ["cypress", "A cypress tree. Cypress, CA office.", "E2E tests using Cypress"],
+  ["playwright", "A famous playwright visited. Playwright in residence.", "Testing with Playwright, Jest"],
+  ["mocha", "Mocha in the kitchen. Free mocha.", "Unit tests with Mocha and Jest"],
+  ["jasmine", "Jasmine tea served. Jasmine joins us.", "Tests written in Jasmine, Karma and Jest"],
+  ["cucumber", "Cucumber sandwiches. Cool as a cucumber.", "BDD using Cucumber"],
+  ["espresso", "Espresso machine on site. Espresso bar.", "Android UI tests with Espresso"],
+  ["postman", "The postman comes at noon. Postman Pat.", "API testing using Postman"],
+  ["unity", "Unity is a value. unity across teams.", "Games built with Unity, C#"],
+  ["confluence", "A confluence of rivers. Confluence of ideas.", "Docs in Confluence, Jira"],
+  ["salesforce", "Salesforce is a customer of ours.", "Experience with Salesforce"],
+];
+for (const [skill, negative, positive] of AMBIGUOUS) {
+  test(`${skill}: not in "${negative}", found in "${positive}"`, () => {
+    assert.ok(!matchSkills(negative).has(skill), `false positive in ${negative}`);
+    assert.ok(matchSkills(positive).has(skill), `missed in ${positive}`);
+  });
+}
+
+const POSTINGS = {
+  ios: `Senior iOS Engineer
+What you'll do
+- Build features in Swift and SwiftUI, with UIKit where needed
+- Persist data with Core Data and sync over REST and GraphQL
+- Write XCTest unit and UI tests and ship through TestFlight
+Requirements
+- 5+ years building iOS apps with Xcode
+- Objective-C experience a plus
+- Familiarity with CI/CD and Git`,
+  data: `Data Engineer
+You will build batch and streaming pipelines.
+Requirements
+- Python and SQL
+- Spark, Airflow and dbt
+- Snowflake or BigQuery
+- Kafka
+- Data modeling and ETL
+- Experience with AWS (S3, Redshift)`,
+  security: `Application Security Engineer
+- Run penetration testing and threat modeling for web services
+- Know the OWASP Top 10
+- Experience with SAML, OpenID Connect and JWT based SSO
+- Support SOC 2 and ISO 27001 audits
+- Tools: Burp Suite, Wireshark, Splunk`,
+};
+for (const [name, posting] of Object.entries(POSTINGS)) {
+  test(`a realistic ${name} posting yields at least six requirements`, () => {
+    const keywords = extractKeywords(posting);
+    assert.ok(keywords.length >= 6, keywords.join(", "));
+  });
+}
+
+test("a requirement is met by a skill that plainly shows it", () => {
+  assert.ok(findInResume("nosql", "Built services on MongoDB"));
+  assert.ok(findInResume("swift", "Shipped screens in SwiftUI"));
+  assert.ok(!findInResume("swiftui", "Wrote Swift code"));
+});

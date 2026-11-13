@@ -46,7 +46,7 @@ export const SKILL_ALIASES = {
   "c#": ["c#", "csharp", "c sharp"],
   go: ["go", "golang"],
   rust: ["rust"],
-  swift: ["swift", "swiftui"],
+  swift: ["swift"],
   kotlin: ["kotlin"],
   ruby: ["ruby"],
   rails: ["rails", "ruby on rails"],
@@ -85,33 +85,337 @@ export const SKILL_ALIASES = {
   ec2: ["ec2"],
   lambda: ["lambda"],
   serverless: ["serverless"],
+
+  // Languages
+  c: ["c"],
+  scala: ["scala"],
+  haskell: ["haskell"],
+  elixir: ["elixir"],
+  erlang: ["erlang"],
+  php: ["php"],
+  perl: ["perl"],
+  r: ["r"],
+  matlab: ["matlab"],
+  dart: ["dart"],
+  "objective-c": ["objective-c", "objective c", "objc", "obj-c"],
+  lua: ["lua"],
+  julia: ["julia"],
+  solidity: ["solidity"],
+  bash: ["bash"],
+  "shell scripting": ["shell scripting", "shell script", "shell scripts", "shell"],
+  powershell: ["powershell"],
+  groovy: ["groovy"],
+  clojure: ["clojure"],
+  "f#": ["f#"],
+  ocaml: ["ocaml"],
+  fortran: ["fortran"],
+  cobol: ["cobol"],
+  vba: ["vba", "visual basic"],
+  verilog: ["verilog", "systemverilog"],
+  vhdl: ["vhdl"],
+  "assembly language": ["assembly language", "x86 assembly", "arm assembly"],
+
+  // Mobile
+  ios: ["ios"],
+  android: ["android"],
+  swiftui: ["swiftui"],
+  uikit: ["uikit"],
+  "jetpack compose": ["jetpack compose"],
+  flutter: ["flutter"],
+  xcode: ["xcode"],
+  "android studio": ["android studio"],
+  "core data": ["core data"],
+  cocoapods: ["cocoapods"],
+  gradle: ["gradle"],
+  testflight: ["testflight"],
+
+  // Web and backend frameworks
+  ".net": [".net", "dotnet", ".net core"],
+  "asp.net": ["asp.net", "asp.net core", "asp.net mvc"],
+  nestjs: ["nestjs", "nest.js"],
+  fastapi: ["fastapi"],
+  laravel: ["laravel"],
+  symfony: ["symfony"],
+  svelte: ["svelte", "sveltekit"],
+  nuxt: ["nuxt", "nuxtjs", "nuxt.js"],
+  remix: ["remix"],
+  grpc: ["grpc"],
+  protobuf: ["protobuf", "protocol buffers"],
+  openapi: ["openapi", "swagger"],
+  jquery: ["jquery"],
+  bootstrap: ["bootstrap"],
+  sass: ["sass", "scss"],
+  "material ui": ["material ui", "material-ui", "mui"],
+  storybook: ["storybook"],
+  "three.js": ["three.js", "threejs"],
+  d3: ["d3", "d3.js"],
+  webgl: ["webgl"],
+  "socket.io": ["socket.io"],
+  hibernate: ["hibernate"],
+  "entity framework": ["entity framework"],
+  "web components": ["web components"],
+
+  // Data stores
+  nosql: ["nosql"],
+  sqlite: ["sqlite"],
+  oracle: ["oracle", "oracle database", "oracle db"],
+  "sql server": ["sql server", "mssql", "ms sql", "t-sql", "tsql"],
+  mariadb: ["mariadb"],
+  dynamodb: ["dynamodb"],
+  cassandra: ["cassandra"],
+  couchbase: ["couchbase"],
+  neo4j: ["neo4j"],
+  memcached: ["memcached"],
+  clickhouse: ["clickhouse"],
+  cockroachdb: ["cockroachdb"],
+  firestore: ["firestore"],
+  opensearch: ["opensearch"],
+  snowflake: ["snowflake"],
+  bigquery: ["bigquery"],
+  redshift: ["redshift"],
+  "vector databases": ["vector database", "vector databases", "vector db"],
+
+  // Data, analytics and ML
+  spark: ["spark", "apache spark", "pyspark"],
+  hadoop: ["hadoop"],
+  hive: ["hive"],
+  airflow: ["airflow", "apache airflow"],
+  dbt: ["dbt"],
+  databricks: ["databricks"],
+  flink: ["flink"],
+  kinesis: ["kinesis"],
+  "aws glue": ["aws glue"],
+  fivetran: ["fivetran"],
+  pandas: ["pandas"],
+  numpy: ["numpy"],
+  matplotlib: ["matplotlib"],
+  jupyter: ["jupyter"],
+  pytorch: ["pytorch"],
+  tensorflow: ["tensorflow"],
+  keras: ["keras"],
+  "scikit-learn": ["scikit-learn", "scikit learn", "sklearn"],
+  xgboost: ["xgboost"],
+  opencv: ["opencv"],
+  "hugging face": ["hugging face", "huggingface"],
+  langchain: ["langchain"],
+  mlflow: ["mlflow"],
+  sagemaker: ["sagemaker"],
+  mlops: ["mlops"],
+  nlp: ["nlp", "natural language processing"],
+  "computer vision": ["computer vision"],
+  llms: ["llm", "llms", "large language model", "large language models"],
+  "generative ai": ["generative ai", "genai", "gen ai"],
+  rag: ["rag", "retrieval-augmented generation", "retrieval augmented generation"],
+  "reinforcement learning": ["reinforcement learning"],
+  tableau: ["tableau"],
+  "power bi": ["power bi", "powerbi"],
+  looker: ["looker"],
+  excel: ["excel", "microsoft excel", "ms excel"],
+  etl: ["etl", "elt"],
+  "data modeling": ["data modeling", "data modelling"],
+  "data warehousing": ["data warehousing", "data warehouse", "data warehouses"],
+  "data pipelines": ["data pipelines", "data pipeline"],
+  "data visualization": ["data visualization", "data visualisation"],
+  statistics: ["statistics", "statistical analysis", "statistical modeling"],
+  "a/b testing": ["a/b testing", "a/b tests", "ab testing"],
+
+  // Infrastructure, cloud services and observability
+  ansible: ["ansible"],
+  chef: ["chef"],
+  puppet: ["puppet"],
+  helm: ["helm"],
+  "argo cd": ["argo cd", "argocd"],
+  pulumi: ["pulumi"],
+  cloudformation: ["cloudformation"],
+  vagrant: ["vagrant"],
+  packer: ["packer"],
+  consul: ["consul"],
+  "hashicorp vault": ["hashicorp vault"],
+  istio: ["istio"],
+  envoy: ["envoy"],
+  openshift: ["openshift"],
+  ecs: ["ecs"],
+  eks: ["eks"],
+  gke: ["gke"],
+  aks: ["aks"],
+  sqs: ["sqs"],
+  sns: ["sns"],
+  iam: ["iam"],
+  vpc: ["vpc"],
+  cloudwatch: ["cloudwatch"],
+  "azure devops": ["azure devops"],
+  gitlab: ["gitlab"],
+  bitbucket: ["bitbucket"],
+  cloudflare: ["cloudflare"],
+  prometheus: ["prometheus"],
+  grafana: ["grafana"],
+  datadog: ["datadog"],
+  splunk: ["splunk"],
+  sentry: ["sentry"],
+  "new relic": ["new relic", "newrelic"],
+  opentelemetry: ["opentelemetry"],
+  pagerduty: ["pagerduty"],
+  "elk stack": ["elk", "elk stack"],
+  nginx: ["nginx"],
+  dns: ["dns"],
+  "tcp/ip": ["tcp/ip"],
+  cdn: ["cdn"],
+  "load balancing": ["load balancing", "load balancers", "load balancer"],
+
+  // Testing
+  cypress: ["cypress"],
+  playwright: ["playwright"],
+  pytest: ["pytest"],
+  junit: ["junit"],
+  testng: ["testng"],
+  mocha: ["mocha"],
+  jasmine: ["jasmine"],
+  vitest: ["vitest"],
+  rspec: ["rspec"],
+  cucumber: ["cucumber"],
+  appium: ["appium"],
+  xctest: ["xctest", "xcuitest"],
+  espresso: ["espresso"],
+  postman: ["postman"],
+  jmeter: ["jmeter"],
+  "react testing library": ["react testing library", "testing library"],
+  tdd: ["tdd", "test-driven development", "test driven development"],
+  bdd: ["bdd", "behavior-driven development", "behaviour-driven development"],
+  "load testing": ["load testing", "performance testing"],
+
+  // Security and identity
+  owasp: ["owasp"],
+  "penetration testing": ["penetration testing", "pen testing", "pentesting", "pentest"],
+  saml: ["saml"],
+  sso: ["sso", "single sign-on", "single sign on"],
+  jwt: ["jwt", "jwts", "json web token", "json web tokens"],
+  "openid connect": ["openid connect", "oidc"],
+  "soc 2": ["soc 2", "soc2", "soc ii"],
+  "iso 27001": ["iso 27001", "iso/iec 27001"],
+  "pci dss": ["pci dss", "pci-dss"],
+  hipaa: ["hipaa"],
+  gdpr: ["gdpr"],
+  nist: ["nist"],
+  siem: ["siem"],
+  "ssl/tls": ["ssl/tls", "tls", "ssl"],
+  "threat modeling": ["threat modeling", "threat modelling"],
+  "vulnerability management": ["vulnerability management", "vulnerability scanning"],
+  "incident response": ["incident response"],
+  "burp suite": ["burp suite"],
+  metasploit: ["metasploit"],
+  wireshark: ["wireshark"],
+  nmap: ["nmap"],
+  "active directory": ["active directory"],
+  ldap: ["ldap"],
+  kerberos: ["kerberos"],
+  okta: ["okta"],
+  auth0: ["auth0"],
+  "zero trust": ["zero trust"],
+  cryptography: ["cryptography"],
+
+  // Other platforms and tools
+  unity: ["unity", "unity3d"],
+  "unreal engine": ["unreal engine", "unreal engine 5"],
+  opengl: ["opengl"],
+  vulkan: ["vulkan"],
+  cuda: ["cuda"],
+  ros: ["ros", "robot operating system"],
+  rtos: ["rtos"],
+  blockchain: ["blockchain"],
+  confluence: ["confluence"],
+  salesforce: ["salesforce"],
+  sharepoint: ["sharepoint"],
+
+  // Engineering practices postings name as skills
+  "distributed systems": ["distributed systems", "distributed computing"],
+  "system design": ["system design", "systems design"],
+  "object-oriented programming": ["object-oriented programming", "object oriented programming", "oop", "object-oriented design", "object oriented design"],
+  "functional programming": ["functional programming"],
+  concurrency: ["concurrency", "multithreading", "multi-threading", "concurrent programming"],
+  accessibility: ["accessibility", "a11y", "wcag"],
+  "design patterns": ["design patterns"],
+  "event-driven architecture": ["event-driven architecture", "event driven architecture", "event-driven systems"],
+  "domain-driven design": ["domain-driven design", "domain driven design", "ddd"],
+  "api design": ["api design"],
+  "site reliability engineering": ["site reliability engineering", "sre"],
+  "responsive design": ["responsive design", "responsive web design"],
+  seo: ["seo", "search engine optimization"],
+  "embedded systems": ["embedded systems", "embedded software"],
+  "operating systems": ["operating systems"],
+  compilers: ["compilers"],
 };
+
+// Skills that are ways of working or areas of knowledge rather than a
+// technology someone installs. guardrails.js does not treat a rewrite that
+// names one of these as adding a technology.
+export const PRACTICE_SKILLS = new Set([
+  "testing", "algorithms", "data structures", "version control", "serverless", "containerization",
+  "data modeling", "data warehousing", "data pipelines", "data visualization", "statistics", "a/b testing",
+  "load testing", "load balancing", "threat modeling", "vulnerability management", "incident response",
+  "zero trust", "cryptography", "distributed systems", "system design", "object-oriented programming",
+  "functional programming", "concurrency", "accessibility", "design patterns", "event-driven architecture",
+  "domain-driven design", "api design", "site reliability engineering", "responsive design",
+  "embedded systems", "operating systems", "compilers", "microservices",
+]);
 
 // A requirement for the key is also met by any of these skills on the resume
 // (Docker on a resume shows containerization; not the other way round)
 export const SATISFIED_BY = {
   containerization: ["docker", "kubernetes"],
-  "version control": ["git", "github"],
-  "infrastructure as code": ["terraform"],
+  "version control": ["git", "github", "gitlab", "bitbucket"],
+  "infrastructure as code": ["terraform", "cloudformation", "pulumi"],
   serverless: ["lambda"],
-  sql: ["postgresql", "mysql"],
+  sql: ["postgresql", "mysql", "sqlite", "sql server", "mariadb"],
   javascript: ["typescript"],
-  "ci/cd": ["github actions", "jenkins", "gitlab ci", "circleci"],
+  "ci/cd": ["github actions", "jenkins", "gitlab ci", "circleci", "argo cd", "azure devops"],
+  nosql: ["mongodb", "dynamodb", "cassandra", "couchbase", "firestore"],
+  swift: ["swiftui"],
+  ios: ["swiftui", "uikit"],
+  android: ["jetpack compose"],
+  kubernetes: ["eks", "gke", "aks", "openshift"],
+  "data warehousing": ["snowflake", "bigquery", "redshift"],
+  "machine learning": ["pytorch", "tensorflow", "keras", "scikit-learn", "xgboost"],
+  "deep learning": ["pytorch", "tensorflow", "keras"],
+  python: ["django", "flask", "fastapi", "pytest", "pandas", "numpy"],
+  testing: ["jest", "pytest", "junit", "mocha", "vitest", "cypress", "playwright", "selenium", "rspec", "xctest"],
+  sso: ["saml", "openid connect"],
+  aws: ["ec2", "s3", "lambda", "dynamodb", "cloudformation", "ecs", "eks", "sqs", "sns", "redshift", "sagemaker", "kinesis", "aws glue", "cloudwatch"],
+  gcp: ["bigquery", "gke"],
+  azure: ["aks", "azure devops"],
+  ".net": ["asp.net"],
 };
 
-// Aliases that are also ordinary English or ordinary letters. The rule:
+// Aliases that are also ordinary English, loosely used company names, or
+// very short. The rule:
 // - `forms` are the exact spellings (case-sensitive) that may count: "AI" but
-//   never "ai", "Go" but never "go".
+//   never "ai", "Go" but never "go", "Excel" but never "excel at".
 // - `context: true` aliases are everyday words ("go", "next", "rest of",
-//   "express interest", "Spring 2027"), so even the exact spelling counts only
-//   in a technical context: right after an introducing phrase ("experience
-//   with", "proficient in", "using", "such as", "Languages:"), right before a
-//   technical noun ("developer", "framework", "services", "skills"), or listed
-//   next to another recognised skill ("Python, Go, and Rust", "Swift/Kotlin").
+//   "express interest", "Spring 2027", "a spark", "Oracle" the company), so
+//   even the exact spelling counts only in a technical context:
+//   - right after an introducing phrase ("experience with", "proficient in",
+//     "using", "such as", "Languages:");
+//   - right before a technical noun ("developer", "framework", "services",
+//     "skills");
+//   - listed next to another recognised skill ("Python, Go, and Rust",
+//     "Swift/Kotlin", one skill per line in a bulleted list);
+//   - or as the whole of its line in a multi-line text, after an optional
+//     bullet or number marker and before optional trailing punctuation
+//     ("- Rust", "2. Swift", "Kotlin"), which is how a requirements list
+//     reads, including the bare <li> text the extension captures.
+// - `listOnly: true` (single letters "R" and "C") count only in a list next to
+//   another recognised skill or before `after` ("R programming", "C
+//   language"), never from an introducing phrase, a whole line or a resume's
+//   technical mode. `rejectAfter` rules out "R&D", "C-suite", "R's".
 // - Any spelling (even lower case) counts when it sits in a comma or slash list
 //   right next to another recognised skill ("python, go, rust").
 // Sentence-initial "Go is our main language" is missed on purpose: a missed
 // "go" is safer than reporting a requirement the posting never stated.
+const word = (form) => ({ forms: [form], context: true });
+const LETTER = {
+  listOnly: true,
+  after: /^\s+(?:programming|language|scripts?|studio|developers?|code)\b/i,
+  rejectAfter: /^(?:[&'’-]|\.\S)/,
+};
 export const ALIAS_RULES = {
   js: { forms: ["JS"] },
   ts: { forms: ["TS"] },
@@ -125,15 +429,66 @@ export const ALIAS_RULES = {
   jest: { forms: ["Jest"] },
   flask: { forms: ["Flask"] },
   tailwind: { forms: ["Tailwind"] },
-  go: { forms: ["Go"], context: true },
-  next: { forms: ["Next"], context: true },
-  node: { forms: ["Node"], context: true },
-  express: { forms: ["Express"], context: true },
-  spring: { forms: ["Spring"], context: true },
-  swift: { forms: ["Swift"], context: true },
-  rust: { forms: ["Rust"], context: true },
-  ruby: { forms: ["Ruby"], context: true },
-  rails: { forms: ["Rails"], context: true },
+  lambda: { forms: ["Lambda"] },
+  tableau: { forms: ["Tableau"] },
+  prometheus: { forms: ["Prometheus"] },
+  redshift: { forms: ["Redshift"] },
+  elk: { forms: ["ELK"] },
+  mui: { forms: ["MUI"] },
+  ddd: { forms: ["DDD"] },
+  go: word("Go"),
+  next: word("Next"),
+  node: word("Node"),
+  express: word("Express"),
+  spring: word("Spring"),
+  swift: word("Swift"),
+  rust: word("Rust"),
+  ruby: word("Ruby"),
+  rails: word("Rails"),
+  c: { ...LETTER, forms: ["C"] },
+  r: { ...LETTER, forms: ["R"] },
+  dart: word("Dart"),
+  julia: word("Julia"),
+  elixir: word("Elixir"),
+  solidity: word("Solidity"),
+  groovy: word("Groovy"),
+  bash: { forms: ["Bash", "BASH"], context: true },
+  shell: word("Shell"),
+  flutter: word("Flutter"),
+  "core data": word("Core Data"),
+  remix: word("Remix"),
+  bootstrap: word("Bootstrap"),
+  storybook: word("Storybook"),
+  hibernate: word("Hibernate"),
+  d3: word("D3"),
+  oracle: word("Oracle"),
+  cassandra: word("Cassandra"),
+  snowflake: word("Snowflake"),
+  spark: word("Spark"),
+  hive: word("Hive"),
+  airflow: word("Airflow"),
+  pandas: { forms: ["pandas", "Pandas"], context: true },
+  rag: word("RAG"),
+  looker: word("Looker"),
+  excel: word("Excel"),
+  chef: word("Chef"),
+  puppet: word("Puppet"),
+  helm: word("Helm"),
+  vagrant: word("Vagrant"),
+  packer: word("Packer"),
+  consul: word("Consul"),
+  envoy: word("Envoy"),
+  sentry: word("Sentry"),
+  cypress: word("Cypress"),
+  playwright: word("Playwright"),
+  mocha: word("Mocha"),
+  jasmine: word("Jasmine"),
+  cucumber: word("Cucumber"),
+  espresso: word("Espresso"),
+  postman: word("Postman"),
+  unity: word("Unity"),
+  confluence: word("Confluence"),
+  salesforce: word("Salesforce"),
 };
 
 function escapeRegExp(value) {
@@ -156,12 +511,19 @@ export function containsTerm(text, term) {
 }
 
 const INTRO_BEFORE =
-  /(?:\b(?:experience|experienced|proficien(?:t|cy)|fluen(?:t|cy)|expertise|knowledge|familiar(?:ity)?|skilled|background|comfortable|written|built|developed|develop|develops|build|building|programming|coding)\s+(?:in|with|using|of)(?:\s+the)?|\b(?:using|such as|e\.g\.,?|languages?\s*:|frameworks?\s*:|skills\s*:|stack\s*:|technologies\s*:))\s*$/i;
+  /(?:\b(?:experience|experienced|proficien(?:t|cy)|fluen(?:t|cy)|expertise|knowledge|familiar(?:ity)?|skilled|background|comfortable|written|built|developed|develop|develops|build|building|programming|coding|tests?|tested|testing)\s+(?:in|with|using|of)(?:\s+the)?|\b(?:using|such as|e\.g\.,?|languages?\s*:|frameworks?\s*:|skills\s*:|stack\s*:|technologies\s*:))\s*$/i;
 const TECH_AFTER =
   /^\s*(?:developers?|engineers?|engineering|programming|programmers?|language|frameworks?|code(?:base)?s?|services?|microservices|backends?|apis?|sdks?|modules?|runtime|ecosystem|experience|skills|development|servers?)\b/i;
 // Text between two listed skills: separators, optionally "and"/"or"
 const LIST_GAP = /^[\s,/|&;()+]*(?:(?:and|or)\b[\s(]*)?$/i;
 const STRONG_LIST_GAP = /^\s*[,/|]\s*$/;
+// A bulleted or one-per-line list: the end of one item, line breaks, and the
+// next item's bullet or number marker
+const BULLET = String.raw`(?:[-*•·◦▪‣–—+]|\d{1,2}[.)]|\(?[a-z][.)])`;
+const LINE_GAP = new RegExp(String.raw`^[ \t]*[.,;:!]?[ \t]*(?:\r?\n[ \t]*)+${BULLET}?[ \t]*$`, "i");
+// What may sit before and after a hit that is the whole of its line
+const LINE_PREFIX = new RegExp(String.raw`^[ \t]*${BULLET}?[ \t]*$`, "i");
+const LINE_SUFFIX = /^[ \t]*[.,;:!]?[ \t]*\r?$/;
 
 const CANDIDATE_PATTERNS = Object.entries(SKILL_ALIASES).flatMap(([skill, aliases]) =>
   aliases.map((alias) => ({ skill, re: termPattern(alias), rule: ALIAS_RULES[alias] }))
@@ -174,11 +536,22 @@ const MAX_LIST_GAP = 12;
 const CONTEXT_AFTER = 60;
 
 function adjacent(a, b, gapPattern, text) {
-  if (a.start < b.end && b.start < a.end) return true; // overlapping: "Ruby" in "Ruby on Rails"
+  // One inside the other: "Ruby" in "Ruby on Rails"
+  if ((a.start >= b.start && a.end <= b.end) || (b.start >= a.start && b.end <= a.end)) return true;
+  if (a.start < b.end && b.start < a.end) return false; // partly overlapping: not a list
   const [from, to] = a.end <= b.start ? [a.end, b.start] : [b.end, a.start];
   if (to - from > MAX_LIST_GAP) return false;
   const gap = text.slice(from, to);
+  if (gap.includes("\n")) return a.wholeLine && b.wholeLine && LINE_GAP.test(gap);
   return gap.trim() !== "" && gapPattern.test(gap);
+}
+
+// Whether the hit is the whole of its line (bar a bullet and end punctuation)
+function isWholeLine(text, start, end) {
+  const lineStart = text.lastIndexOf("\n", start - 1) + 1;
+  let lineEnd = text.indexOf("\n", end);
+  if (lineEnd === -1) lineEnd = text.length;
+  return LINE_PREFIX.test(text.slice(lineStart, start)) && LINE_SUFFIX.test(text.slice(end, lineEnd));
 }
 
 // The skills (SKILL_ALIASES keys) that `text` names, under the rules above.
@@ -187,17 +560,27 @@ function adjacent(a, b, gapPattern, text) {
 // surrounding context, so "Built APIs with Node and Express" is not reported
 // as missing Node or Express.
 export function matchSkills(text, { technical = false } = {}) {
+  const multiLine = text.includes("\n");
   const hits = [];
   for (const { skill, re, rule } of CANDIDATE_PATTERNS) {
     re.lastIndex = 0;
     for (const m of text.matchAll(re)) {
-      const hit = { skill, start: m.index, end: m.index + m[0].length, exact: true, accepted: !rule };
+      const start = m.index;
+      const end = start + m[0].length;
+      const after = text.slice(end, end + CONTEXT_AFTER);
+      if (rule?.rejectAfter?.test(after)) continue;
+      const hit = { skill, start, end, exact: true, accepted: !rule, wholeLine: multiLine && isWholeLine(text, start, end) };
       if (rule) {
         hit.exact = rule.forms.includes(m[0]);
-        const inContext =
-          INTRO_BEFORE.test(text.slice(Math.max(0, hit.start - 40), hit.start)) ||
-          TECH_AFTER.test(text.slice(hit.end, hit.end + CONTEXT_AFTER));
-        hit.accepted = hit.exact && (!rule.context || inContext || technical);
+        if (rule.listOnly) {
+          hit.accepted = hit.exact && rule.after.test(after);
+        } else {
+          const inContext =
+            hit.wholeLine ||
+            INTRO_BEFORE.test(text.slice(Math.max(0, start - 40), start)) ||
+            TECH_AFTER.test(after);
+          hit.accepted = hit.exact && (!rule.context || inContext || technical);
+        }
       }
       hits.push(hit);
     }
