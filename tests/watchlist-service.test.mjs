@@ -2,7 +2,15 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { database } from "./helpers/database.mjs";
 
-const service = await import("@/server/watchlist/service");
+const realService = await import("@/server/watchlist/service");
+// record_watch_check stamps the database's clock; the fake takes it from the `now` each call is given
+const withClock = (fn) => (...args) => {
+  const options = args.findLast((arg) => arg && typeof arg === "object" && "now" in arg);
+  if (options) args[0].now = options.now;
+  return fn(...args);
+};
+const service = { ...realService };
+for (const name of ["refreshCompany", "addCompany", "checkCompany", "refreshStale", "runWatchlistCron"]) service[name] = withClock(realService[name]);
 const { HttpError } = await import("@/server/http");
 const { normalizePostingIdentity } = await import("@/lib/postingIdentity");
 
@@ -631,4 +639,75 @@ test("saving the same posting twice at once leaves one saved job, one saved_at a
   assert.equal(rowsOf(db, "applications").length, 0);
   assert.equal(rowsOf(db, "watched_postings")[0].saved_at, iso(T0)); // set by the first save, not moved by the second
   assert.deepEqual((await service.listPostings(db, user)).postings, []);
+});
+
+// ---------- what the server may write ----------
+
+// Records every payload sent to watched_companies by insert or update
+function recording(db) {
+  const sent = [];
+  const from = db.from;
+  db.from = (table) => {
+    const query = from(table);
+    if (table !== "watched_companies") return query;
+    for (const operation of ["insert", "update"]) {
+      const original = query[operation].bind(query);
+      query[operation] = (value) => { sent.push({ operation, value }); return original(value); };
+    }
+    return query;
+  };
+  return sent;
+}
+
+test("the server never writes last_checked_at, last_error or open_count to watched_companies directly", async (t) => {
+  quiet(t);
+  const db = database({ watched_companies: [], watched_postings: [] });
+  const sent = recording(db);
+  const ok = feed({ name: "Acme", total: 1, postings: [post(1)] });
+  const { company: added } = await service.addCompany(db, user, { link: "greenhouse:acme", keywords: "engineer" }, { now: T0, fetchBoard: ok.fetchBoard });
+  await service.updateKeywords(db, user, added.id, ["data"]);
+  await service.checkCompany(db, user, added.id, { now: T0 + HOUR, fetchBoard: feed(new HttpError(404, NOT_FOUND)).fetchBoard });
+  await service.checkCompany(db, user, added.id, { now: T0 + 2 * HOUR, fetchBoard: ok.fetchBoard });
+  await service.refreshStale(db, user, { now: T0 + 40 * HOUR, fetchBoard: ok.fetchBoard });
+  await service.runWatchlistCron(db, { now: T0 + 80 * HOUR, fetchBoard: ok.fetchBoard });
+
+  assert.ok(sent.length >= 2);
+  for (const { operation, value } of sent) {
+    const keys = Object.keys(value).sort();
+    const allowed = operation === "insert" ? ["board_token", "name", "platform", "title_keywords", "user_id"] : ["name", "title_keywords"];
+    assert.ok(keys.every((key) => allowed.includes(key)), `${operation} sent ${keys}`);
+  }
+  // Checks went through the function, which is how the row's check columns changed
+  const calls = db.rpcCalls.filter((c) => c.name === "record_watch_check");
+  assert.ok(calls.length >= 4);
+  assert.ok(calls.every((c) => c.args.p_company_id === added.id));
+  assert.deepEqual(Object.keys(calls[0].args).sort(), ["p_company_id", "p_error", "p_open_count"]);
+  assert.ok(calls.some((c) => c.args.p_error === NOT_FOUND));
+});
+
+test("a database without the check function reads as setup pending", async (t) => {
+  quiet(t);
+  const c = uuid(1);
+  const db = database({ watched_companies: [company(c, user)], watched_postings: [] });
+  const realRpc = db.rpc;
+  db.rpc = async (name, args) => (name === "record_watch_check" ? { data: null, error: { code: "PGRST202", message: "missing" } } : realRpc(name, args));
+  // The failed read can't be recorded either: the refresh still answers with the error instead of throwing
+  const result = await service.refreshCompany(db, user, { id: c }, { now: T0, fetchBoard: feed(boardOf([post(1)])).fetchBoard });
+  assert.equal(typeof result.error, "string");
+  assert.equal(service.isSetupPending({ code: "PGRST202" }) && service.isSetupPending({ code: "42883" }), true);
+});
+
+test("the daily run gives every user a turn: at most 5 companies per user, oldest first", async () => {
+  const mine = Array.from({ length: 20 }, (_, i) => company(uuid(100 + i), user, { board_token: `m${i}`, last_checked_at: null }));
+  const theirs = [0, 1].map((i) => company(uuid(200 + i), other, { board_token: `o${i}`, last_checked_at: iso(T0 - 50 * HOUR) }));
+  const db = database({ watched_companies: [...mine, ...theirs], watched_postings: [] });
+  const asked = [];
+  const fetchBoard = async ({ token }) => { asked.push(token); return boardOf([]); };
+  const result = await service.runWatchlistCron(db, { now: T0, maxCompanies: 30, fetchBoard });
+  assert.equal(result.companies, 7);
+  assert.equal(asked.filter((t) => t.startsWith("m")).length, 5);
+  assert.deepEqual(asked.filter((t) => t.startsWith("o")).sort(), ["o0", "o1"]); // reached despite 20 never-checked companies ahead of them
+  // The overall cap still applies
+  const again = await service.runWatchlistCron(db, { now: T0 + 30 * HOUR, maxCompanies: 3, fetchBoard });
+  assert.equal(again.companies, 3);
 });

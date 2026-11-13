@@ -21,6 +21,7 @@ const insertInto = (table, row) => {
   return pg.query(`insert into public.${table}(${keys.join(",")}) values(${keys.map((_, i) => `$${i + 1}`).join(",")}) returning id`, Object.values(row));
 };
 const user = randomUUID(), other = randomUUID();
+const uuid0 = () => randomUUID();
 try {
   await pg.exec(`create role anon; create role authenticated; create role service_role bypassrls;
     create schema auth; create table auth.users(id uuid primary key,email text,raw_user_meta_data jsonb default '{}');
@@ -49,15 +50,68 @@ try {
   const c1 = (await company()).rows[0].id;
   const [{ updated_at: created }] = await rows("select updated_at from public.watched_companies where id=$1", [c1]);
   await new Promise(r => setTimeout(r, 5));
-  await pg.query("update public.watched_companies set name='Acme Inc', title_keywords=array['engineer'], open_count=42 where id=$1", [c1]);
+  await pg.query("update public.watched_companies set name='Acme Inc', title_keywords=array['engineer'] where id=$1", [c1]);
   const [edited] = await rows("select name,title_keywords,open_count,last_error,updated_at from public.watched_companies where id=$1", [c1]);
-  equal([edited.name, edited.title_keywords, edited.open_count, edited.last_error], ["Acme Inc", ["engineer"], 42, ""]);
+  equal([edited.name, edited.title_keywords, edited.open_count, edited.last_error], ["Acme Inc", ["engineer"], null, ""]);
   assert.ok(edited.updated_at > created); assertions++;
   const p1 = (await posting(c1)).rows[0].id;
   const p2 = (await posting(c1, { posting_id: "p2", title: "Designer" })).rows[0].id;
   equal(await scalar("select count(*)::int as result from public.watched_postings"), 2);
   await pg.query("update public.watched_postings set dismissed_at=now(), saved_at=now(), closed_at=now(), description='text' where id=$1", [p1]);
   equal(await scalar("select description as result from public.watched_postings where id=$1", [p1]), "text");
+
+  // Users cannot write the check columns; they may edit name and keywords
+  const refused = (sql, args = []) => rejects(pg.query(sql, args), "42501");
+  await refused("update public.watched_companies set last_checked_at=null where id=$1", [c1]);
+  await refused("update public.watched_companies set last_checked_at=now() where id=$1", [c1]);
+  await refused("update public.watched_companies set last_error='x' where id=$1", [c1]);
+  await refused("update public.watched_companies set open_count=1 where id=$1", [c1]);
+  await refused("update public.watched_companies set created_at=now() where id=$1", [c1]);
+  await refused("update public.watched_companies set updated_at=now() where id=$1", [c1]);
+  await refused("update public.watched_companies set id=gen_random_uuid() where id=$1", [c1]);
+  await refused("update public.watched_companies set user_id=user_id where id=$1", [c1]);
+  await refused("update public.watched_companies set platform='lever' where id=$1", [c1]);
+  equal((await pg.query("update public.watched_companies set name='Acme Two', title_keywords=array['a','b'] where id=$1", [c1])).affectedRows, 1);
+  await refused("insert into public.watched_companies(user_id,platform,board_token,name,last_checked_at) values($1,'ashby','ins1','N',null)", [user]);
+  await refused("insert into public.watched_companies(user_id,platform,board_token,name,created_at) values($1,'ashby','ins2','N',now())", [user]);
+  await refused("insert into public.watched_companies(user_id,platform,board_token,name,open_count) values($1,'ashby','ins3','N',3)", [user]);
+  await pg.query("insert into public.watched_companies(user_id,platform,board_token,name,title_keywords) values($1,'ashby','ins4','N',array['x'])", [user]); assertions++;
+  const [fresh] = await rows("select last_checked_at,last_error,open_count from public.watched_companies where board_token='ins4'");
+  equal([fresh.last_checked_at, fresh.last_error, fresh.open_count], [null, "", null]);
+  await pg.query("delete from public.watched_companies where board_token='ins4'");
+
+  // record_watch_check: the only way the check columns move
+  const check = (id, error, count) => pg.query("select public.record_watch_check($1,$2,$3)", [id, error, count]);
+  const state = async (id) => (await rows("select last_checked_at,last_error,open_count from public.watched_companies where id=$1", [id]))[0];
+  await role("service_role");
+  await pg.query("update public.watched_companies set last_checked_at=now()-interval '2 days' where id=$1", [c1]);
+  await role("authenticated", user);
+  await check(c1, "boom", 7);
+  let after = await state(c1);
+  assert.ok(Math.abs(Date.now() - new Date(after.last_checked_at).getTime()) < 60_000); assertions++;
+  equal([after.last_error, after.open_count], ["boom", 7]);
+  await check(c1, null, -1);
+  after = await state(c1);
+  equal([after.last_error, after.open_count], ["", 7]); // a negative count is ignored, a null error clears
+  await check(c1, "again", null);
+  equal((await state(c1)).open_count, 7);
+  await check(c1, "e".repeat(500), 0);
+  after = await state(c1);
+  equal([after.last_error.length, after.open_count], [300, 0]);
+  await rejects(check(uuid0(), "x", 1), "P0002");
+  await role("authenticated", other);
+  const seen = await rows("select last_checked_at,last_error,open_count from public.watched_companies where id=$1", [c1]).catch(() => []);
+  equal(seen, []); // not even visible
+  await rejects(check(c1, "hijack", 99), "P0002");
+  await role("service_role");
+  equal(await state(c1), after); // nothing changed
+  await role("anon");
+  await rejects(check(c1, "anon", 1), "42501");
+  await role("service_role");
+  await check(c1, "from the job", 3);
+  equal([(await state(c1)).last_error, (await state(c1)).open_count], ["from the job", 3]);
+  await check((await rows("select id from public.watched_companies limit 1"))[0].id, "", 1); assertions++;
+  await role("authenticated", user);
 
   // Another user: no read, update, delete on either table; no forging; no attaching to my company
   await role("authenticated", other);
@@ -103,8 +157,10 @@ try {
   await rejects(company({ board_token: "n1", name: "   " }), "23514");
   await rejects(company({ board_token: "n2", name: "x".repeat(201) }), "23514");
   await rejects(company({ board_token: "n3", title_keywords: Array.from({ length: 13 }, (_, i) => `k${i}`) }), "23514");
+  await role("service_role"); // users cannot name these columns at all; the CHECKs still guard the server's writes
   await rejects(company({ board_token: "n4", last_error: "e".repeat(301) }), "23514");
   await rejects(company({ board_token: "n5", open_count: -1 }), "23514");
+  await role("authenticated", user);
   await rejects(posting(c1, { posting_id: "" }), "23514");
   await rejects(posting(c1, { posting_id: "i".repeat(201) }), "23514");
   await rejects(posting(c1, { posting_id: "b1", title: "  " }), "23514");

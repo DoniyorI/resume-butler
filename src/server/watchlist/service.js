@@ -13,7 +13,7 @@ import { opportunityInput, saveOpportunity } from "@/server/opportunities/servic
 // postings. Until the migration is applied, reads return setupPending and
 // writes a 503.
 
-const SETUP_CODES = ["42P01", "PGRST205", "PGRST200", "PGRST204", "42703"];
+const SETUP_CODES = ["42P01", "PGRST205", "PGRST200", "PGRST204", "42703", "PGRST202", "42883"];
 const SETUP_MESSAGE = "Watchlist needs migration 021.";
 export const MAX_COMPANIES = 20;
 export const MAX_KEYWORDS = 12;
@@ -32,6 +32,8 @@ const UNREADABLE_MESSAGE = "Could not read that job board right now.";
 // A company isn't started with less than this left of the run's budget
 export const MIN_REMAINING_MS = 20_000;
 const CHUNK = 100;
+const CRON_WINDOW = 200;
+const PER_USER_PER_RUN = 5;
 
 export const isSetupPending = (error) => SETUP_CODES.includes(error?.code);
 
@@ -181,8 +183,10 @@ export function selectPostings(postings, keywords) {
 
 const sameTime = (stored, incoming) => (stored ? Date.parse(stored) : null) === (incoming ? Date.parse(incoming) : null);
 
-async function recordCheck(supabase, userId, companyId, patch) {
-  const { error } = await supabase.from("watched_companies").update(patch).eq("user_id", userId).eq("id", companyId);
+// last_checked_at, last_error and open_count are written only by this database
+// function (users have no UPDATE right on them): it stamps the time itself
+async function recordCheck(supabase, companyId, errorText, openCount = null) {
+  const { error } = await supabase.rpc("record_watch_check", { p_company_id: companyId, p_error: errorText, p_open_count: openCount });
   check(error);
 }
 
@@ -201,7 +205,7 @@ async function failure(supabase, userId, companyId, nowIso, message, close = fal
         .select("id");
       if (!result.error) closed = result.data?.length || 0;
     }
-    await recordCheck(supabase, userId, companyId, { last_checked_at: nowIso, last_error: message.slice(0, 300) });
+    await recordCheck(supabase, companyId, message.slice(0, 300));
   } catch (error) {
     console.error("Recording a watchlist failure:", error?.name || "error");
   }
@@ -355,7 +359,7 @@ async function applyBoard(supabase, userId, current, read, nowMs) {
     .is("saved_at", null);
   check(cleanup.error);
 
-  await recordCheck(supabase, userId, current.id, { last_checked_at: nowIso, last_error: error, open_count: read.total });
+  await recordCheck(supabase, current.id, error, read.total);
   return { added: fresh.length, updated, closed: closing.length, ...(error ? { error } : {}) };
 }
 
@@ -533,13 +537,23 @@ export async function refreshStale(supabase, userId, { max = 5, olderThanHours =
  * Returns counts only.
  */
 export async function runWatchlistCron(admin, { maxCompanies = 30, deadlineMs = 40_000, minRemainingMs = MIN_REMAINING_MS, now = Date.now(), clock = Date.now, fetchBoard } = {}) {
-  const { data, error } = await admin
+  // A window of the oldest-checked companies, then at most PER_USER_PER_RUN of
+  // each user's in that order, so one user's backlog can't fill the run
+  const { data: window, error } = await admin
     .from("watched_companies")
     .select("id,user_id")
     .order("last_checked_at", { ascending: true, nullsFirst: true })
-    .limit(maxCompanies);
+    .limit(CRON_WINDOW);
   if (isSetupPending(error)) return { setupPending: true };
   if (error) throw error;
+  const perUser = new Map();
+  const data = [];
+  for (const row of window) {
+    const taken = perUser.get(row.user_id) || 0;
+    if (taken >= PER_USER_PER_RUN || data.length >= maxCompanies) continue;
+    perUser.set(row.user_id, taken + 1);
+    data.push(row);
+  }
 
   const totals = { companies: data.length, refreshed: 0, skipped: 0, failed: 0, added: 0, updated: 0, closed: 0 };
   const started = clock();

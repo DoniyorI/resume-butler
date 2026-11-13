@@ -88,7 +88,13 @@ alter table public.watched_companies enable row level security;
 alter table public.watched_postings enable row level security;
 revoke all on public.watched_companies from public, anon, authenticated;
 revoke all on public.watched_postings from public, anon, authenticated;
-grant select, insert, update, delete on public.watched_companies to authenticated;
+-- Users choose what to watch (name, keywords); the server records checks. Column
+-- grants keep last_checked_at, last_error and open_count out of their reach
+-- (they would defeat the refresh throttle and the cron's oldest-first order):
+-- those change only through record_watch_check below.
+grant select, delete on public.watched_companies to authenticated;
+grant insert (user_id, platform, board_token, name, title_keywords) on public.watched_companies to authenticated;
+grant update (name, title_keywords) on public.watched_companies to authenticated;
 grant select, insert, update, delete on public.watched_postings to authenticated;
 grant all on public.watched_companies to service_role;
 grant all on public.watched_postings to service_role;
@@ -110,6 +116,24 @@ create policy "Edit own watched postings" on public.watched_postings
   for update to authenticated using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id);
 create policy "Delete own watched postings" on public.watched_postings
   for delete to authenticated using ((select auth.uid()) = user_id);
+
+-- Records that a company's board was just read. last_checked_at only ever moves
+-- to now(); open_count changes only for a valid count.
+create function public.record_watch_check(p_company_id uuid, p_error text, p_open_count integer)
+returns void language plpgsql security definer set search_path='' as $$
+declare v_updated integer;
+begin
+  update public.watched_companies set
+    last_checked_at=now(),
+    last_error=left(coalesce(p_error,''),300),
+    open_count=case when p_open_count is not null and p_open_count>=0 then p_open_count else open_count end
+  where id=p_company_id and (user_id=auth.uid() or coalesce(auth.role(),'')='service_role');
+  get diagnostics v_updated=row_count;
+  if v_updated=0 then raise exception 'Company not found' using errcode='P0002'; end if;
+end;
+$$;
+revoke all on function public.record_watch_check(uuid,text,integer) from public,anon;
+grant execute on function public.record_watch_check(uuid,text,integer) to authenticated,service_role;
 
 -- The per-user limiter gains two keys for the watchlist: the body is the one
 -- from 015 with 'watchlist-add' (20 an hour) and 'watchlist-check' (60 an hour).

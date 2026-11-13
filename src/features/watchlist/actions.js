@@ -59,6 +59,7 @@ export async function checkCompanyNow(companyId) {
 export async function refreshStaleBoards() {
   return runAction("Refresh watched boards", async () => {
     const { supabase, user } = await requireUser();
+    await enforceRateLimit(supabase, "watchlist-check");
     const result = await refreshStale(supabase, user.id);
     refresh();
     return result;

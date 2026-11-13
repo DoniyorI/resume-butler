@@ -12,7 +12,7 @@ mock.module("@/server/auth", {
 });
 mock.module("next/cache", { namedExports: { revalidatePath() {} } });
 
-const { watchCompany, checkCompanyNow } = await import("@/features/watchlist/actions");
+const { watchCompany, checkCompanyNow, refreshStaleBoards } = await import("@/features/watchlist/actions");
 
 const freshDb = () => {
   const db = database({
@@ -22,7 +22,9 @@ const freshDb = () => {
     }],
     watched_postings: [],
   });
+  const fake = db.rpc;
   db.rpc = async (name, args) => {
+    if (name !== "consume_rate_limit") return fake(name, args);
     events.push(`rpc:${args.p_key}`);
     return { data: state.allow, error: null };
   };
@@ -53,5 +55,26 @@ test("the add and check actions spend the rate limit before any request to a job
   assert.deepEqual(events.slice(0, 2), ["rpc:watchlist-add", "fetch"]);
   events.length = 0;
   assert.equal((await checkCompanyNow(companyId)).ok, true);
+  assert.deepEqual(events, ["rpc:watchlist-check", "fetch"]);
+});
+
+test("refreshing the stale boards spends the check limit before anything else", async (t) => {
+  t.mock.method(console, "warn", () => {});
+  t.mock.method(globalThis, "fetch", async () => {
+    events.push("fetch");
+    return new Response(JSON.stringify({ jobs: [] }), { status: 200 });
+  });
+  state.db = freshDb();
+  events.length = 0;
+
+  state.allow = false;
+  const refused = await refreshStaleBoards();
+  assert.deepEqual([refused.ok, refused.status], [false, 429]);
+  assert.deepEqual(events, ["rpc:watchlist-check"]); // no board read, nothing recorded
+  assert.equal(state.db.rpcCalls.some((c) => c.name === "record_watch_check"), false);
+
+  events.length = 0;
+  state.allow = true;
+  assert.equal((await refreshStaleBoards()).ok, true);
   assert.deepEqual(events, ["rpc:watchlist-check", "fetch"]);
 });

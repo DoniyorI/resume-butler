@@ -21,7 +21,19 @@ export function database(seed = {}) {
       tables[table] ||= [];
       return new Query(table);
     },
-    async rpc() {
+    // `now` lets a test pin the clock record_watch_check stamps (the real function uses now())
+    now: null,
+    rpcCalls: [],
+    async rpc(name, args) {
+      db.rpcCalls.push({ name, args });
+      if (name === "record_watch_check") {
+        const row = (tables.watched_companies || []).find((r) => r.id === args.p_company_id);
+        if (!row) return { data: null, error: { code: "P0002", message: "Company not found" } };
+        row.last_checked_at = new Date(db.now ?? Date.now()).toISOString();
+        row.last_error = String(args.p_error ?? "").slice(0, 300);
+        if (args.p_open_count != null && args.p_open_count >= 0) row.open_count = args.p_open_count;
+        return { data: null, error: null };
+      }
       return { data: null, error: { code: "PGRST202", message: "Function is not installed" } };
     },
   };
