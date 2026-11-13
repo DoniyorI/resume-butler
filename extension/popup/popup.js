@@ -90,7 +90,7 @@ async function renderJob(connection) {
   $("capture-company").value = p.company ?? job.company ?? "";
   $("capture-role").value = p.role ?? job.role ?? "";
   $("capture-location").value = p.location ?? job.location ?? "";
-  $("capture-description").value = p.job_description ?? job.description ?? "";
+  $("capture-description").value = typeof p.job_description === "string" && p.job_description.trim() ? p.job_description : job.description ?? "";
   const select = $("resume-choice");
   select.replaceChildren(new Option("Master CV / decide later", ""));
   for (const resume of context?.resumes || []) select.add(new Option(resume.title, resume.id));

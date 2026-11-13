@@ -29,3 +29,30 @@ test("submission capture stays usable while resume metadata is unavailable", asy
   assert.equal(sent.filter(message => message.type === "record").length, 1);
   assert.equal(sent.find(message => message.type === "record").account.userId, "A");
 });
+
+test("an empty stored description falls back to the captured one", async () => {
+  const elements = new Map();
+  const node = id => {
+    if (!elements.has(id)) elements.set(id, { onclick: null, addEventListener() {}, replaceChildren() {}, add() {} });
+    return elements.get(id);
+  };
+  const job = { company: "QA", role: "Engineer", description: "Captured description", url: "https://job-boards.greenhouse.io/acme/jobs/123" };
+  const run = async stored => {
+    elements.clear();
+    vm.runInNewContext(await readFile(new URL("../extension/popup/popup.js", import.meta.url), "utf8"), {
+      document: { getElementById: node }, Date, window: { close() {} }, Option: function Option(label, value) { return { label, value }; },
+      chrome: {
+        runtime: { sendMessage: (message, callback) => {
+          if (message.type === "status") callback({ connection: { userId: "A", origin: "http://localhost:3000" }, recent: [] });
+          if (message.type === "capture-context") callback({ resumes: [], opportunity: { payload: { job_description: stored } } });
+        } },
+        tabs: { query: async () => [{ id: 1 }], sendMessage: (id, message, cb) => cb(job) },
+      },
+    });
+    await new Promise(resolve => setImmediate(resolve));
+    return node("capture-description").value;
+  };
+  assert.equal(await run(""), "Captured description");
+  assert.equal(await run("   \n"), "Captured description");
+  assert.equal(await run("Edited by user"), "Edited by user");
+});

@@ -20,6 +20,46 @@
     }
     if (!values.length) container.textContent = empty;
   };
+  const BANDS = { strong: "Strong fit", good: "Good fit", stretch: "Stretch", low: "Low fit", unknown: "Not enough to tell" };
+  const CHECKS = { "work-authorization": "Work authorisation", clearance: "Clearance", citizenship: "Citizenship", onsite: "On-site", relocation: "Relocation", travel: "Travel" };
+  const list = value => Array.isArray(value) ? value.filter(item => typeof item === "string" && item) : [];
+  const renderFit = (fit, source) => {
+    const lines = $("job-fit-lines");
+    lines.replaceChildren();
+    const add = (label, text, tag = "p") => {
+      const line = document.createElement(tag); line.className = "fit-line";
+      if (label) { const strong = document.createElement("strong"); strong.textContent = `${label} `; line.append(strong); }
+      line.append(document.createTextNode(text)); lines.append(line);
+    };
+    const chip = $("job-fit-band");
+    chip.textContent = BANDS[fit.band] || BANDS.unknown;
+    chip.setAttribute("data-band", BANDS[fit.band] ? fit.band : "unknown");
+    $("job-fit-reason").textContent = typeof fit.reason === "string" ? fit.reason : "";
+    if (fit.band !== "unknown") {
+      const missing = list(fit.missing), listed = list(fit.listed), preferred = list(fit.preferredMissing);
+      if (missing.length) add("Not in your Master CV:", missing.join(", "));
+      if (listed.length) add("Listed without an example:", listed.join(", "));
+      if (preferred.length) add("Nice to have, not in your CV:", preferred.join(", "));
+      if (Array.isArray(fit.notShown)) {
+        const notShown = list(fit.notShown);
+        add("", notShown.length ? `Your selected resume leaves out: ${notShown.join(", ")}` : "Your selected resume shows everything your Master CV backs.");
+      }
+      const years = fit.years;
+      if (years?.status === "short") add("", `Asks for ${years.required}+ years; your dated experience covers about ${years.have} years.`);
+      else if (years?.status === "unknown" && years.required != null) add("", `Asks for ${years.required}+ years; add dates to your experience to compare.`);
+      const degree = fit.degree;
+      if (degree?.status === "short" && degree.required) add("", `Asks for a ${degree.required}, ${degree.inProgress ? "only in progress in your education" : "not shown in your education"}`);
+      const checks = Array.isArray(fit.checks) ? fit.checks.filter(check => check && typeof check.quote === "string") : [];
+      if (checks.length) {
+        add("Only you can judge:", "");
+        for (const check of checks) add(CHECKS[check.kind] || "Other", `\u201C${check.quote}\u201D`);
+      }
+    }
+    $("job-fit").hidden = false; $("job-keywords").hidden = true; $("job-score-note").hidden = true;
+    $("job-score-method").textContent = "Compared with your Master CV";
+    $("job-score-status").textContent = source?.title ? `Source: ${source.title}` : "";
+    $("job-score-result").hidden = false;
+  };
   $("job-score-compare").onclick = async () => {
     if (!context) return;
     const jobDescription = $("capture-description").value.trim();
@@ -41,6 +81,9 @@
       $("job-score-status").textContent = result?.error || "Comparison unavailable. Try again.";
       return;
     }
+    if (result.fit && typeof result.fit === "object") { renderFit(result.fit, result.source); return; }
+    $("job-fit").hidden = true; $("job-keywords").hidden = false; $("job-score-note").hidden = false;
+    $("job-score-method").textContent = "Keyword coverage";
     if (!result.totalKeywords || result.score == null) {
       $("job-score-status").textContent = "No recognized job terms. A score would be misleading.";
       return;

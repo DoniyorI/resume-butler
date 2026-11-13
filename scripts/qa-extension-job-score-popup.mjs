@@ -41,7 +41,7 @@ const check = (a, b, label) => { assert.deepEqual(a, b, label); checks++; };
 try {
   await page.goto("https://popup.example.test/popup/popup.html");
   await page.locator("#resume-choice option").nth(1).waitFor({ state: "attached" });
-  const compare = page.getByRole("button", { name: "Compare with job", exact: true });
+  const compare = page.getByRole("button", { name: "Check fit", exact: true });
   check(await compare.count(), 1);
   check(requests.length, 0, "no background comparisons on load");
   check(await page.locator("#job-facts").innerText(), "$200K–$230K / year · Full-time");
