@@ -16,6 +16,8 @@ const SAVED_JOB_DAYS = 7;
 // Saved jobs that fit the Master CV well enough to suggest applying, strongest first
 const FIT_SUGGESTION_LIMIT = 2;
 const FIT_BANDS = ["strong", "good"];
+// Watched postings first seen this recently count as new
+const WATCHED_NEW_DAYS = 7;
 
 const DAY_MS = 86_400_000;
 const companyOf = (app) => app.company || "this company";
@@ -28,6 +30,8 @@ const appHref = (id, kind) => `/applications/${id}?step=${kind}#next-steps`;
  * @param {Array} input.activities [{ applicationId, kind, status, dueOn, completedAt }] (empty before migration 020)
  * @param {Array} input.savedJobs [{ id, company, role, createdAt, applicationId, band? }]; `band` is the
  *   fit band from assessFit when the caller could compute it (never computed here)
+ * @param {Array} input.watched [{ id, firstSeenAt, band }] open postings at watched companies with their
+ *   fit band (from watchedWithBands; never computed here)
  * @param {number} input.pendingEmailCount inbox suggestions waiting for review
  * @param {string} input.today "YYYY-MM-DD"
  * @returns {Array<{ id, kind, title, reason, href, applicationId? }>}
@@ -37,6 +41,7 @@ export function suggestNextSteps({
   historyByApp = new Map(),
   activities = [],
   savedJobs = [],
+  watched = [],
   pendingEmailCount = 0,
   today,
 }) {
@@ -145,6 +150,26 @@ export function suggestNextSteps({
     href: "/saved-jobs?sort=fit",
   }));
 
+  const newlyWatched = watched.filter(
+    (posting) => posting.firstSeenAt && String(posting.firstSeenAt).slice(0, 10) >= addDays(today, -WATCHED_NEW_DAYS)
+  );
+  const strongCount = newlyWatched.filter((posting) => posting.band === "strong").length;
+  const goodCount = newlyWatched.filter((posting) => posting.band === "good").length;
+  const watchedCount = strongCount || goodCount;
+  const watchlist = watchedCount
+    ? [
+        {
+          id: "watchlist-fit",
+          kind: "watchlist_fit",
+          title: "Review new postings at companies you watch",
+          reason: `${watchedCount} new ${watchedCount === 1 ? "posting at a company" : "postings at companies"} you watch ${
+            watchedCount === 1 ? "looks" : "look"
+          } like ${strongCount ? "a strong" : "a good"} fit.`,
+          href: "/watchlist",
+        },
+      ]
+    : [];
+
   const saved = savedJobs
     .filter((job) => !job.applicationId && job.createdAt && !suggestedToApply.has(job.id))
     .map((job) => ({ job, age: daysBetween(String(job.createdAt).slice(0, 10), today) }))
@@ -158,5 +183,5 @@ export function suggestNextSteps({
       href: "/saved-jobs",
     }));
 
-  return [...offers, ...interviews, ...recruiters, ...followUps, ...inbox, ...fits, ...saved].slice(0, SUGGESTION_LIMIT);
+  return [...offers, ...interviews, ...recruiters, ...followUps, ...inbox, ...fits, ...watchlist, ...saved].slice(0, SUGGESTION_LIMIT);
 }

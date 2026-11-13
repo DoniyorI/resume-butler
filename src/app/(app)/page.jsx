@@ -31,6 +31,7 @@ import {
 } from "@/server/activities/service";
 import { suggestNextSteps } from "@/server/activities/suggest";
 import { savedJobsWithBands } from "@/server/fit/savedJobFit";
+import { watchedWithBands } from "@/server/watchlist/fit";
 
 export const metadata = { title: "Dashboard" };
 
@@ -58,7 +59,7 @@ async function softly(load, fallback, what) {
 // email updates, follow-ups), then the newest applications, then the trends
 export default async function DashboardPage() {
   const { supabase, user } = await requirePageUser();
-  const [rows, { firstName, goal }, connection, pending, upcoming, activities, decideJobs, fitJobs] = await Promise.all([
+  const [rows, { firstName, goal }, connection, pending, upcoming, activities, decideJobs, fitJobs, watched] = await Promise.all([
     loadDashboardRows(supabase, user.id),
     getGoalAndName(supabase, user.id),
     loadConnection(supabase, user.id),
@@ -73,6 +74,8 @@ export default async function DashboardPage() {
     softly(listSavedJobsToDecide(supabase, user.id), [], "saved jobs"),
     // Fit bands for the newest unapplied saved jobs; without them there is just no fit suggestion
     softly(savedJobsWithBands(supabase, user.id), [], "saved job fit"),
+    // New postings at watched companies with their fit band; [] before migration 021
+    softly(watchedWithBands(supabase, user.id), [], "watched postings"),
   ]);
   const withBands = new Set(fitJobs.map((job) => job.id));
   const savedJobs = [...fitJobs, ...decideJobs.filter((job) => !withBands.has(job.id))];
@@ -82,6 +85,7 @@ export default async function DashboardPage() {
     historyByApp: groupHistoryByApplication(rows.history),
     activities: activities.items,
     savedJobs,
+    watched,
     pendingEmailCount: pending.count,
     today: todayKey(),
   });

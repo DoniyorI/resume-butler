@@ -35,6 +35,7 @@ export function database(seed = {}) {
     eq(key, value) { this.filters.push((row) => read(row, key) === value); return this; }
     neq(key, value) { this.filters.push((row) => key.includes("->>") ? read(row, key) != null && read(row, key) !== value : row[key] !== value); return this; }
     not(key, operator, value) { this.filters.push((row) => operator === "is" && value === null ? read(row, key) != null : read(row, key) !== value); return this; }
+    is(key, value) { this.filters.push((row) => (value === null ? row[key] == null : row[key] === value)); return this; }
     in(key, values) { this.filters.push((row) => values.includes(row[key])); return this; }
     gte(key, value) { this.filters.push((row) => row[key] >= value); return this; }
     lt(key, value) { this.filters.push((row) => row[key] < value); return this; }
@@ -42,7 +43,7 @@ export function database(seed = {}) {
     limit(count) { this.count = count; return this; }
     range(from, to) { this.bounds = [from, to]; return this; }
     insert(value) { this.operation = "insert"; this.values = Array.isArray(value) ? value : [value]; return this; }
-    upsert(value, options = {}) { this.operation = "upsert"; this.values = [value]; this.conflict = options.onConflict; return this; }
+    upsert(value, options = {}) { this.operation = "upsert"; this.values = Array.isArray(value) ? value : [value]; this.conflict = options.onConflict; this.ignore = options.ignoreDuplicates === true; return this; }
     update(value) { this.operation = "update"; this.value = value; return this; }
     delete() { this.operation = "delete"; return this; }
     single() { this.one = "single"; return this; }
@@ -60,6 +61,7 @@ export function database(seed = {}) {
             (["processed_emails", "application_suggestions"].includes(this.table) ? ["user_id", "message_id"] : ["id"]);
           const existing = rows.find((row) => keys.every((key) => value[key] != null && row[key] === value[key]));
           if (existing && this.operation === "insert") return { data: null, error: { code: "23505", message: "Duplicate key" } };
+          if (existing && this.ignore) continue;
           if (existing) { Object.assign(existing, structuredClone(value)); selected.push(existing); }
           else {
             const created = { id: randomUUID(), created_at: new Date().toISOString(), state: "pending", ...structuredClone(value) };

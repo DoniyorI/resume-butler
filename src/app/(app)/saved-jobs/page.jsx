@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Bookmark, ArrowLeft, ArrowRight, Puzzle } from "lucide-react";
+import { Bookmark, ArrowLeft, ArrowRight, Puzzle, Radar } from "lucide-react";
 import { requirePageUser } from "@/server/auth";
 import { listOpportunities, listResumeChoices, SAVED_JOBS_PAGE_SIZE } from "@/server/opportunities/service";
 import { fitForSavedJobs, rankSavedJobsByFit } from "@/server/fit/savedJobFit";
@@ -48,7 +48,10 @@ export default async function SavedJobsPage({ searchParams }) {
           <h1 className="flex items-center gap-3 text-2xl font-semibold tracking-tight"><Bookmark className="text-brand" size={23} /> Saved jobs <span className="text-base font-normal text-muted-foreground">{total}</span></h1>
           <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted-foreground">Keep promising openings together. Review the details and choose your working resume before you apply.</p>
         </div>
-        <Link href="/extension" className="mt-8 inline-flex items-center gap-2 rounded-lg border bg-white px-3 py-2 text-sm shadow-sm hover:bg-muted"><Puzzle size={16} /> Capture with extension</Link>
+        <div className="mt-8 flex flex-wrap gap-2">
+          <Link href="/watchlist" className="inline-flex items-center gap-2 rounded-lg border bg-white px-3 py-2 text-sm shadow-sm hover:bg-muted"><Radar size={16} /> Watchlist</Link>
+          <Link href="/extension" className="inline-flex items-center gap-2 rounded-lg border bg-white px-3 py-2 text-sm shadow-sm hover:bg-muted"><Puzzle size={16} /> Capture with extension</Link>
+        </div>
       </div>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <form action="/saved-jobs" className="flex min-w-0 flex-[1_1_18rem] gap-2">
