@@ -185,6 +185,8 @@ test("a realistic software posting against a realistic CV", () => {
       kind: "project",
       label: "Shelfwatch",
       quote: "Packaged the app with Docker and ran it on a home Kubernetes cluster",
+      source: { type: "project", id: "p1" },
+      text: "Packaged the app with Docker and ran it on a home Kubernetes cluster",
     },
   ]);
 

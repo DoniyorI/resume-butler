@@ -205,3 +205,48 @@ export function skillLines(skills) {
   }
   return [...grouped].map(([header, names]) => ({ header, skills: names.join(", ") }));
 }
+
+const sameText = (a, b) => (a || "").trim().toLowerCase() === (b || "").trim().toLowerCase();
+
+// The resume item that is the same entry as a Master CV entry (the editor's
+// idea of "already on the page"), or undefined. Education: school + major;
+// experience: company + position; projects: project name. Experience and
+// projects also compare start dates when both sides have one, so two roles
+// with the same title at one company stay apart.
+const sameStart = (a, b) => !a || !b || sameText(a, b);
+export const findResumeItem = {
+  education: (cv, items) => items.find((item) => sameText(item.school, cv.school) && sameText(item.major, cv.major)),
+  experience: (cv, items) =>
+    items.find(
+      (item) =>
+        sameText(item.companyName, cv.company) && sameText(item.position, cv.position) && sameStart(item.startDate, cv.startDate)
+    ),
+  projects: (cv, items) => items.find((item) => sameText(item.projectName, cv.name) && sameStart(item.startDate, cv.startDate)),
+};
+
+// A resume item's identifying fields in the Master CV's shape, for findResumeItem
+export const resumeItemAsCv = {
+  experience: (item) => ({ company: item.companyName, position: item.position, startDate: item.startDate }),
+  projects: (item) => ({ name: item.projectName, startDate: item.startDate }),
+};
+
+/**
+ * Adds a bullet to the experience or project entry that `match` names
+ * ({ companyName, position, startDate } or { projectName, startDate }). Returns the new items, or
+ * null when the entry is not there or already has that exact bullet.
+ */
+export function appendBullet(sectionId, items, match, text) {
+  const bullet = String(text || "").trim();
+  const find = findResumeItem[sectionId];
+  if (!bullet || !find || !match) return null;
+  const target = find(
+    sectionId === "projects"
+      ? { name: match.projectName, startDate: match.startDate }
+      : { company: match.companyName, position: match.position, startDate: match.startDate },
+    items
+  );
+  if (!target) return null;
+  const bullets = itemBullets(target);
+  if (bullets.some((line) => String(line).trim() === bullet)) return null;
+  return items.map((item) => (item === target ? { ...item, description: [...bullets, bullet] } : item));
+}

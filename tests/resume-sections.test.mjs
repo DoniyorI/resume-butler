@@ -90,3 +90,38 @@ test("custom and certification exports escape headings and exclude hidden text f
   assert.equal(printableResumeKey(hidden), printableResumeKey(changedHidden));
   assert.notEqual(printableResumeKey(visible), printableResumeKey(hidden));
 });
+
+test("appendBullet adds a Master CV bullet to the matching entry only, once", () => {
+  const items = [
+    { companyName: "Harbor Ledger", position: "Software Engineer", description: ["Built services in Python"] },
+    { companyName: "Tallow Freight", position: "Junior Developer", description: "Packaged jobs with Docker" },
+  ];
+  const added = document.appendBullet("experience", items, { companyName: " harbor ledger", position: "Software Engineer" }, "Tuned PostgreSQL queries");
+  assert.deepEqual(added[0].description, ["Built services in Python", "Tuned PostgreSQL queries"]);
+  assert.equal(added[1], items[1]);
+  assert.deepEqual(items[0].description, ["Built services in Python"]);
+  assert.equal(document.appendBullet("experience", added, { companyName: "Harbor Ledger", position: "Software Engineer" }, "Tuned PostgreSQL queries"), null);
+  assert.equal(document.appendBullet("experience", items, { companyName: "Nowhere", position: "Software Engineer" }, "x"), null);
+  assert.deepEqual(document.appendBullet("experience", items, { companyName: "Tallow Freight", position: "Junior Developer" }, "More")[1].description, ["Packaged jobs with Docker", "More"]);
+  const projects = [{ projectName: "Ledger CLI", description: [] }];
+  assert.deepEqual(document.appendBullet("projects", projects, { projectName: "ledger cli" }, "Wrote a parser")[0].description, ["Wrote a parser"]);
+  assert.equal(document.appendBullet("skills", items, {}, "x"), null);
+});
+
+test("findResumeItem and appendBullet tell same-titled roles apart by start date, and fall back without dates", () => {
+  const items = [
+    { companyName: "Harbor Ledger", position: "Engineer", startDate: "2019-01-01", description: ["first"] },
+    { companyName: "Harbor Ledger", position: "Engineer", startDate: "2022-01-01", description: ["second"] },
+  ];
+  const second = { company: "Harbor Ledger", position: "Engineer", startDate: "2022-01-01" };
+  assert.equal(document.findResumeItem.experience(second, items), items[1]);
+  assert.equal(document.findResumeItem.experience({ ...second, startDate: "2020-05-01" }, items), undefined);
+  assert.equal(document.findResumeItem.experience({ ...second, startDate: "" }, items), items[0]);
+  const undated = [{ ...items[0], startDate: "" }];
+  assert.equal(document.findResumeItem.experience(second, undated), undated[0]);
+  const added = document.appendBullet("experience", items, { companyName: "Harbor Ledger", position: "Engineer", startDate: "2022-01-01" }, "extra");
+  assert.deepEqual(added[0].description, ["first"]);
+  assert.deepEqual(added[1].description, ["second", "extra"]);
+  const projects = [{ projectName: "Atlas", startDate: "2020-01-01" }, { projectName: "Atlas", startDate: "2023-01-01" }];
+  assert.equal(document.findResumeItem.projects({ name: "atlas", startDate: "2023-01-01" }, projects), projects[1]);
+});

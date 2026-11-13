@@ -193,6 +193,8 @@ test("demonstrated, listed and missing carry exact evidence from the CV", () => 
       kind: "experience",
       label: "Data Engineer, Copperline Health",
       quote: "Moved nightly batch jobs to Python and cut runtime from 4 hours to 20 minutes",
+      source: { type: "experience", id: "e1" },
+      text: "Moved nightly batch jobs to Python and cut runtime from 4 hours to 20 minutes",
     },
   ]);
   assert.deepEqual(byTerm.docker.evidence, [
@@ -200,21 +202,39 @@ test("demonstrated, listed and missing carry exact evidence from the CV", () => 
       kind: "project",
       label: "Trailhead Maps",
       quote: "Containerised the API with Docker and deployed it on a small VPS",
+      source: { type: "project", id: "p1" },
+      text: "Containerised the API with Docker and deployed it on a small VPS",
     },
   ]);
   assert.equal(byTerm.redis.strength, "demonstrated");
   assert.deepEqual(byTerm.redis.evidence, [
-    { kind: "custom", label: "Code Club mentor", quote: "Taught Redis basics to students" },
+    {
+      kind: "custom",
+      label: "Code Club mentor",
+      quote: "Taught Redis basics to students",
+      source: { type: "custom", id: "00000000-0000-4000-8000-000000000002" },
+      text: "Taught Redis basics to students",
+    },
   ]);
 
   assert.equal(byTerm.aws.strength, "listed");
-  assert.deepEqual(byTerm.aws.evidence, [{ kind: "skills", label: "Skills: Cloud", quote: "AWS" }]);
+  assert.deepEqual(byTerm.aws.evidence, [
+    {
+      kind: "skills",
+      label: "Skills: Cloud",
+      quote: "AWS",
+      source: { type: "skill", id: "s1" },
+      text: "AWS",
+    },
+  ]);
   assert.equal(byTerm.kubernetes.strength, "listed");
   assert.deepEqual(byTerm.kubernetes.evidence, [
     {
       kind: "certification",
       label: "Certified Kubernetes Administrator",
       quote: "Certified Kubernetes Administrator",
+      source: { type: "certification", id: null },
+      text: "Certified Kubernetes Administrator",
     },
   ]);
 
@@ -322,7 +342,15 @@ test("a higher degree meets a lower one, and alternatives are not separate requi
   assert.ok(!terms(result).includes("master's degree"));
   const degree = result.requirements.find((req) => req.term === "bachelor's degree");
   assert.equal(degree.strength, "demonstrated");
-  assert.deepEqual(degree.evidence, [{ kind: "education", label: "Westbrook University", quote: "Master" }]);
+  assert.deepEqual(degree.evidence, [
+    {
+      kind: "education",
+      label: "Westbrook University",
+      quote: "Master",
+      source: { type: "education", id: null },
+      text: "Master",
+    },
+  ]);
 
   const phd = fit(
     posting,
@@ -628,13 +656,33 @@ test("a more specific skill in a bullet demonstrates the general requirement, qu
     term: "sql",
     importance: "required",
     strength: "demonstrated",
-    evidence: [{ kind: "experience", label, quote: "Tuned PostgreSQL indexes for the billing ledger" }],
+    evidence: [
+      {
+        kind: "experience",
+        label,
+        quote: "Tuned PostgreSQL indexes for the billing ledger",
+        source: { type: "experience", id: "e1" },
+        text: "Tuned PostgreSQL indexes for the billing ledger",
+      },
+    ],
   });
   assert.deepEqual(byTerm.javascript.evidence, [
-    { kind: "experience", label, quote: "Rewrote the admin panel in TypeScript" },
+    {
+      kind: "experience",
+      label,
+      quote: "Rewrote the admin panel in TypeScript",
+      source: { type: "experience", id: "e1" },
+      text: "Rewrote the admin panel in TypeScript",
+    },
   ]);
   assert.deepEqual(byTerm["ci/cd"].evidence, [
-    { kind: "experience", label, quote: "Set up GitHub Actions for every pull request" },
+    {
+      kind: "experience",
+      label,
+      quote: "Set up GitHub Actions for every pull request",
+      source: { type: "experience", id: "e1" },
+      text: "Set up GitHub Actions for every pull request",
+    },
   ]);
   assert.ok(Object.values(byTerm).every((req) => req.strength === "demonstrated"));
 });

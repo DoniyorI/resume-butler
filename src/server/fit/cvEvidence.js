@@ -34,8 +34,11 @@ const lines = (value) =>
     .map((line) => String(line || ""))
     .filter((line) => line.trim());
 
-function unit(kind, key, label, text) {
-  return { kind, key, label, text, skills: matchSkills(text, { technical: true }) };
+// The Master CV row a line came from; id is null when the loaded shape has none
+const sourceOf = (type, id) => ({ type, id: id ?? null });
+
+function unit(kind, key, label, text, source) {
+  return { kind, key, label, text, source, skills: matchSkills(text, { technical: true }) };
 }
 
 /** Every searchable line of the Master CV, each tied to the entry it belongs to */
@@ -48,12 +51,12 @@ export function indexCv(cv, today = new Date()) {
         .filter(Boolean)
         .join(", ") || "Experience";
     for (const text of [...lines(exp.position), ...lines(exp.bullets)])
-      units.push(unit("experience", `experience:${i}`, label, text));
+      units.push(unit("experience", `experience:${i}`, label, text, sourceOf("experience", exp.id)));
   });
   (cv.projects || []).forEach((project, i) => {
     const label = String(project.name || "").trim() || "Project";
     for (const text of [...lines(project.name), ...lines(project.description), ...lines(project.bullets)]) {
-      units.push(unit("project", `project:${i}`, label, text));
+      units.push(unit("project", `project:${i}`, label, text, sourceOf("project", project.id)));
     }
   });
   (cv.customSections || []).forEach((section, s) => {
@@ -67,11 +70,11 @@ export function indexCv(cv, today = new Date()) {
           ...lines(item.text),
           ...lines(item.description),
         ]) {
-          units.push(unit("custom", key, label, text));
+          units.push(unit("custom", key, label, text, sourceOf("custom", item.id)));
         }
       } else {
         for (const text of lines(item.text))
-          units.push(unit("custom", key, section.title || "Custom section", text));
+          units.push(unit("custom", key, section.title || "Custom section", text, sourceOf("custom", item.id)));
       }
     });
   });
@@ -82,27 +85,31 @@ export function indexCv(cv, today = new Date()) {
     const name = String(skill?.name || "").trim();
     if (!name) continue;
     const category = String(skill.category || "").trim();
-    categories.set(category, [...(categories.get(category) || []), name]);
+    categories.set(category, [...(categories.get(category) || []), { name, id: skill.id }]);
   }
-  [...categories].forEach(([category, names]) => {
+  [...categories].forEach(([category, entries]) => {
+    const names = entries.map((entry) => entry.name);
     const line = unit(
       "skills",
       `skills:${category}`,
       category ? `Skills: ${category}` : "Skills",
-      names.join(", ")
+      names.join(", "),
+      sourceOf("skill", null)
     );
     line.names = names;
+    line.ids = entries.map((entry) => entry.id);
     units.push(line);
   });
 
   (cv.certifications || []).forEach((cert, i) => {
     const label = String(cert.name || cert.issuer || "").trim() || "Certification";
     for (const text of [...lines(cert.name), ...lines(cert.issuer)])
-      units.push(unit("certification", `certification:${i}`, label, text));
+      units.push(unit("certification", `certification:${i}`, label, text, sourceOf("certification", cert.id)));
   });
   (cv.education || []).forEach((edu, i) => {
     const label = String(edu.school || "").trim() || "Education";
-    for (const text of lines(edu.major)) units.push(unit("education", `education:${i}`, label, text));
+    for (const text of lines(edu.major))
+      units.push(unit("education", `education:${i}`, label, text, sourceOf("education", edu.id)));
   });
 
   return { units, education: cv.education || [], today };
@@ -114,11 +121,13 @@ function spellings(term) {
   return [...skills.flatMap((skill) => SKILL_ALIASES[skill] || [skill]), ...term.split(/\s+/)];
 }
 
-function quoteFor(term, line) {
+function evidenceItem(term, line) {
   // A skills line quotes the one skill that matched when it can
-  const text = line.names?.find((name) => findInResume(term, name)) || line.text;
+  const at = line.names ? line.names.findIndex((name) => findInResume(term, name)) : -1;
+  const text = at >= 0 ? line.names[at] : line.text;
+  const source = at >= 0 ? sourceOf("skill", line.ids[at]) : line.source;
   const [start, end] = locate(text, spellings(term));
-  return clipAround(text, start, end, QUOTE_CAP);
+  return { kind: line.kind, label: line.label, quote: clipAround(text, start, end, QUOTE_CAP), source, text };
 }
 
 function evidenceFrom(term, lines) {
@@ -127,7 +136,7 @@ function evidenceFrom(term, lines) {
   for (const line of lines) {
     if (seen.has(line.key)) continue;
     seen.add(line.key);
-    evidence.push({ kind: line.kind, label: line.label, quote: quoteFor(term, line) });
+    evidence.push(evidenceItem(term, line));
     if (evidence.length === MAX_EVIDENCE) break;
   }
   return evidence;
@@ -155,6 +164,8 @@ export function strengthOf(term, index) {
         kind: "education",
         label: String(edu.school || "").trim() || "Education",
         quote: clipAround(String(edu.degreeType || edu.major || ""), 0, 0, QUOTE_CAP),
+        source: sourceOf("education", edu.id),
+        text: String(edu.degreeType || edu.major || ""),
       })),
     };
   }
@@ -164,6 +175,14 @@ export function strengthOf(term, index) {
   if (shown.length) return { strength: "demonstrated", evidence: evidenceFrom(term, shown) };
   if (matching.length) return { strength: "listed", evidence: evidenceFrom(term, matching) };
   return { strength: "missing", evidence: [] };
+}
+
+/** Every Master CV line that backs a term, uncapped: [{ type, id, text }]. Same matching as strengthOf. */
+export function sourcesFor(term, index) {
+  if (isDegree(term)) return [];
+  return index.units
+    .filter((line) => findInResume(term, line.text, { skills: line.skills }))
+    .map((line) => ({ type: line.source.type, id: line.source.id, text: line.text }));
 }
 
 /** Whether a resume shows a term, under the same rules */

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { chatJSON } from "@/server/openai";
 import { loadMasterCv } from "@/server/resume/loadCv";
 import { cvToResumeItem } from "@/features/resumes/resumeDocument";
+import { parseCvDate } from "@/server/fit/experienceYears";
 
 const TAILOR_PROMPT = `You choose which entries of a candidate's master CV go on a one-page resume for a specific job.
 
@@ -22,8 +23,8 @@ Return JSON:
   "skills": [{ "category": "...", "names": ["...", ...] }]
 }`;
 
-const MAX_EXPERIENCE = 5;
-const MAX_PROJECTS = 4;
+export const MAX_EXPERIENCE = 5;
+export const MAX_PROJECTS = 4;
 const MAX_SKILL_GROUPS = 6;
 const REASON_CHARS = 120;
 
@@ -48,6 +49,27 @@ function describeCv(cv) {
   }
   lines.push(`Skills: ${cv.skills.map((s) => s.name).join(", ")}`);
   return lines.join("\n");
+}
+
+const dayOf = (value) => {
+  const day = parseCvDate(value);
+  return day === "present" ? Infinity : typeof day === "number" ? day : -Infinity;
+};
+const compare = (a, b) => (a === b ? 0 : a > b ? 1 : -1);
+
+/** Entries newest first: current role, then later end date, then later start date; ties keep CV order */
+export function mostRecent(entries, max = entries.length) {
+  return entries
+    .map((entry, i) => ({ entry, i }))
+    .sort(
+      (a, b) =>
+        Number(Boolean(b.entry.currentlyWorking)) - Number(Boolean(a.entry.currentlyWorking)) ||
+        compare(dayOf(b.entry.endDate), dayOf(a.entry.endDate)) ||
+        compare(dayOf(b.entry.startDate), dayOf(a.entry.startDate)) ||
+        a.i - b.i
+    )
+    .slice(0, max)
+    .map(({ entry }) => entry);
 }
 
 // Model output is untrusted: keep only ids that exist, in the CV's order, at most `max`
@@ -85,7 +107,8 @@ function pickSkills(cvSkills, groups) {
  * Choose the master CV entries that fit a job. Returns resume sections in the
  * editor's shape, plus what was picked and why, so the editor can show the
  * choice before applying it:
- * { content: { education, experience, projects, skills }, picks: { experience, projects } }
+ * { content: { education, experience, projects, skills }, picks: { experience, projects }, fallback }
+ * where `fallback` lists the sections ("experience", "projects") the model picked nothing for
  */
 export async function tailorResume(supabase, userId, { jobDescription }) {
   const cv = await loadMasterCv(supabase, userId);
@@ -100,8 +123,17 @@ export async function tailorResume(supabase, userId, { jobDescription }) {
     temperature: 0.2,
   });
 
-  const experience = pickById(cv.experience, answer.experience, MAX_EXPERIENCE);
-  const projects = pickById(cv.projects, answer.projects, MAX_PROJECTS);
+  // A section the model left empty falls back to the newest entries, so
+  // applying the result never silently clears it; `fallback` names those sections
+  const fallback = [];
+  const pickOrRecent = (name, entries, picks, max) => {
+    const picked = pickById(entries, picks, max);
+    if (picked.length || !entries.length) return picked;
+    fallback.push(name);
+    return mostRecent(entries, max).map((entry) => ({ entry, reason: "Recent, no direct match" }));
+  };
+  const experience = pickOrRecent("experience", cv.experience, answer.experience, MAX_EXPERIENCE);
+  const projects = pickOrRecent("projects", cv.projects, answer.projects, MAX_PROJECTS);
   let education = pickById(cv.education, answer.education, cv.education.length);
   if (education.length === 0) education = cv.education.map((entry) => ({ entry }));
   const skills = pickSkills(cv.skills, answer.skills);
@@ -120,5 +152,6 @@ export async function tailorResume(supabase, userId, { jobDescription }) {
       })),
       projects: projects.map(({ entry, reason }) => ({ title: entry.name, reason })),
     },
+    fallback,
   };
 }

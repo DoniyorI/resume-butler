@@ -2,17 +2,14 @@ import Link from "next/link";
 import { Check, Plus } from "lucide-react";
 import { formatMonthYear } from "@/lib/dates";
 import { Button } from "@/components/ui/button";
-import { cvToResumeItem, skillLines } from "@/features/resumes/resumeDocument";
+import { cvToResumeItem, findResumeItem, skillLines } from "@/features/resumes/resumeDocument";
 
 const shortDate = (value) => formatMonthYear(value, { month: "short" });
-const same = (a, b) => (a || "").trim().toLowerCase() === (b || "").trim().toLowerCase();
-
 // Whether a CV entry is already on the page, so it isn't added twice by accident
 const ON_PAGE = {
-  education: (cv, items) => items.some((item) => same(item.school, cv.school) && same(item.major, cv.major)),
-  experience: (cv, items) =>
-    items.some((item) => same(item.companyName, cv.company) && same(item.position, cv.position)),
-  projects: (cv, items) => items.some((item) => same(item.projectName, cv.name)),
+  education: (cv, items) => Boolean(findResumeItem.education(cv, items)),
+  experience: (cv, items) => Boolean(findResumeItem.experience(cv, items)),
+  projects: (cv, items) => Boolean(findResumeItem.projects(cv, items)),
 };
 
 function Entry({ title, subtitle, meta, onPage, onAdd }) {
