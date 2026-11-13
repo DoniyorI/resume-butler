@@ -8,9 +8,9 @@ November 13, 2026. Covers roadmap milestone M4 (formerly A7).
 - **Today on the dashboard.** Overdue steps, those due today and the next seven days, each one click from done.
 - **Suggested next steps.** Six rules, in order: an offer with no recorded deadline; an interview with nothing planned after it; a recruiter who reached out and has no reply planned; no reply since applying (the existing 14-day rule); inbox updates waiting for review; saved jobs waiting for a decision. Each suggestion states its reason. They are computed on every load, never stored, and involve no AI. An open step for the same purpose removes the suggestion.
 
-## Migration 020 is required for dated steps
+## Migration 020
 
-`supabase/migrations/020_application_activities.sql` creates `application_activities`. **Until it is applied** the suggestions work, the Today card says that dated steps need migration 020, and the application page shows one line in place of the Next steps card. Nothing else is affected.
+`supabase/migrations/020_application_activities.sql` creates `application_activities`. It is applied to the hosted database (see below). On a database without it the suggestions work, the Today card says that dated steps need migration 020, and the application page shows one line in place of the Next steps card. Nothing else is affected.
 
 The migration is additive: one new table, one unique index on `applications(id, user_id)`, one trigger function. It changes no existing data.
 
@@ -22,15 +22,11 @@ The migration is additive: one new table, one unique index on `applications(id, 
 - **Signed-in browser flow, pre-migration:** `scripts/qa-next-steps.mjs` passed against `localhost:3000` and the hosted database as it is today: the Today card shows the three expected suggestions for seeded applications, the application page shows the migration line and still saves, no page errors. The disposable account was removed.
 - **Review:** an independent review found no authorization or schema defect and confirmed the dashboard's existing figures are unchanged. Its eleven behavioural findings were fixed, including moving the per-user cap into the database, where it cannot be bypassed.
 
-## Not yet verified
+## Migration applied and full flow verified
 
-**The dated-step UI has not been driven in a browser against a database that has the table**, because the hosted database does not have migration 020 and it is applied by hand. The logic is covered by the unit tests and the SQL by the PGlite run, but the two have not been exercised together. After 020 is applied, run:
+Migration 020 was applied to the hosted database on November 13, 2026 through the Supabase SQL editor. The text run was checked against the committed file by SHA-256 before running; the result was "Success. No rows returned", and a follow-up query confirmed the table, row-level security, four policies and both triggers.
 
-```bash
-QA_PLAYWRIGHT_MODULE=/opt/homebrew/lib/node_modules/playwright node --use-system-ca --import ./tests/register.mjs scripts/qa-next-steps.mjs
-```
-
-The script detects the table and runs the full flow: add an assessment and a timed interview, see both in Today, complete one, reschedule the other, delete, and confirm a second user's application is refused.
+`scripts/qa-next-steps.mjs` then ran its full path against the migrated database and passed every step: add an assessment and a timed interview (stored with `America/New_York`), see both in Today, complete one from Today, reschedule the other, delete, and confirm that attaching a step to a second user's application is refused by the foreign key (`23503`). No page errors; both disposable accounts were removed.
 
 ## Known limits
 

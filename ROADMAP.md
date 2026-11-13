@@ -38,7 +38,7 @@ The goal is one place to learn whether a job fits, tailor a resume to it, apply,
 | M1 | Honest feedback: no score for empty content, correct keyword extraction, an honest response rate | A9 (part) | Done November 12. [Verification](docs/honest-feedback-and-saved-job-verification.md) |
 | M2 | One job, one thread: saved jobs feed tailoring and carry their context into the application | Audit item 1 | Done November 12, no migration. [Verification](docs/honest-feedback-and-saved-job-verification.md) |
 | M3 | Fit with evidence on saved jobs, scored against the Master CV | B1 | Done November 12, no migration. [Verification and limits](docs/fit-verification.md) |
-| M4 | Next actions: dated activities and a Today list | A7 | Code shipped November 13. **Migration 020 must be applied**; the dated-step browser flow is verified after that. [Verification](docs/next-steps-verification.md) |
+| M4 | Next actions: dated activities and a Today list | A7 | Done November 13. Migration 020 applied and the full browser flow verified against it. [Verification](docs/next-steps-verification.md) |
 | M5 | Tailoring driven by fit evidence; missing facts are asked for | B3 | Done November 13, no migration. [Verification](docs/tailor-from-fit-verification.md) |
 | M6 | The same fit result in the extension and on application pages | B1 (extension half) | Done November 13, no migration. Extension 0.6.0 needs an unpacked reload. [Verification](docs/fit-everywhere-verification.md) |
 | M7 | Watchlist: target companies' public boards, new postings scored for fit | RB-13 | Next |
