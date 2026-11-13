@@ -2,7 +2,7 @@
 
 A complete map of the app: what it does, how it's built, where each piece lives and how the pieces talk to each other. Written for anyone (person or LLM) picking up the codebase cold. For day-to-day coding rules, see [CLAUDE.md](../CLAUDE.md). For setup, see [README.md](../README.md).
 
-Last reviewed: 2026-10-28, on `main` (Next.js 14.2). An upgrade to Next.js 16.4 / React 19 lives on the branch `claude/keen-roentgen-b7b6a5`; see [Upgrades in flight](#upgrades-in-flight).
+Last reviewed: 2026-11-13, on `main` (Next.js 14.2). An upgrade to Next.js 16.4 / React 19 lives on the branch `claude/keen-roentgen-b7b6a5`; see [Upgrades in flight](#upgrades-in-flight).
 
 ## Contents
 
@@ -118,7 +118,7 @@ src/
   lib/                       Safe on client and server: constants, dates, redirects, safeUrl,
                              salary, jobDetails, emailCategories, postJson, utils, supabase clients
   server/                    Server-only ("server-only" import), reusable by actions, routes, cron, extension
-supabase/migrations/         SQL schema, applied in order (001–019)
+supabase/migrations/         SQL schema, applied in order (001–020)
 extension/                   Chrome extension (see its README)
 docs/                        This file, the extension plan
 public/image/                Logo, illustrations, Lottie animations
@@ -126,15 +126,15 @@ vercel.json                  Cron schedule
 next.config.mjs              Security headers (CSP etc.), redirects, server external packages
 ```
 
-Feature folders: `applications`, `ats`, `auth`, `contact`, `cover-letters`, `cv` (data and actions only), `dashboard`, `documents`, `email-sync`, `extension`, `opportunities` (saved jobs), `profile`, `resumes`, `suggestions`.
+Feature folders: `activities` (next steps), `applications`, `ats`, `auth`, `contact`, `cover-letters`, `cv` (data and actions only), `dashboard`, `documents`, `email-sync`, `extension`, `opportunities` (saved jobs), `profile`, `resumes`, `suggestions`.
 
 ## Pages
 
 | Path | File | What it shows |
 |---|---|---|
-| `/` | `(app)/page.jsx` | Dashboard: welcome, stat cards, goal, email sync card, follow-ups, recent applications, charts |
+| `/` | `(app)/page.jsx` | Dashboard: welcome, Today (dated next steps and suggestions), stat cards, goal, email sync card, follow-ups, recent applications, charts |
 | `/applications` | `(app)/applications/page.jsx` | Applications table (URL-driven filters, sort, pages of 50), suggestions banner |
-| `/applications/[id]` | `(app)/applications/[id]/page.jsx` | Application detail: facts, editable details, job description, notes, ATS scanner, status timeline, linked documents |
+| `/applications/[id]` | `(app)/applications/[id]/page.jsx` | Application detail: facts, editable details, job description, notes, ATS scanner, status timeline, linked documents, Next steps card (`?step=<kind>` opens its add form) |
 | `/saved-jobs` | `(app)/saved-jobs/page.jsx` | Searchable shortlist, captured posting details and owned working resume selection; each card has "Tailor resume" and "I applied", a fit band with its reason and a "See why" panel (see [Fit](#fit-serverfit-featuresopportunities)). `?sort=fit` ranks by best fit (default newest). Separate from application counts until the user applies |
 | `/documents` | `(app)/documents/page.jsx` | Library of resumes and cover letters with page thumbnails, search, tabs, sort |
 | `/profile` | `(app)/profile/page.jsx` | Profile (identity rail, CV strength) and master CV sections, resume import |
@@ -152,7 +152,9 @@ Redirects in `next.config.mjs`: `/cv` → `/profile`, `/resumes` and `/coverlett
 ## Features in depth
 
 ### Dashboard (`features/dashboard`)
+- **Today** (`TodayCard.jsx`) sits under the heading, above the stat cards. `(app)/page.jsx` loads `listUpcoming`, `listForSuggestions` and `listSavedJobsToDecide` (each fails soft with a logged warning) and passes the dated steps, the older-overdue count and the `suggestNextSteps` result to the card. The card groups steps into overdue, today and the next seven days by the viewer's local date on the client (`useLocalToday`; the server doesn't know the viewer's time zone), shows at most 20 overdue steps plus "and N older overdue steps", lets the user mark a step done, then lists the suggested next steps with their reasons. Before migration 020 it says dated steps need the migration and the suggestions still show. The existing `FollowUps` card is kept.
 - `data.js` computes everything server-side from `applications` and `application_status_history`: totals and this week's count, response rate (applications whose current status or history includes Reached Out, Interviewed or Offered, via `responseSummary`; the card caption counts the same set), offer rate, average days from Applied to first Interviewed, follow-ups (still at Applied 14+ days after applying, oldest first), recent applications, applications over time, status breakdown, and Sankey nodes and links (Applied/Reached Out entry streams, recorded interview milestone and shared current outcomes; unchanged records remain visible as waiting, missing entry history is explicit, and repeated status edits cannot inflate counts).
+- `loadDashboardRows(supabase, userId)` loads applications and status history once; `getDashboardStats(supabase, userId, rows)` accepts them so the stats and the suggestions share one read. `waitingOnReply` (the follow-up rule) and `groupHistoryByApplication` are exported for `suggestNextSteps`. The existing figures are unchanged.
 - `GoalCard`: "apply to N jobs a day/week" with progress, streak and what's left (weeks start Monday; saved by `saveGoal` to `profiles.goal_period/goal_target`).
 - `SyncCard`: email connection status, pending suggestions, "Scan now", daily auto-sync toggle.
 - `Charts.jsx` is loaded through `LazyCharts.jsx` (dynamic import) to keep recharts out of the first load.
@@ -161,7 +163,16 @@ Redirects in `next.config.mjs`: `/cv` → `/profile`, `/resumes` and `/coverlett
 - **Table** (`ApplicationTable`, `columns.jsx`, `useApplicationsTable`): TanStack Table. The URL is the state (`listParams.js`): `?status=…&q=…&from=…&to=…&sort=applied_date.desc&page=2`. Search, status filter with counts, date range, sorting, column visibility, pages of 50, row selection with bulk status change and delete (`BulkActions`), inline status (`StatusCell`) and comments (`CommentsCell`), row actions (duplicate, delete), CSV export (`csv.js` neutralizes spreadsheet formulas).
 - **Add** (`AddApplication`): dialog from the header; can link a resume or cover letter and take an optional job description. `createApplication` fills what was left empty (description, job details, working resume if still owned) from the saved job with the same posting link; typed values win, and a blank date is omitted so the column default applies. The insert is `insertApplication` (`server/applications`).
 - **Detail** (`ApplicationEditor`): breadcrumb, status select beside the title, a facts row (pay, workplace, employment type, location, applied date, source, posting link), editable details including the pay range (once migration 010 is applied), job description as readable text with Edit / Show more, notes, the ATS scanner when a resume is linked, status timeline, linked documents. Status saves instantly; everything else saves with Save (an "unsaved changes" hint shows when something changed).
+- **Next steps card** (`features/activities`): see [Next steps](#next-steps-serveractivities-featuresactivities). The detail page loads the application's steps with `listActivities` and passes `<NextSteps>` into `ApplicationEditor` as the `nextSteps` slot.
 - **Email scan button** (`ScanEmailsButton`, `useEmailScan`) on the table header.
+
+### Next steps (`server/activities`, `features/activities`)
+- **Dated steps on an application.** Kinds: follow-up, assessment, recruiter screen, interview, offer deadline, task (`kinds.js`, shared by validation and UI). A step has a title, an optional day (`due_on`), an optional time, a contact (name and channel), a link and notes, and a status of open, done or cancelled. Table `application_activities` (migration 020).
+- **Service** (`server/activities/service.js`): every query is scoped by `user_id` and input goes through zod. `listActivities` (one application), `listUpcoming` (open steps for Today: the 20 most recently due overdue ones with a count of older ones, then today and the next seven days plus two spare days for viewers ahead of the server's date), `listForSuggestions` (open steps and done ones dated or completed in the last 14 days), `listSavedJobsToDecide` (saved jobs not applied to, saved over a week ago; empty before migration 013), `createActivity` (checks the application is the user's first, for a clear 404), `updateActivity`, `setActivityStatus` (`completed_at` set only while done; marking done twice keeps the first time) and `deleteActivity`. Before migration 020 reads return `{ items: [], setupPending: true }` and writes throw a 503 "Install migration 020 to use next steps." message. The 2,000-step cap (trigger error `54000`) becomes a 429 message.
+- **Suggestions** (`server/activities/suggest.js`): `suggestNextSteps` is pure, calls no AI and is never stored; it runs on every dashboard load. Rules, in this order: an offer without a deadline step; interviewed with nothing planned and no step done in the last 14 days; a recruiter reached out and nothing planned; no reply since applying (the dashboard's `waitingOnReply` rule); pending inbox updates; saved jobs waiting more than 7 days for a decision. Within a rule the oldest comes first, the list is capped at 8, and an open step for the same purpose on that application suppresses the suggestion, so recording the step makes it go away. Each suggestion carries a reason and a link, `/applications/<id>?step=<kind>#next-steps` for application ones.
+- **UI** (`features/activities`): `NextSteps.jsx` is the card on the application page (open steps first, finished ones collapsed; one quiet line before migration 020), `ActivityForm.jsx` adds and edits (`?step=<kind>` opens it on that kind), `actions.js` holds the Server Actions, `hooks/useLocalToday.js` gives the viewer's date.
+- **Time zones**: a timed step stores `starts_at` with the IANA zone it was entered in (`time_zone`) and keeps that zone when edited; a new time uses the browser's zone. A local time that does not exist on that date (the clocks change) is refused, not moved; an ambiguous fall-back time takes its first occurrence.
+- **Checks**: `scripts/qa-next-steps.mjs` is the signed-in browser check (a pre-migration path, and a full path once the table exists); `scripts/qa-next-steps-sql.mjs` runs 37 assertions against migration 020 on a disposable Postgres (PGlite); `tests/next-steps.test.mjs` covers the rules and time handling.
 
 ### Suggestions (`features/suggestions`)
 - Email scans write `application_suggestions` (kind `new` or `update`), never applications directly.
@@ -258,6 +269,7 @@ Per-user limits live in the `consume_rate_limit` database function (migrations 0
 | `features/opportunities/actions.js` | `saveJob`, `removeSavedJob`, `tailorSavedJob` ("Tailor resume": opens or creates the working resume, redirects to `/resumes/[id]?job=<id>`), `markSavedJobApplied` ("I applied") |
 | `features/cv/actions.js` | `saveExperience`, `deleteExperience`, `saveProjects`, `deleteProject`, `saveEducation`, `deleteEducation`, `saveCertifications`, `deleteCertification`, `addSkill`, `deleteSkill` |
 | `features/profile/actions.js` | `updateProfile` |
+| `features/activities/actions.js` | `createActivityAction`, `updateActivityAction`, `setActivityStatusAction`, `deleteActivityAction` (revalidate the application page and `/`) |
 | `features/dashboard/actions.js` | `saveGoal` |
 | `features/email-sync/actions.js` | `saveEmailConnection`, `disconnectEmail`, `setEmailAutoSync` |
 | `features/suggestions/actions.js` | `approveSuggestion`, `dismissSuggestion`, `dismissAllSuggestions` |
@@ -282,6 +294,8 @@ Every action is `runAction(context, async () => …)` with `parseInput(zodSchema
 | `ats/*` | `scoreResume` (status, nullable component scores, overall score only when `ok`, `yearsRequired`) and its parts (keywords incl. `extractYearsRequirement`, sections, bullets, `skills.js` with `matchSkills`, `ALIAS_RULES`, `SATISFIED_BY`, `PRACTICE_SKILLS`, resume text) |
 | `fit/*` | `assessFit` (pure, deterministic, no AI: requirements with importance and strength, band and reason, years, degree, checks, working-resume comparison) and its parts (`posting.js` reads requirements and checks, `cvEvidence.js` finds the user's evidence, `experienceYears.js`, `quote.js`); `savedJobFit.js`: `fitForSavedJobs`, `rankSavedJobsByFit` (see [Fit](#fit-serverfit-featuresopportunities)) |
 | `opportunities/service.js` | Saved jobs: `saveOpportunity(supabase, userId, input, { keepStored })` (only extension captures pass `keepStored`, which keeps a stored description and job details a re-capture lacks; the web editor is authoritative; `resumeId` undefined keeps the stored choice, null clears it), `listSavedJobTargets`, `readSavedJob`, `loadSavedJob`, `startTailoredResume` (no AI: reuses the working resume or creates "Company – Role" aimed at the job and records it), `applyToSavedJob` (see Saved jobs) |
+| `activities/service.js` | Next steps: `listActivities`, `listUpcoming`, `listForSuggestions`, `listSavedJobsToDecide`, `createActivity`, `updateActivity`, `setActivityStatus`, `deleteActivity`, `todayKey`; setup-pending reads and 503/429 write messages (see [Next steps](#next-steps-serveractivities-featuresactivities)) |
+| `activities/suggest.js` | `suggestNextSteps`: pure, rule-based, no AI, never stored; capped at 8 |
 | `applications/insertApplication.js` | `insertApplication(supabase, userId, fields, details)`: the shared application insert. Derives the posting identity columns from `portal_link`, omits a missing `applied_date`, and retries without the identity columns (012) and then the job details (010) when the database lacks them |
 | `resume/loadCv.js` | The user's profile and master CV as stored (with nested bullets) |
 | `resume/generateResume.js`, `tailorResume.js` | Pick CV entries for a job (model output filtered to ids that exist, in CV order, capped) |
@@ -330,6 +344,7 @@ Supabase Postgres. **Row-level security is on for every table**; users can only 
 | `application_suggestions` | kind (`new` / `update`), `application_id`, company, role, status, category, confidence, summary, email fields, `state` (pending / approved / dismissed) | The review queue |
 | `api_rate_limits` | `user_id`, key, window | Via `consume_rate_limit()` (authenticated only) |
 | `extension_tokens` | `token_hash` (SHA-256), name, `last_used_at`, `revoked_at` | Tokens are `rbx_` + 32 random bytes, shown once |
+| `application_activities` | `user_id`, `application_id`, `kind` (follow_up / assessment / recruiter_screen / interview / offer_deadline / task), `title`, `due_on`, `starts_at`, `time_zone`, `status` (open / done / cancelled), `completed_at`, `notes`, `contact_name`, `contact_channel`, `link` | Migration 020, applied by hand. Owner-only RLS for select, insert, update and delete. A composite foreign key `(application_id, user_id)` to `applications(id, user_id)` stops a step being attached to another user's application, and cascades on application delete. A trigger caps each user at 2,000 steps (errcode `54000`, shown as a 429 message). Until applied, reads return `setupPending` and writes say to install migration 020 |
 | `auth_rate_limits` | hashed `bucket`, window | Via `consume_auth_rate_limit()` (service role only, migration 009) |
 
 Migrations (`supabase/migrations/`, apply in order in the SQL editor):
@@ -348,6 +363,7 @@ Migrations (`supabase/migrations/`, apply in order in the SQL editor):
 | `010_job_details.sql` | Pay range, workplace, employment type, source site |
 | `011_email_sync_integrity.sql` | Expiring scan leases, auto-sync attempt ordering, transactional suggestion approval |
 | `012_application_identity.sql` | Posting identities, atomic extension receipts/replay, explicit match resolution and approval revalidation |
+| `020_application_activities.sql` | `application_activities` (dated next steps), its owner-only policies, composite foreign key and per-user cap trigger |
 
 Naming: database fields are snake_case; each `data.js` maps rows to camelCase at the boundary.
 
@@ -356,7 +372,7 @@ Naming: database fields are snake_case; each `data.js` maps rows to camelCase at
 - One entry point, `chatJSON` in `src/server/openai.js` (OpenAI chat completions, JSON mode, `gpt-6-luna` unless configured). Task overrides: `OPENAI_EMAIL_MODEL`, `OPENAI_WRITING_MODEL`, `OPENAI_SELECTION_MODEL`, `OPENAI_IMPORT_MODEL`; each falls back to `OPENAI_MODEL`. Email requests use a strict JSON schema and runtime validation. See [model evaluation and rollout advice](email-sync-reliability.md#current-ai-models-and-recommendation).
 - **Uses**: email classification, resume tailoring (pick entries), bullet suggestions and rewrites, paragraph rewrites, cover letter drafts, resume import.
 - **Untrusted output**: every response is validated and capped before use. Tailoring keeps only ids that exist; import caps rows and text; suggestions go through `checkRewrite` (`guardrails.js`), which rejects any variant that adds or swaps a technology or drops a fact (a number, a name) from the original. Technologies are recognised by the same skill matcher the ATS scanner uses (`matchSkills`), so ordinary words such as "excel at" or "shell out" are not mistaken for a technology, and ways of working (`PRACTICE_SKILLS`) are left to the word checks. Paragraph rewrites get the technology check.
-- **Not AI**: ATS scoring and fit (`assessFit`) are deterministic and call no model. Fit quotes the user's own Master CV words and never writes or rewrites anything.
+- **Not AI**: ATS scoring, fit (`assessFit`) and suggested next steps (`suggestNextSteps`) are deterministic and call no model. Fit quotes the user's own Master CV words and never writes or rewrites anything.
 - **Cost control**: per-user rate limits on every AI route; a no-AI pre-filter before email classification; ATS scoring needs no AI.
 
 ## PDF and LaTeX
@@ -487,4 +503,4 @@ The extension reads the newer LinkedIn layout using current-posting metadata lin
 
 ### Master CV import merge (migration019)
 
-Resume parsing normalizes bounded fields/dates and calls `merge_resume_import` using the signed-in user client. The SQL transaction scopes every row to auth.uid(), serializes per owner, merges unique compatible-date exact matches, preserves existing facts and bullets, and reports ambiguous/capacity cases. New bullets append after existing ones; case/whitespace and terminal-period duplicates are skipped without changing technical symbols such as C++/C#. No existing CV rows are deleted. Migration019 is installed;001–019 are immutable and the next migration is020. The importer fails safely before writes when019 is absent. Optional blank dates are normalized before CV actions validate real calendar dates. [Verification and rollout blockers](interface-import-verification.md).
+Resume parsing normalizes bounded fields/dates and calls `merge_resume_import` using the signed-in user client. The SQL transaction scopes every row to auth.uid(), serializes per owner, merges unique compatible-date exact matches, preserves existing facts and bullets, and reports ambiguous/capacity cases. New bullets append after existing ones; case/whitespace and terminal-period duplicates are skipped without changing technical symbols such as C++/C#. No existing CV rows are deleted. Migration019 is installed;001–019 are immutable. Migration 020 (next steps) is applied by hand; the next new one is021. The importer fails safely before writes when019 is absent. Optional blank dates are normalized before CV actions validate real calendar dates. [Verification and rollout blockers](interface-import-verification.md).

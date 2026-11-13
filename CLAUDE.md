@@ -57,6 +57,7 @@ src/
     applications/         insertApplication (shared insert: posting identity, job details, fail-open)
     opportunities/        Saved jobs: save, list, tailoring targets, startTailoredResume, applyToSavedJob
     fit/                  assessFit (posting against Master CV, with evidence), fitForSavedJobs, rankSavedJobsByFit
+    activities/           Dated next steps per application (service.js) and suggestNextSteps (suggest.js, pure rules)
     email/                IMAP client, classification, matching, connection settings, syncEmailsForUser,
                           autoSync (the daily job)
     supabaseAdmin.js      Service-role client (bypasses RLS): cron, extension API, auth rate limits
@@ -65,7 +66,7 @@ src/
                           rewriteBullet, guardrails (blocks AI edits that add or swap facts),
                           parseResume, renderResume
   middleware.js           Refreshes the session and routes signed-out visitors (pages only, skips /api)
-supabase/migrations/      SQL schema, 001-011; apply in order in the Supabase SQL editor
+supabase/migrations/      SQL schema, 001-020; apply in order in the Supabase SQL editor
 extension/                Chrome extension (Manifest V3, no build step); see extension/README.md
 docs/                     ARCHITECTURE.md (the full map), chrome-extension-plan.md
 ```
@@ -90,6 +91,7 @@ docs/                     ARCHITECTURE.md (the full map), chrome-extension-plan.
 - **Auth configuration.** Follow [README.md's setup](README.md#getting-started) for Site URL and redirect patterns, including callback query strings. CAPTCHA is pending: enable Supabase protection only after the sign-in, sign-up and password-reset forms collect challenge tokens and their Server Actions pass `options.captchaToken`.
 - **Scores.** `scoreResume` (`@/server/ats/score`) returns `null` for anything it did not rate and a `status` saying why. Never show a stand-in 0 or 100, and never add a word to `SKILL_ALIASES` that is also ordinary English without an `ALIAS_RULES` entry (`@/server/ats/skills`).
 - **Fit.** `assessFit` (`@/server/fit/assessFit`) compares a posting with the Master CV: pure, deterministic, no AI. Evidence is always a quote of the user's own text, and a gap points to the Master CV instead of writing a claim. It is decision support; never present it as a chance of an interview or as a percentage. New skills go in `SKILL_ALIASES`; known wrong cases are listed in [docs/fit-verification.md](docs/fit-verification.md).
+- **Next steps.** Dated activities live in `application_activities` (migration 020) and go through `@/server/activities/service`; every read handles the table being absent (`setupPending`). `suggestNextSteps` is a pure function over rows already loaded: add a rule there, with its reason sentence and a test, and never store or AI-generate a suggestion. A timed step keeps the IANA zone it was entered in.
 - **Saved jobs.** A saved job (`job_opportunities`) keeps its context through tailoring and applying: documents target it by `opportunityId`, and applications are created through `insertApplication` so description, pay, workplace and resume carry over. Extension captures merge with the stored job (`keepStored`); the web editor is authoritative.
 - **Matching applications.** New submissions and confirmations only merge into an open application from the same hiring cycle (`isSameCycle`, 120 days); otherwise they're new. Email never changes applications directly: it writes `application_suggestions` for the user to approve.
 - **Loading and layout.** Each `(app)` route has a `loading.js` shaped like its page (`@/components/shared/PageSkeletons`); keep them in step with page layout changes. The header is a fixed 73px, so pages start at `pt-[85px]` and the editors at `top-[73px]`.
@@ -121,7 +123,7 @@ docs/                     ARCHITECTURE.md (the full map), chrome-extension-plan.
 
 ## Database (Supabase)
 
-Key tables: `profiles`, `cv_experience` (+ `_bullets`), `cv_projects` (+ `_bullets`), `cv_education`, `cv_skills`, `cv_certifications`, `applications`, `application_status_history` (trigger-logged), `resumes` (`content` JSONB), `cover_letters` (Draft.js JSONB), `email_connections` (+ `auto_sync`), `processed_emails`, `application_suggestions`, `api_rate_limits`, `auth_rate_limits` (hashed IP/email buckets for sign-in, sign-up and reset), `extension_tokens` (hashed; the extension's credentials). `applications.source` is `manual`, `email` or `extension`; migration 010 adds job details (`salary_min`/`salary_max`/`salary_currency`/`salary_period`, `workplace_type`, `employment_type`, `source_site`), built by `jobDetailColumns` (`@/lib/jobDetails`, pay parsed by `@/lib/salary`). Matching across hiring cycles: `isSameCycle` (`@/server/email/matching`), open and applied within 120 days. Goals are `profiles.goal_period` / `goal_target`. RLS is enabled on every table.
+Key tables: `profiles`, `cv_experience` (+ `_bullets`), `cv_projects` (+ `_bullets`), `cv_education`, `cv_skills`, `cv_certifications`, `applications`, `application_status_history` (trigger-logged), `resumes` (`content` JSONB), `cover_letters` (Draft.js JSONB), `email_connections` (+ `auto_sync`), `processed_emails`, `application_suggestions`, `api_rate_limits`, `auth_rate_limits` (hashed IP/email buckets for sign-in, sign-up and reset), `extension_tokens` (hashed; the extension's credentials), `job_opportunities` (saved jobs, migration 013), `application_activities` (dated next steps, migration 020). `applications.source` is `manual`, `email` or `extension`; migration 010 adds job details (`salary_min`/`salary_max`/`salary_currency`/`salary_period`, `workplace_type`, `employment_type`, `source_site`), built by `jobDetailColumns` (`@/lib/jobDetails`, pay parsed by `@/lib/salary`). Matching across hiring cycles: `isSameCycle` (`@/server/email/matching`), open and applied within 120 days. Goals are `profiles.goal_period` / `goal_target`. RLS is enabled on every table.
 
 ## Environment Variables
 
