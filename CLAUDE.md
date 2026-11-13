@@ -91,6 +91,7 @@ docs/                     ARCHITECTURE.md (the full map), chrome-extension-plan.
 - **Auth configuration.** Follow [README.md's setup](README.md#getting-started) for Site URL and redirect patterns, including callback query strings. CAPTCHA is pending: enable Supabase protection only after the sign-in, sign-up and password-reset forms collect challenge tokens and their Server Actions pass `options.captchaToken`.
 - **Scores.** `scoreResume` (`@/server/ats/score`) returns `null` for anything it did not rate and a `status` saying why. Never show a stand-in 0 or 100, and never add a word to `SKILL_ALIASES` that is also ordinary English without an `ALIAS_RULES` entry (`@/server/ats/skills`).
 - **Fit.** `assessFit` (`@/server/fit/assessFit`) compares a posting with the Master CV: pure, deterministic, no AI. Evidence is always a quote of the user's own text, and a gap points to the Master CV instead of writing a claim. It is decision support; never present it as a chance of an interview or as a percentage. New skills go in `SKILL_ALIASES`; known wrong cases are listed in [docs/fit-verification.md](docs/fit-verification.md).
+- **Tailoring.** The editor tailors from fit evidence (`planTailoring`, `resumeGaps` in `@/server/fit/tailorPlan`, served by `POST /api/resume-fit`): entries, bullets and skills are copied verbatim from the Master CV, and a requirement the Master CV lacks is asked about ("I have this" adds it to the Master CV), never put on the page directly. Keep it that way: no control may add text to a resume that is not the user's own.
 - **Next steps.** Dated activities live in `application_activities` (migration 020) and go through `@/server/activities/service`; every read handles the table being absent (`setupPending`). `suggestNextSteps` is a pure function over rows already loaded: add a rule there, with its reason sentence and a test, and never store or AI-generate a suggestion. A timed step keeps the IANA zone it was entered in.
 - **Saved jobs.** A saved job (`job_opportunities`) keeps its context through tailoring and applying: documents target it by `opportunityId`, and applications are created through `insertApplication` so description, pay, workplace and resume carry over. Extension captures merge with the stored job (`keepStored`); the web editor is authoritative.
 - **Matching applications.** New submissions and confirmations only merge into an open application from the same hiring cycle (`isSameCycle`, 120 days); otherwise they're new. Email never changes applications directly: it writes `application_suggestions` for the user to approve.
@@ -104,11 +105,12 @@ docs/                     ARCHITECTURE.md (the full map), chrome-extension-plan.
 |---|---|
 | `POST /api/generate-resume` | Align the master CV to a job description and store a resume |
 | `POST /api/generate-cover-letter` | Draft cover letter paragraphs from the CV and job description (tone, length; flags technologies the CV doesn't have) |
-| `POST /api/tailor-resume` | Pick the master CV entries that fit a job (previewed, then applied in the editor) |
+| `POST /api/tailor-resume` | AI pick of master CV entries for a job; no longer called by the editor, which uses `/api/resume-fit` |
 | `POST /api/suggest-bullets` | Suggest edits to resume bullets (`focus`: "match" a job, or "concise" to fit one page) |
 | `POST /api/rewrite-bullet` | Three AI rewrites of one bullet (stronger, tailored, shorter) |
 | `POST /api/resume-pages` | Compile the saved resume and return the PDF's page count |
 | `POST /api/ats-score` | Heuristic ATS keyword/section score (no AI) |
+| `POST /api/resume-fit` | Fit of the Master CV for a job, a tailoring plan and what the resume leaves out (no AI) |
 | `POST /api/parse-resume` | Parse an uploaded PDF/.txt resume into the master CV |
 | `POST /api/download-resume` | Render a resume to LaTeX and compile to PDF (latex.ytotech.com) |
 | `POST /api/download-cover-letter` | Same for a cover letter |
