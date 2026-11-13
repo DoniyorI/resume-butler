@@ -56,6 +56,7 @@ src/
     ats/                  ATS scoring (scoreResume), keyword and skill matching (matchSkills)
     applications/         insertApplication (shared insert: posting identity, job details, fail-open)
     opportunities/        Saved jobs: save, list, tailoring targets, startTailoredResume, applyToSavedJob
+    fit/                  assessFit (posting against Master CV, with evidence), fitForSavedJobs, rankSavedJobsByFit
     email/                IMAP client, classification, matching, connection settings, syncEmailsForUser,
                           autoSync (the daily job)
     supabaseAdmin.js      Service-role client (bypasses RLS): cron, extension API, auth rate limits
@@ -88,6 +89,7 @@ docs/                     ARCHITECTURE.md (the full map), chrome-extension-plan.
 - **Auth flows.** Sign-in, sign-up, reset and password update count against `enforceAuthRateLimit` (`@/server/authRateLimit`), since Supabase sees the server's IP for everyone. Only a fresh recovery session (`hasRecentRecovery`) may set a new password. Redirects after sign-in go through `safeNextPath`.
 - **Auth configuration.** Follow [README.md's setup](README.md#getting-started) for Site URL and redirect patterns, including callback query strings. CAPTCHA is pending: enable Supabase protection only after the sign-in, sign-up and password-reset forms collect challenge tokens and their Server Actions pass `options.captchaToken`.
 - **Scores.** `scoreResume` (`@/server/ats/score`) returns `null` for anything it did not rate and a `status` saying why. Never show a stand-in 0 or 100, and never add a word to `SKILL_ALIASES` that is also ordinary English without an `ALIAS_RULES` entry (`@/server/ats/skills`).
+- **Fit.** `assessFit` (`@/server/fit/assessFit`) compares a posting with the Master CV: pure, deterministic, no AI. Evidence is always a quote of the user's own text, and a gap points to the Master CV instead of writing a claim. It is decision support; never present it as a chance of an interview or as a percentage. New skills go in `SKILL_ALIASES`; known wrong cases are listed in [docs/fit-verification.md](docs/fit-verification.md).
 - **Saved jobs.** A saved job (`job_opportunities`) keeps its context through tailoring and applying: documents target it by `opportunityId`, and applications are created through `insertApplication` so description, pay, workplace and resume carry over. Extension captures merge with the stored job (`keepStored`); the web editor is authoritative.
 - **Matching applications.** New submissions and confirmations only merge into an open application from the same hiring cycle (`isSameCycle`, 120 days); otherwise they're new. Email never changes applications directly: it writes `application_suggestions` for the user to approve.
 - **Loading and layout.** Each `(app)` route has a `loading.js` shaped like its page (`@/components/shared/PageSkeletons`); keep them in step with page layout changes. The header is a fixed 73px, so pages start at `pt-[85px]` and the editors at `top-[73px]`.
