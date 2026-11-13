@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { addSkill } from "@/features/cv/actions";
-import { BANDS, CHECK_KINDS, EMPTY_CV, degreeLine, yearsLine } from "@/features/opportunities/JobFit";
+import { BANDS, CHECK_KINDS, EMPTY_CV, degreeLine, termName, yearsLine } from "@/features/opportunities/JobFit";
 
 const ROWS_SHOWN = 6;
 const FOOTER = "Fit compares this posting with your Master CV. It is not a prediction of an interview.";
@@ -19,7 +19,7 @@ function AddRow({ row, busy, disabled, onAdd }) {
   return (
     <li className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1.5 py-2">
       <div className="min-w-0 flex-1 basis-40">
-        <p className="break-words text-sm font-medium">{row.term}</p>
+        <p className="break-words text-sm font-medium">{row.label || row.term}</p>
         <p className="break-words text-xs text-muted-foreground">{row.title}</p>
         <p className="mt-0.5 break-words text-[11px] leading-relaxed text-muted-foreground">“{row.quote}”</p>
       </div>
@@ -28,7 +28,7 @@ function AddRow({ row, busy, disabled, onAdd }) {
         variant="outline"
         className="h-7 shrink-0 px-2 text-xs"
         disabled={disabled || busy}
-        aria-label={`${BUTTON_LABELS[row.kind]} for ${row.term}`}
+        aria-label={`${BUTTON_LABELS[row.kind]} for ${row.label || row.term}`}
         onClick={() => onAdd(row)}
       >
         {busy ? <Loader2 className="mr-1 h-3 w-3 animate-spin" aria-hidden="true" /> : null}
@@ -44,7 +44,7 @@ function MissingRow({ row, skills, refresh }) {
   const id = useId();
   const [open, setOpen] = useState(false);
   const categories = [...new Set(skills.map((skill) => skill.category).filter(Boolean))];
-  const [name, setName] = useState(row.term);
+  const [name, setName] = useState(row.label || row.term);
   const [category, setCategory] = useState(categories[0] || "Other");
   const [custom, setCustom] = useState("");
   const [saving, setSaving] = useState(false);
@@ -83,13 +83,11 @@ function MissingRow({ row, skills, refresh }) {
     }
   };
 
-  const alternatives = Array.isArray(row.alternatives) ? row.alternatives.filter(Boolean) : [];
   return (
     <li className="py-2">
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
         <p className="min-w-0 flex-1 basis-40 break-words text-xs">
-          The posting asks for <span className="font-medium">{row.term}</span>
-          {alternatives.length ? ` (or ${alternatives.join(", or ")})` : ""}
+          The posting asks for <span className="font-medium">{termName(row)}</span>
         </p>
         <Button
           size="sm"
@@ -97,7 +95,7 @@ function MissingRow({ row, skills, refresh }) {
           className="h-7 shrink-0 px-2 text-xs"
           aria-expanded={open}
           aria-controls={id}
-          aria-label={`I have this: ${row.term}`}
+          aria-label={`I have this: ${row.label || row.term}`}
           onClick={() => setOpen(!open)}
         >
           I have this

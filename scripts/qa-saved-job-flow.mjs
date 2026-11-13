@@ -139,6 +139,26 @@ try {
     await page.screenshot({ path: join(shots, "3-application-page.png"), fullPage: true }); screenshots.push(join(shots, "3-application-page.png"));
   });
 
+  // The application page compares its saved description with the Master CV. The
+  // skills are seeded here, after the tailoring step, so that step still starts from an empty CV.
+  await step("4b-application-fit", ["4-i-applied"], async () => {
+    check(await admin.from("cv_skills").insert(["Python", "C++", "C#"].map((name, sort_order) => ({ user_id: userId, name, category: "Languages", sort_order }))));
+    await page.goto(`${base}/applications/${ctx.applicationId}`, { waitUntil: "networkidle" });
+    const fit = page.locator("div.mb-4").filter({ hasText: /Good fit|Strong fit|Stretch|Low fit/ }).first();
+    await fit.waitFor();
+    const body = await page.locator("body").innerText();
+    observed.applicationFit = body.slice(body.indexOf("Fit for this job"), body.indexOf("Fit for this job") + 400).replace(/\s+/g, " ");
+    const errs = [];
+    if (!(await fit.innerText()).includes("Good fit")) errs.push("fit band is not Good fit");
+    if (!body.includes("Based on the saved job description.")) errs.push("sentence missing");
+    // The readable names show up under See why
+    await fit.getByRole("button", { name: "See why" }).click();
+    const why = await page.locator("body").innerText();
+    for (const label of ["Python", "C++", "C#"]) if (!why.includes(label)) errs.push(`no ${label} row`);
+    await page.screenshot({ path: join(shots, "3b-application-fit.png"), fullPage: true }); screenshots.push(join(shots, "3b-application-fit.png"));
+    if (errs.length) throw new Error(errs.join("; "));
+  });
+
   await step("5-application-row", ["4-i-applied"], async () => {
     const apps = check(await mine("applications"));
     assert.equal(apps.length, 1, "exactly one application");
@@ -222,7 +242,7 @@ try {
   if (browser) await browser.close().catch(() => {});
   if (userId) {
     try {
-      const tables = ["application_suggestions", "applications", "job_opportunities", "cover_letters", "resumes"];
+      const tables = ["application_suggestions", "applications", "job_opportunities", "cover_letters", "resumes", "cv_skills"];
       for (const table of tables) {
         const { error } = await admin.from(table).delete().eq("user_id", userId);
         if (error && !["42P01", "PGRST205"].includes(error.code)) throw new Error(`${table}: ${error.message}`);
@@ -230,7 +250,7 @@ try {
       const { error } = await admin.auth.admin.deleteUser(userId);
       if (error) throw new Error(`deleteUser: ${error.message}`);
       const left = {};
-      for (const table of ["applications", "job_opportunities", "resumes"]) {
+      for (const table of ["applications", "job_opportunities", "resumes", "cv_skills"]) {
         const { count } = await admin.from(table).select("id", { count: "exact", head: true }).eq("user_id", userId);
         if (count) left[table] = count;
       }

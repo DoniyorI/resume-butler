@@ -7,7 +7,7 @@ import {
   skillLines,
 } from "@/features/resumes/resumeDocument";
 import { findInResume } from "@/server/ats/keywords";
-import { matchSkills } from "@/server/ats/skills";
+import { matchSkills, skillLabel } from "@/server/ats/skills";
 import { indexCv, isDegree, sourcesFor } from "@/server/fit/cvEvidence";
 import { MAX_EXPERIENCE, MAX_PROJECTS, mostRecent } from "@/server/resume/tailorResume";
 
@@ -42,7 +42,7 @@ const score = (terms) =>
 
 function reasonFor(terms) {
   if (!terms || !terms.size) return "";
-  const names = [...terms.keys()];
+  const names = [...terms.keys()].map(skillLabel);
   const shown = names.slice(0, MAX_NAMED_TERMS);
   const more = names.length - shown.length;
   const list =
@@ -169,6 +169,7 @@ function entryAddable(req, evidence, cv, resume) {
   const sectionId = isProject ? "projects" : "experience";
   const base = {
     term: req.term,
+    label: req.label || skillLabel(req.term),
     importance: req.importance,
     sectionId,
     title: isProject ? entry.name : [entry.position, entry.company].filter(Boolean).join(", "),
@@ -208,6 +209,7 @@ export function resumeGaps({ fit, cv, resumeContent }) {
       if (!name) continue;
       addable.push({
         term: req.term,
+        label: req.label || skillLabel(req.term),
         importance: req.importance,
         kind: "skill",
         sectionId: "skills",
@@ -224,11 +226,16 @@ export function resumeGaps({ fit, cv, resumeContent }) {
   const missing = requirements
     .filter((req) => req.strength === "missing" && !isDegree(req.term))
     .sort(BY_IMPORTANCE)
-    .map((req) =>
-      req.alternatives
-        ? { term: req.term, importance: req.importance, alternatives: req.alternatives }
-        : { term: req.term, importance: req.importance }
-    );
+    .map((req) => {
+      const row = { term: req.term, label: req.label || skillLabel(req.term), importance: req.importance };
+      return req.alternatives
+        ? {
+            ...row,
+            alternatives: req.alternatives,
+            alternativeLabels: req.alternativeLabels || req.alternatives.map(skillLabel),
+          }
+        : row;
+    });
 
   return {
     backed: backed.length,

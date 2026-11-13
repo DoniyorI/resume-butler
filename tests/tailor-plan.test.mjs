@@ -132,10 +132,10 @@ test("entries are ordered by score, then recency, and each says what it backs", 
   // Fabrikam backs python + redis (4 points); Northwind backs python + postgresql (4 points)
   // and is more recent, so it leads. Contoso backs nothing and is left out.
   assert.deepEqual(picks.experience, [
-    { title: "Senior Engineer at Northwind Cloud", reason: "Backs python and postgresql" },
-    { title: "Data Engineer at Fabrikam Labs", reason: "Backs python and redis" },
+    { title: "Senior Engineer at Northwind Cloud", reason: "Backs Python and PostgreSQL" },
+    { title: "Data Engineer at Fabrikam Labs", reason: "Backs Python and Redis" },
   ]);
-  assert.deepEqual(picks.projects, [{ title: "Trail Map", reason: "Backs docker" }]);
+  assert.deepEqual(picks.projects, [{ title: "Trail Map", reason: "Backs Docker" }]);
   assert.deepEqual(content.experience.map((item) => item.companyName), ["Northwind Cloud", "Fabrikam Labs"]);
   assert.deepEqual(content.projects.map((item) => item.projectName), ["Trail Map"]);
   assert.deepEqual(content.education.map((item) => item.school), ["Lakeside University"]);
@@ -161,7 +161,7 @@ test("required terms outweigh preferred ones", () => {
   const description = "Requirements:\n- Redis\n- Python\n- Docker\n\nNice to have:\n- Go";
   const { picks } = planTailoring({ fit: fitFor(null, description, master), cv: master });
   assert.deepEqual(picks.experience.map((pick) => pick.title), ["Data Engineer at Alpha", "Data Engineer at Beta"]);
-  assert.equal(picks.experience[1].reason, "Backs go");
+  assert.equal(picks.experience[1].reason, "Backs Go");
 });
 
 test("the caps are 5 experiences and 4 projects, and more than four terms say 'and N more'", () => {
@@ -239,7 +239,7 @@ test("the current role is always picked, and three older matching roles keep the
   assert.deepEqual(picks.experience.map((p) => p.title), [
     "Engineer at Gamma", "Engineer at Beta", "Engineer at Alpha", "Support Analyst at Delta",
   ]);
-  assert.deepEqual(picks.experience.map((p) => p.reason), ["Backs python", "Backs python", "Backs python", "Your most recent role"]);
+  assert.deepEqual(picks.experience.map((p) => p.reason), ["Backs Python", "Backs Python", "Backs Python", "Your most recent role"]);
 });
 
 test("a project backing a term two experiences already back still gets credit", () => {
@@ -254,7 +254,7 @@ test("a project backing a term two experiences already back still gets credit", 
   const fit = fitFor(null, "Requirements:\n- Docker\n- Python\n- Redis", master);
   assert.ok(!fit.requirements.find((r) => r.term === "docker").evidence.some((e) => e.source.type === "project"));
   const { picks } = planTailoring({ fit, cv: master });
-  assert.deepEqual(picks.projects, [{ title: "Shipyard", reason: "Backs docker" }]);
+  assert.deepEqual(picks.projects, [{ title: "Shipyard", reason: "Backs Docker" }]);
 });
 
 test("sourcesFor lists every backing line, however many the evidence names", async () => {
@@ -305,7 +305,10 @@ test("gaps: an absent entry, a missing bullet, a skill, a degree, a missing term
   assert.equal(gaps.addable.at(-1).term, "go");
 
   // Kafka or RabbitMQ is absent from the CV
-  assert.deepEqual(gaps.missing, [{ term: "kafka", importance: "required", alternatives: ["rabbitmq"] }]);
+  assert.deepEqual(gaps.missing, [
+    { term: "kafka", label: "Kafka", importance: "required", alternatives: ["rabbitmq"], alternativeLabels: ["RabbitMQ"] },
+  ]);
+  assert.equal(byTerm.terraform.label, "Terraform");
 
   assert.equal(gaps.backed, fit.requirements.filter((req) => req.strength !== "missing").length);
   assert.equal(gaps.shown, fit.resume.shown.length);

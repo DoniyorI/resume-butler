@@ -177,14 +177,14 @@ try {
     observed.evidenceQuotes = quotes;
     const errs = [];
     if (!quotes.some(q => q && BULLETS.flat().some(b => b.includes(q)))) errs.push("no evidence quote is a substring of a seeded bullet");
-    const kube = panel.locator("li").filter({ hasText: /kubernetes/i }).first();
+    const kube = panel.locator("li").filter({ hasText: "Kubernetes" }).first();
     if (!(await kube.count()) || !(await kube.innerText()).includes("Listed, no example yet")) errs.push("Kubernetes is not listed without an example");
     const judge = panel.locator("section").filter({ hasText: "Only you can judge" });
     if (!(await judge.count()) || !/visa sponsorship/i.test(await judge.innerText())) errs.push("sponsorship quote missing under Only you can judge");
     if (!text.includes(FOOTER)) errs.push("footer sentence missing");
     if (/\d+%|\d+\.\d+ ?\/|score/i.test(text.replace(/covers about \d+(\.\d+)?/, ""))) errs.push("a percentage or score appears");
     await page.screenshot({ path: join(shots, "2-see-why-1440.png"), fullPage: true }); screenshots.push(join(shots, "2-see-why-1440.png"));
-    assert.deepEqual(errs, []);
+    if (errs.length) throw new Error(errs.join("; "));
   });
 
   await step("5-sort", ["2-save-three-jobs"], async () => {

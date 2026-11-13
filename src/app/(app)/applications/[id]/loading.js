@@ -27,6 +27,8 @@ export default function ApplicationDetailLoading() {
         <div className="space-y-5">
           <Skeleton className="h-72 w-full rounded-xl" />
           <Skeleton className="h-80 w-full rounded-xl" />
+          {/* Fit for this job, after the job description */}
+          <Skeleton className="h-28 w-full rounded-xl" />
         </div>
         <div className="space-y-5">
           {/* Next steps */}

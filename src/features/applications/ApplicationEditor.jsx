@@ -119,6 +119,7 @@ export default function ApplicationEditor({
   resumeContent,
   submissionPanel,
   nextSteps,
+  fit,
 }) {
   const [form, dispatch] = useReducer(formReducer, application, initForm);
   const [saved, setSaved] = useState(() => initForm(application));
@@ -455,6 +456,8 @@ export default function ApplicationEditor({
               )}
             </CardContent>
           </Card>
+
+          {fit}
 
           <Card>
             <CardHeader className="pb-4">

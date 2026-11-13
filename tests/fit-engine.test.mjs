@@ -545,10 +545,12 @@ test("when no alternative is backed only the first is missing, naming the others
   const go = result.requirements.find((req) => req.term === "go");
   assert.deepEqual(go, {
     term: "go",
+    label: "Go",
     importance: "required",
     strength: "missing",
     evidence: [],
     alternatives: ["rust", "kotlin"],
+    alternativeLabels: ["Rust", "Kotlin"],
   });
   assert.ok(!terms(result).includes("rust") && !terms(result).includes("kotlin"));
   assert.equal(result.counts.required.total, 4);
@@ -654,6 +656,7 @@ test("a more specific skill in a bullet demonstrates the general requirement, qu
   const label = "Software Engineer, Harbor Analytics";
   assert.deepEqual(byTerm.sql, {
     term: "sql",
+    label: "SQL",
     importance: "required",
     strength: "demonstrated",
     evidence: [

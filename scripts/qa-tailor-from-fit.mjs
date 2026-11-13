@@ -135,8 +135,8 @@ try {
     await shot("1-fit-card-empty-resume.png");
     const errs = [];
     if (!/0 of 4/.test(text)) errs.push(`line reads "${text}"`);
-    for (const term of ["python", "postgresql", "docker"]) if (!(await addButton("Add entry", term).count())) errs.push(`no Add entry row for ${term}`);
-    if (!(await addButton("Add to Skills", "kubernetes").count())) errs.push("no Add to Skills row for kubernetes");
+    for (const term of ["Python", "PostgreSQL", "Docker"]) if (!(await addButton("Add entry", term).count())) errs.push(`no Add entry row for ${term}`);
+    if (!(await addButton("Add to Skills", "Kubernetes").count())) errs.push("no Add to Skills row for kubernetes");
     const missing = fitCard().locator("li").filter({ hasText: /The posting asks for\s+terraform/i });
     if (!(await missing.count())) errs.push("no Not in your Master CV row for terraform");
     else {
@@ -148,9 +148,9 @@ try {
   });
 
   await step("4-add-entry-python", ["3-studio-fit-card"], async () => {
-    await addButton("Add entry", "python").click();
-    await gone("Add entry", "python");
-    await gone("Add entry", "postgresql");
+    await addButton("Add entry", "Python").click();
+    await gone("Add entry", "Python");
+    await gone("Add entry", "PostgreSQL");
     const text = await paperText();
     observed.afterPython = (await line().innerText()).trim();
     const errs = [];
@@ -160,15 +160,15 @@ try {
   });
 
   await step("5-add-entry-docker", ["4-add-entry-python"], async () => {
-    await addButton("Add entry", "docker").click();
-    await gone("Add entry", "docker");
+    await addButton("Add entry", "Docker").click();
+    await gone("Add entry", "Docker");
     const text = await paperText();
     assert.ok(text.includes(B.company) && text.includes(B_BULLETS[0]), "experience B and its bullet on the page");
   });
 
   await step("6-add-skill-kubernetes", ["5-add-entry-docker"], async () => {
-    await addButton("Add to Skills", "kubernetes").click();
-    await gone("Add to Skills", "kubernetes");
+    await addButton("Add to Skills", "Kubernetes").click();
+    await gone("Add to Skills", "Kubernetes");
     assert.ok((await paperText()).includes("Kubernetes"), "Kubernetes on the page");
     await line().waitFor();
     observed.afterSkill = (await line().innerText()).trim();
@@ -182,10 +182,10 @@ try {
     await page.getByRole("button", { name: "Hide Experience", exact: true }).first().click();
     await page.waitForFunction(bullet => ![...document.querySelectorAll(".rb-paper")].some(el => el.textContent.includes(bullet)), A_BULLETS[0]);
     // The fit sees only visible content, so it offers the entry again; adding must not duplicate it
-    await addButton("Add entry", "python").click();
+    await addButton("Add entry", "Python").click();
     await page.getByRole("button", { name: "Hide Experience", exact: true }).first().waitFor();
     await page.waitForFunction(bullet => [...document.querySelectorAll(".rb-paper")].some(el => el.textContent.includes(bullet)), A_BULLETS[0]);
-    await gone("Add entry", "python");
+    await gone("Add entry", "Python");
     observed.afterHiddenAdd = { aCount: await countOf(A_BULLETS[0]), bCount: await countOf(B_BULLETS[0]) };
     assert.deepEqual(observed.afterHiddenAdd, { aCount: 1, bCount: 1 }, "each experience appears exactly once");
     const row = check(await admin.from("resumes").select("content").eq("user_id", userId).order("created_at", { ascending: true }).limit(1).single());
@@ -201,12 +201,12 @@ try {
     const form = row.locator("form");
     await form.waitFor();
     observed.formText = (await form.innerText()).replace(/\s+/g, " ").slice(0, 300);
-    assert.equal(await form.getByLabel("Skill name").inputValue(), "terraform");
+    assert.equal(await form.getByLabel("Skill name").inputValue(), "Terraform");
     assert.ok(observed.formText.includes("Only add skills you could talk about in an interview."), "interview sentence");
     await shot("3-i-have-this-form.png");
     // Two submits in the same tick: only one cv_skills row may result
     await form.getByRole("button", { name: "Add to my Master CV" }).evaluate(el => { el.click(); el.click(); });
-    await addButton("Add to Skills", "terraform").waitFor({ timeout: 20000 });
+    await addButton("Add to Skills", "Terraform").waitFor({ timeout: 20000 });
     const rows = check(await mine("cv_skills")).filter(s => /^terraform$/i.test(s.name));
     await page.waitForTimeout(1000);
     const after = check(await mine("cv_skills")).filter(s => /^terraform$/i.test(s.name));
@@ -240,7 +240,7 @@ try {
     const resume = check(await admin.from("resumes").insert({ user_id: userId, title: `Second ${run}`, content }).select("id").single());
     await page.goto(`${base}/resumes/${resume.id}?job=${observed.opportunityId}`, { waitUntil: "networkidle" });
     await fitCard().waitFor({ timeout: 45000 });
-    const button = addButton("Add bullet", "postgresql");
+    const button = addButton("Add bullet", "PostgreSQL");
     await button.waitFor({ timeout: 30000 });
     assert.ok(!(await paperText()).includes(A_BULLETS[1]), "bullet not on the page before");
     await shot("5-add-bullet-row.png");

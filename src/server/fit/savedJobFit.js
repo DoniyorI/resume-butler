@@ -127,3 +127,23 @@ export async function rankSavedJobsByFit(
     fitUnavailable,
   };
 }
+
+/**
+ * The newest `limit` saved jobs not yet applied to, each with its fit band, for
+ * the dashboard's "what to do next": [{ id, company, role, createdAt,
+ * applicationId, band }]. band is null without a usable description. Throws
+ * when the jobs can't be read; a fit that can't be computed just leaves no
+ * bands. Empty before migration 013.
+ */
+export async function savedJobsWithBands(supabase, userId, { limit = 20, today = new Date() } = {}) {
+  const { jobs } = savedJobsResult(await savedJobsQuery(supabase, userId).is("application_id", null).limit(limit));
+  const fits = await fitForSavedJobs(supabase, userId, jobs, { today });
+  return jobs.map((job) => ({
+    id: job.id,
+    company: job.payload?.company || "",
+    role: job.payload?.role || "",
+    createdAt: job.created_at,
+    applicationId: null,
+    band: fits[job.id]?.band || null,
+  }));
+}

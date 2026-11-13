@@ -34,9 +34,12 @@ const PREFERRED_SHOWN = 4;
 export const EMPTY_CV = /Master CV has no experience/i;
 const article = (term) => (/^[aeiou]/i.test(term) ? "an" : "a");
 
-function termName(req) {
-  const alternatives = Array.isArray(req.alternatives) ? req.alternatives.filter(Boolean) : [];
-  return alternatives.length ? `${req.term} (or ${alternatives.join(", or ")})` : req.term;
+// The readable name of a requirement or gap row, with its "(or ...)" alternatives
+export function termName(req) {
+  const name = req.label || req.term;
+  const source = Array.isArray(req.alternativeLabels) ? req.alternativeLabels : req.alternatives;
+  const alternatives = Array.isArray(source) ? source.filter(Boolean) : [];
+  return alternatives.length ? `${name} (or ${alternatives.join(", or ")})` : name;
 }
 
 function RequirementRow({ req }) {
@@ -120,6 +123,8 @@ function FitDetails({ fit, tailor }) {
   const background = [yearsLine(fit.years), degreeLine(fit.degree)].filter(Boolean);
   const checks = (fit.checks || []).filter((check) => check?.quote);
   const resume = fit.resume;
+  const labels = new Map(fit.requirements.map((req) => [req.term, req.label || req.term]));
+  const notShown = (resume?.notShown || []).map((term) => labels.get(term) || term);
   return (
     <div className="mt-3 space-y-4 rounded-lg border bg-slate-50/60 p-3 text-xs">
       {required.length ? <RequirementList title="Required" list={required} /> : null}
@@ -156,11 +161,11 @@ function FitDetails({ fit, tailor }) {
           </ul>
         </section>
       ) : null}
-      {resume && resume.notShown?.length ? (
+      {resume && notShown.length ? (
         <section className="flex flex-wrap items-center justify-between gap-2">
           <p className="min-w-0 flex-1 leading-relaxed text-muted-foreground">
-            Your working resume leaves out {resume.notShown.length}{" "}
-            {resume.notShown.length === 1 ? "thing" : "things"} your Master CV backs: {resume.notShown.join(", ")}
+            Your working resume leaves out {notShown.length} {notShown.length === 1 ? "thing" : "things"} your
+            Master CV backs: {notShown.join(", ")}
           </p>
           {tailor}
         </section>

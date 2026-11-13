@@ -1,6 +1,6 @@
 import "server-only";
 import { extractYearsRequirement } from "@/server/ats/keywords";
-import { matchSkills } from "@/server/ats/skills";
+import { matchSkills, skillLabel } from "@/server/ats/skills";
 import { resumeToText } from "@/server/ats/resumeText";
 import { visibleResumeContent } from "@/features/resumes/resumeDocument";
 import { countedText, findChecks, readRequirements, readSentences } from "@/server/fit/posting";
@@ -166,8 +166,16 @@ export function assessFit({ jobDescription, cv, resumeContent = null, today = ne
     )
     .map(({ term, importance, strength, evidence, alternatives }) =>
       alternatives
-        ? { term, importance, strength, evidence, alternatives }
-        : { term, importance, strength, evidence }
+        ? {
+            term,
+            label: skillLabel(term),
+            importance,
+            strength,
+            evidence,
+            alternatives,
+            alternativeLabels: alternatives.map(skillLabel),
+          }
+        : { term, label: skillLabel(term), importance, strength, evidence }
     );
 
   const counts = { required: tally(requirements, "required"), preferred: tally(requirements, "preferred") };

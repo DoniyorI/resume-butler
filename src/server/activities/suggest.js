@@ -13,6 +13,9 @@ export const SUGGESTION_LIMIT = 8;
 const RECENT_DAYS = 14;
 // Saved jobs older than this ask for a decision
 const SAVED_JOB_DAYS = 7;
+// Saved jobs that fit the Master CV well enough to suggest applying, strongest first
+const FIT_SUGGESTION_LIMIT = 2;
+const FIT_BANDS = ["strong", "good"];
 
 const DAY_MS = 86_400_000;
 const companyOf = (app) => app.company || "this company";
@@ -23,7 +26,8 @@ const appHref = (id, kind) => `/applications/${id}?step=${kind}#next-steps`;
  * @param {Array} input.applications rows with id, company, role, status, applied_date
  * @param {Map} input.historyByApp application id -> [{ status, changed_at }]
  * @param {Array} input.activities [{ applicationId, kind, status, dueOn, completedAt }] (empty before migration 020)
- * @param {Array} input.savedJobs [{ id, company, role, createdAt, applicationId }]
+ * @param {Array} input.savedJobs [{ id, company, role, createdAt, applicationId, band? }]; `band` is the
+ *   fit band from assessFit when the caller could compute it (never computed here)
  * @param {number} input.pendingEmailCount inbox suggestions waiting for review
  * @param {string} input.today "YYYY-MM-DD"
  * @returns {Array<{ id, kind, title, reason, href, applicationId? }>}
@@ -119,8 +123,30 @@ export function suggestNextSteps({
         ]
       : [];
 
+  const fitting = savedJobs
+    .filter((job) => !job.applicationId && FIT_BANDS.includes(job.band))
+    .map((job, i) => ({ job, i }))
+    .sort(
+      (a, b) =>
+        FIT_BANDS.indexOf(a.job.band) - FIT_BANDS.indexOf(b.job.band) ||
+        String(b.job.createdAt || "").localeCompare(String(a.job.createdAt || "")) ||
+        a.i - b.i
+    )
+    .slice(0, FIT_SUGGESTION_LIMIT)
+    .map(({ job }) => job);
+  const suggestedToApply = new Set(fitting.map((job) => job.id));
+  const fits = fitting.map((job) => ({
+    id: `saved-fit:${job.id}`,
+    kind: "saved_job_fit",
+    title: "Apply to a saved job that fits",
+    reason: `${job.role && job.company ? `${job.role} at ${job.company}` : job.role || job.company || "A saved job"} looks like ${
+      job.band === "strong" ? "a strong" : "a good"
+    } fit. Tailor a resume and apply.`,
+    href: "/saved-jobs?sort=fit",
+  }));
+
   const saved = savedJobs
-    .filter((job) => !job.applicationId && job.createdAt)
+    .filter((job) => !job.applicationId && job.createdAt && !suggestedToApply.has(job.id))
     .map((job) => ({ job, age: daysBetween(String(job.createdAt).slice(0, 10), today) }))
     .filter(({ age }) => age > SAVED_JOB_DAYS)
     .sort((a, b) => b.age - a.age)
@@ -132,5 +158,5 @@ export function suggestNextSteps({
       href: "/saved-jobs",
     }));
 
-  return [...offers, ...interviews, ...recruiters, ...followUps, ...inbox, ...saved].slice(0, SUGGESTION_LIMIT);
+  return [...offers, ...interviews, ...recruiters, ...followUps, ...inbox, ...fits, ...saved].slice(0, SUGGESTION_LIMIT);
 }

@@ -174,6 +174,11 @@ test("a realistic software posting against a realistic CV", () => {
       ["kubernetes", "preferred", "demonstrated", ["Shelfwatch"]],
     ]
   );
+  // The only addition: a readable name beside each canonical term
+  assert.deepEqual(
+    result.requirements.map((req) => req.label),
+    ["AWS", "TypeScript", "Node.js", "PostgreSQL", "REST API", "React", "CI/CD", "JavaScript", "MySQL", "Docker", "Bachelor's degree", "Kafka", "GraphQL", "Kubernetes"]
+  );
   // CI/CD is backed by the GitHub Actions bullet, JavaScript by TypeScript
   assert.equal(
     result.requirements.find((req) => req.term === "ci/cd").evidence[0].quote,

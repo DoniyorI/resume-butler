@@ -108,6 +108,41 @@ test("rule 6: saved jobs older than a week and not applied to ask for a decision
   assert.ok(result.every((s) => s.href === "/saved-jobs"));
 });
 
+test("rule 6 fit: strong and good saved jobs ask to tailor and apply, strongest first, at most two", () => {
+  const job = (n, band, patch = {}) => ({ id: uuid(n), company: `Co${n}`, role: "Dev", createdAt: `${addDays(today, -n)}T09:00:00Z`, applicationId: null, band, ...patch });
+  const savedJobs = [job(1, "good"), job(2, "strong"), job(3, "stretch"), job(4, "low"), job(5, "strong"), job(6, "good"), job(7, "strong", { applicationId: appId }), job(8, null)];
+  const result = suggestNextSteps({ savedJobs, today });
+  const fits = result.filter((s) => s.kind === "saved_job_fit");
+  // Both strong jobs (newest first), not the good ones, and not the applied one
+  assert.deepEqual(fits.map((s) => s.reason), ["Dev at Co2 looks like a strong fit. Tailor a resume and apply.", "Dev at Co5 looks like a strong fit. Tailor a resume and apply."]);
+  assert.ok(fits.every((s) => s.href === "/saved-jobs?sort=fit"));
+
+  const good = suggestNextSteps({ savedJobs: [job(1, "good", { role: "" })], today });
+  assert.deepEqual(good.map((s) => s.reason), ["Co1 looks like a good fit. Tailor a resume and apply."]);
+});
+
+test("a saved job suggested for its fit is not also asked for a decision", () => {
+  const old = (n, band) => ({ id: uuid(n), company: `Old${n}`, role: "", createdAt: `${addDays(today, -(20 + n))}T09:00:00Z`, applicationId: null, band });
+  const result = suggestNextSteps({ savedJobs: [old(1, "strong"), old(2, "good"), old(3, "good"), old(4, "low")], today });
+  assert.deepEqual(result.map((s) => [s.kind, s.id]), [
+    ["saved_job_fit", `saved-fit:${uuid(1)}`],
+    ["saved_job_fit", `saved-fit:${uuid(2)}`],
+    // The third good one is over the cap, so it is asked for a decision like any old saved job
+    ["saved_job", `saved:${uuid(4)}`],
+    ["saved_job", `saved:${uuid(3)}`],
+  ]);
+});
+
+test("fit suggestions come after the inbox and before the decision rule, and a missing band changes nothing", () => {
+  const fit = { id: uuid(1), company: "Fit", role: "Dev", createdAt: `${addDays(today, -1)}T09:00:00Z`, applicationId: null, band: "strong" };
+  const stale = { id: uuid(2), company: "Stale", role: "", createdAt: `${addDays(today, -30)}T09:00:00Z`, applicationId: null };
+  const kinds = suggestNextSteps({ savedJobs: [stale, fit], pendingEmailCount: 1, today }).map((s) => s.kind);
+  assert.deepEqual(kinds, ["inbox", "saved_job_fit", "saved_job"]);
+  // No bands at all (the fit could not be computed): the same as before
+  const bare = suggestNextSteps({ savedJobs: [{ ...fit, band: undefined }, stale], today });
+  assert.deepEqual(bare.map((s) => s.kind), ["saved_job"]);
+});
+
 test("suggestions run most urgent first and stop at the cap", () => {
   const applications = [
     app(uuid(10), "Applied", { applied_date: addDays(today, -30) }),
