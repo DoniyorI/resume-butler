@@ -38,11 +38,11 @@ export default function AddCompanyForm() {
           <input name="link" required value={values.link} onChange={update} disabled={busy} maxLength={300} className={field}
             placeholder="https://jobs.ashbyhq.com/company, https://jobs.lever.co/company, greenhouse:company" />
         </label>
-        <label className="space-y-1.5 text-xs font-medium">
-          Job titles to keep
-          <input name="keywords" value={values.keywords} onChange={update} disabled={busy} maxLength={2000} className={field} placeholder="engineer, data, product" />
-          <span className="block font-normal text-muted-foreground">Leave empty to keep the 100 newest roles</span>
-        </label>
+        <div className="space-y-1.5 text-xs font-medium">
+          <label htmlFor="watch-keywords">Job titles to keep</label>
+          <input id="watch-keywords" name="keywords" aria-describedby="watch-keywords-hint" value={values.keywords} onChange={update} disabled={busy} maxLength={2000} className={field} placeholder="engineer, data, product" />
+          <span id="watch-keywords-hint" className="block font-normal text-muted-foreground">Leave empty to keep the 100 newest roles</span>
+        </div>
         <label className="space-y-1.5 text-xs font-medium">
           Name (optional)
           <input name="name" value={values.name} onChange={update} disabled={busy} maxLength={200} className={field} placeholder="Taken from the board when empty" />
