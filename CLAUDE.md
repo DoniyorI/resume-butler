@@ -36,6 +36,7 @@ src/
                           cover-letters and resumes (the editors live in each one's studio/ folder
                           and share resumes/studio's page canvas and toolbar), cv (data + actions only), dashboard,
                           documents (resume + cover letter library), email-sync, opportunities (saved jobs),
+                          watchlist (companies' public job boards),
                           profile (profile and master CV page), suggestions (email review queue),
                           extension (connect page)
     actions.js            Server Actions for that feature ("use server")
@@ -58,6 +59,8 @@ src/
     opportunities/        Saved jobs: save, list, tailoring targets, startTailoredResume, applyToSavedJob
     fit/                  assessFit (posting against Master CV, with evidence), fitForSavedJobs, rankSavedJobsByFit
     activities/           Dated next steps per application (service.js) and suggestNextSteps (suggest.js, pure rules)
+    watchlist/            Watched companies: parseBoardLink and fetchBoard (boards.js), refresh, save, dismiss
+                          and the daily job (service.js), htmlToText, watchedWithBands
     email/                IMAP client, classification, matching, connection settings, syncEmailsForUser,
                           autoSync (the daily job)
     supabaseAdmin.js      Service-role client (bypasses RLS): cron, extension API, auth rate limits
@@ -66,7 +69,7 @@ src/
                           rewriteBullet, guardrails (blocks AI edits that add or swap facts),
                           parseResume, renderResume
   middleware.js           Refreshes the session and routes signed-out visitors (pages only, skips /api)
-supabase/migrations/      SQL schema, 001-020; apply in order in the Supabase SQL editor
+supabase/migrations/      SQL schema, 001-021; apply in order in the Supabase SQL editor
 extension/                Chrome extension (Manifest V3, no build step); see extension/README.md
 docs/                     ARCHITECTURE.md (the full map), chrome-extension-plan.md
 ```
@@ -95,6 +98,7 @@ docs/                     ARCHITECTURE.md (the full map), chrome-extension-plan.
 - **Tailoring.** The editor tailors from fit evidence (`planTailoring`, `resumeGaps` in `@/server/fit/tailorPlan`, served by `POST /api/resume-fit`): entries, bullets and skills are copied verbatim from the Master CV, and a requirement the Master CV lacks is asked about ("I have this" adds it to the Master CV), never put on the page directly. Keep it that way: no control may add text to a resume that is not the user's own.
 - **Next steps.** Dated activities live in `application_activities` (migration 020) and go through `@/server/activities/service`; every read handles the table being absent (`setupPending`). `suggestNextSteps` is a pure function over rows already loaded: add a rule there, with its reason sentence and a test, and never store or AI-generate a suggestion. A timed step keeps the IANA zone it was entered in.
 - **Saved jobs.** A saved job (`job_opportunities`) keeps its context through tailoring and applying: documents target it by `opportunityId`, and applications are created through `insertApplication` so description, pay, workplace and resume carry over. Extension captures merge with the stored job (`keepStored`); the web editor is authoritative.
+- **Watchlist.** `watched_companies` and `watched_postings` (migration 021) go through `@/server/watchlist/service`. The server fetches only the three fixed board API hosts in `@/server/watchlist/boards`, built from a platform and a checked token, never a URL from the user or from a board's response; board text is untrusted and passes through `htmlToText`/`cleanText`. Users cannot write `last_checked_at`, `last_error` or `open_count`: use the `record_watch_check` RPC. Another board platform is a new adapter there with recorded-shape tests.
 - **Matching applications.** New submissions and confirmations only merge into an open application from the same hiring cycle (`isSameCycle`, 120 days); otherwise they're new. Email never changes applications directly: it writes `application_suggestions` for the user to approve.
 - **Loading and layout.** Each `(app)` route has a `loading.js` shaped like its page (`@/components/shared/PageSkeletons`); keep them in step with page layout changes. The header is a fixed 73px, so pages start at `pt-[85px]` and the editors at `top-[73px]`.
 - **Migrations.** Add a new numbered file in `supabase/migrations/`; never edit an applied one. The user runs it in the SQL editor, so code must keep working until it's applied (fail open, or check the column exists, as `insertApplication` (`@/server/applications/insertApplication`) and `enforceRateLimit` do). Enable RLS on every new table.
@@ -123,10 +127,11 @@ docs/                     ARCHITECTURE.md (the full map), chrome-extension-plan.
 | `POST /api/extension/applications` | Browser extension: add the application the user just submitted (or fill in the tracked one) |
 | `DELETE /api/extension/applications/[id]` | Browser extension: undo an addition (same day, still at Applied) |
 | `GET /api/cron/email-sync` | Daily auto-sync for users who turned it on (Vercel Cron, `Authorization: Bearer $CRON_SECRET`) |
+| `GET /api/cron/watchlist` | Daily re-read of watched companies' boards (Vercel Cron, same authorization) |
 
 ## Database (Supabase)
 
-Key tables: `profiles`, `cv_experience` (+ `_bullets`), `cv_projects` (+ `_bullets`), `cv_education`, `cv_skills`, `cv_certifications`, `applications`, `application_status_history` (trigger-logged), `resumes` (`content` JSONB), `cover_letters` (Draft.js JSONB), `email_connections` (+ `auto_sync`), `processed_emails`, `application_suggestions`, `api_rate_limits`, `auth_rate_limits` (hashed IP/email buckets for sign-in, sign-up and reset), `extension_tokens` (hashed; the extension's credentials), `job_opportunities` (saved jobs, migration 013), `application_activities` (dated next steps, migration 020). `applications.source` is `manual`, `email` or `extension`; migration 010 adds job details (`salary_min`/`salary_max`/`salary_currency`/`salary_period`, `workplace_type`, `employment_type`, `source_site`), built by `jobDetailColumns` (`@/lib/jobDetails`, pay parsed by `@/lib/salary`). Matching across hiring cycles: `isSameCycle` (`@/server/email/matching`), open and applied within 120 days. Goals are `profiles.goal_period` / `goal_target`. RLS is enabled on every table.
+Key tables: `profiles`, `cv_experience` (+ `_bullets`), `cv_projects` (+ `_bullets`), `cv_education`, `cv_skills`, `cv_certifications`, `applications`, `application_status_history` (trigger-logged), `resumes` (`content` JSONB), `cover_letters` (Draft.js JSONB), `email_connections` (+ `auto_sync`), `processed_emails`, `application_suggestions`, `api_rate_limits`, `auth_rate_limits` (hashed IP/email buckets for sign-in, sign-up and reset), `extension_tokens` (hashed; the extension's credentials), `job_opportunities` (saved jobs, migration 013), `application_activities` (dated next steps, migration 020), `watched_companies` and `watched_postings` (watchlist, migration 021). `applications.source` is `manual`, `email` or `extension`; migration 010 adds job details (`salary_min`/`salary_max`/`salary_currency`/`salary_period`, `workplace_type`, `employment_type`, `source_site`), built by `jobDetailColumns` (`@/lib/jobDetails`, pay parsed by `@/lib/salary`). Matching across hiring cycles: `isSameCycle` (`@/server/email/matching`), open and applied within 120 days. Goals are `profiles.goal_period` / `goal_target`. RLS is enabled on every table.
 
 ## Environment Variables
 
@@ -148,5 +153,5 @@ Never print or commit `.env.local` values.
 - Personal project: commit and push straight to `main` (no PRs). Vercel deploys `main`; check the commit status after pushing.
 - Vercel Hobby: the maximum duration is 300 seconds with Fluid Compute, 60 without it. Check the project's Functions settings before raising limits; scan and cron routes currently set `maxDuration = 60`. See [README.md](README.md#deploying-to-vercel) for deployment configuration and the official limits.
 - Verify email/AI changes with `npm test` under Node 24, then `npm run lint`, an isolated production build and relevant signed-in browser flows. Build outside output used by a running preview. For email matching, retries, approval concurrency or models, read [docs/email-sync-reliability.md](docs/email-sync-reliability.md); migration 011 is required for transactional approval and cross-instance scan locks.
-- `vercel.json` runs `/api/cron/email-sync` daily at 12:00 UTC.
+- `vercel.json` runs `/api/cron/email-sync` daily at 12:00 UTC and `/api/cron/watchlist` at 13:00 UTC.
 - An upgrade to Next.js 16.4 / React 19 is on the branch `claude/keen-roentgen-b7b6a5`. When it merges, update this file (versions, `proxy.js` instead of `middleware.js`, the lint command) and docs/ARCHITECTURE.md.
