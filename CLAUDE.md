@@ -47,7 +47,7 @@ src/
     layout/               NavBar (signed in), PublicHeader (visitors), MarketingHeader (picks one), Footer
     shared/               App-wide widgets (ErrorState, LocalDateTime, PageSkeletons for loading.js)
   lib/                    Code safe on client and server: constants, dates, safeUrl, redirects, postJson,
-                          salary, jobDetails, emailCategories, supabase server and middleware clients
+                          salary, jobDetails, csv (toCsv, parseCsv), emailCategories, supabase server and middleware clients
                           (there is no browser client)
   server/                 Server-only code (`import "server-only"`), reusable by actions, routes, cron and the extension:
     auth.js               getCurrentUser (cached per request), requirePageUser, requireUser, hasRecentRecovery
@@ -55,10 +55,13 @@ src/
     http.js               HttpError, parseJson, errorResponse for Route Handlers
     openai.js, rateLimit.js (per user), authRateLimit.js (per IP and email, signed out), crypto.js, latex.js
     ats/                  ATS scoring (scoreResume), keyword and skill matching (matchSkills)
-    applications/         insertApplication (shared insert: posting identity, job details, fail-open)
+    applications/         insertApplication (shared insert: posting identity, job details, fail-open),
+                          importPlan (pure CSV import planning), importApplications (commit, undo)
     opportunities/        Saved jobs: save, list, tailoring targets, startTailoredResume, applyToSavedJob
     fit/                  assessFit (posting against Master CV, with evidence), fitForSavedJobs, rankSavedJobsByFit
     activities/           Dated next steps per application (service.js) and suggestNextSteps (suggest.js, pure rules)
+    offers/               Offer terms and decision per application (service.js)
+    export/               exportJsonChunks (streamed full export), applicationsCsv, NEVER_EXPORT
     watchlist/            Watched companies: parseBoardLink and fetchBoard (boards.js), refresh, save, dismiss
                           and the daily job (service.js), htmlToText, watchedWithBands
     email/                IMAP client, classification, matching, connection settings, syncEmailsForUser,
@@ -69,7 +72,7 @@ src/
                           rewriteBullet, guardrails (blocks AI edits that add or swap facts),
                           parseResume, renderResume
   middleware.js           Refreshes the session and routes signed-out visitors (pages only, skips /api)
-supabase/migrations/      SQL schema, 001-021; apply in order in the Supabase SQL editor
+supabase/migrations/      SQL schema, 001-022; apply in order in the Supabase SQL editor
 extension/                Chrome extension (Manifest V3, no build step); see extension/README.md
 docs/                     ARCHITECTURE.md (the full map), chrome-extension-plan.md
 ```
@@ -98,6 +101,9 @@ docs/                     ARCHITECTURE.md (the full map), chrome-extension-plan.
 - **Tailoring.** The editor tailors from fit evidence (`planTailoring`, `resumeGaps` in `@/server/fit/tailorPlan`, served by `POST /api/resume-fit`): entries, bullets and skills are copied verbatim from the Master CV, and a requirement the Master CV lacks is asked about ("I have this" adds it to the Master CV), never put on the page directly. Keep it that way: no control may add text to a resume that is not the user's own.
 - **Next steps.** Dated activities live in `application_activities` (migration 020) and go through `@/server/activities/service`; every read handles the table being absent (`setupPending`). `suggestNextSteps` is a pure function over rows already loaded: add a rule there, with its reason sentence and a test, and never store or AI-generate a suggestion. A timed step keeps the IANA zone it was entered in.
 - **Saved jobs.** A saved job (`job_opportunities`) keeps its context through tailoring and applying: documents target it by `opportunityId`, and applications are created through `insertApplication` so description, pay, workplace and resume carry over. Extension captures merge with the stored job (`keepStored`); the web editor is authoritative.
+- **Offers.** An offer's terms and decision live in `application_offers` (migration 022) through `@/server/offers/service`; every read handles the table being absent. The decide-by date is not a column: it is the open `offer_deadline` step in `application_activities`, and a decided offer never gets one back. There is no "Accepted" status; the decision is on the offer.
+- **Export.** `GET /api/export` streams everything the account holds (`@/server/export/exportData`). A new user-owned table needs a `SECTIONS` entry there (or a sentence in `NOT_INCLUDED`), and a column holding a credential, a hash of one or file bytes goes in `NEVER_EXPORT`. Write CSV with `toCsv` (`@/lib/csv`), which guards formula cells.
+- **Import.** `planImport` (`@/server/applications/importPlan`) is pure and decides each row's outcome; the route re-plans from the uploaded file on commit and never trusts a plan from the browser. It may not fill in what the file lacks: an unknown status or unreadable pay is kept in the notes, and a row without a date is skipped unless the user chooses today's date.
 - **Watchlist.** `watched_companies` and `watched_postings` (migration 021) go through `@/server/watchlist/service`. The server fetches only the three fixed board API hosts in `@/server/watchlist/boards`, built from a platform and a checked token, never a URL from the user or from a board's response; board text is untrusted and passes through `htmlToText`/`cleanText`. Users cannot write `last_checked_at`, `last_error` or `open_count`: use the `record_watch_check` RPC. Another board platform is a new adapter there with recorded-shape tests.
 - **Matching applications.** New submissions and confirmations only merge into an open application from the same hiring cycle (`isSameCycle`, 120 days); otherwise they're new. Email never changes applications directly: it writes `application_suggestions` for the user to approve.
 - **Loading and layout.** Each `(app)` route has a `loading.js` shaped like its page (`@/components/shared/PageSkeletons`); keep them in step with page layout changes. The header is a fixed 73px, so pages start at `pt-[85px]` and the editors at `top-[73px]`.
@@ -127,11 +133,13 @@ docs/                     ARCHITECTURE.md (the full map), chrome-extension-plan.
 | `POST /api/extension/applications` | Browser extension: add the application the user just submitted (or fill in the tracked one) |
 | `DELETE /api/extension/applications/[id]` | Browser extension: undo an addition (same day, still at Applied) |
 | `GET /api/cron/email-sync` | Daily auto-sync for users who turned it on (Vercel Cron, `Authorization: Bearer $CRON_SECRET`) |
+| `GET /api/export` | Everything the account holds as streamed JSON; `?format=csv` for all applications (never credentials or hashes) |
+| `POST /api/import-applications` | CSV import: `preview` plans every row, `commit` re-plans and inserts (multipart, 1 MB, 500 rows) |
 | `GET /api/cron/watchlist` | Daily re-read of watched companies' boards (Vercel Cron, same authorization) |
 
 ## Database (Supabase)
 
-Key tables: `profiles`, `cv_experience` (+ `_bullets`), `cv_projects` (+ `_bullets`), `cv_education`, `cv_skills`, `cv_certifications`, `applications`, `application_status_history` (trigger-logged), `resumes` (`content` JSONB), `cover_letters` (Draft.js JSONB), `email_connections` (+ `auto_sync`), `processed_emails`, `application_suggestions`, `api_rate_limits`, `auth_rate_limits` (hashed IP/email buckets for sign-in, sign-up and reset), `extension_tokens` (hashed; the extension's credentials), `job_opportunities` (saved jobs, migration 013), `application_activities` (dated next steps, migration 020), `watched_companies` and `watched_postings` (watchlist, migration 021). `applications.source` is `manual`, `email` or `extension`; migration 010 adds job details (`salary_min`/`salary_max`/`salary_currency`/`salary_period`, `workplace_type`, `employment_type`, `source_site`), built by `jobDetailColumns` (`@/lib/jobDetails`, pay parsed by `@/lib/salary`). Matching across hiring cycles: `isSameCycle` (`@/server/email/matching`), open and applied within 120 days. Goals are `profiles.goal_period` / `goal_target`. RLS is enabled on every table.
+Key tables: `profiles`, `cv_experience` (+ `_bullets`), `cv_projects` (+ `_bullets`), `cv_education`, `cv_skills`, `cv_certifications`, `applications`, `application_status_history` (trigger-logged), `resumes` (`content` JSONB), `cover_letters` (Draft.js JSONB), `email_connections` (+ `auto_sync`), `processed_emails`, `application_suggestions`, `api_rate_limits`, `auth_rate_limits` (hashed IP/email buckets for sign-in, sign-up and reset), `extension_tokens` (hashed; the extension's credentials), `job_opportunities` (saved jobs, migration 013), `application_activities` (dated next steps, migration 020), `watched_companies` and `watched_postings` (watchlist, migration 021), `application_offers` (offer terms and decision, migration 022). `applications.source` is `manual`, `email` or `extension`; migration 010 adds job details (`salary_min`/`salary_max`/`salary_currency`/`salary_period`, `workplace_type`, `employment_type`, `source_site`), built by `jobDetailColumns` (`@/lib/jobDetails`, pay parsed by `@/lib/salary`). Matching across hiring cycles: `isSameCycle` (`@/server/email/matching`), open and applied within 120 days. Goals are `profiles.goal_period` / `goal_target`. RLS is enabled on every table.
 
 ## Environment Variables
 
