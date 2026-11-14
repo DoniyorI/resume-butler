@@ -2,6 +2,7 @@ import { requirePageUser } from "@/server/auth";
 import { getCvData } from "@/features/cv/data";
 import { getProfile } from "@/features/profile/data";
 import CareerProfile from "@/features/profile/CareerProfile";
+import DataExport from "@/features/profile/DataExport";
 
 export const metadata = { title: "Profile & CV" };
 
@@ -16,6 +17,7 @@ export default async function ProfilePage() {
         Keep your full background here. Choose the entries and sections you want in each resume.
       </p>
       <CareerProfile profile={profile} cv={cv} />
+      <DataExport />
     </div>
   );
 }

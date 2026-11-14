@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import ActiveFilters from "@/features/applications/ActiveFilters";
 import ApplicationToolbar from "@/features/applications/ApplicationToolbar";
 import { INTERACTIVE_COLUMNS } from "@/features/applications/columns";
-import { applicationsToCsv, downloadCsv } from "@/features/applications/csv";
+import { downloadExport } from "@/features/profile/downloadExport";
 import { APPLICATIONS_PAGE_SIZE, hasActiveFilters, listHref } from "@/features/applications/listParams";
 import { useApplicationsTable } from "@/features/applications/hooks/useApplicationsTable";
 
@@ -75,10 +75,17 @@ export default function ApplicationTable({ applications, total, allTotal, status
   const lastShown = firstShown + applications.length - 1;
   const goToPage = (page) => navigate({ page }, { push: true });
 
-  const handleExportCsv = () => {
-    const date = new Date().toISOString().split("T")[0];
-    downloadCsv(applicationsToCsv(applications), `applications_${date}.csv`);
-    toast("Exported to CSV");
+  const [exporting, setExporting] = useState(false);
+  const handleExportCsv = async () => {
+    setExporting(true);
+    try {
+      await downloadExport("csv");
+      toast("Exported all applications to CSV");
+    } catch (error) {
+      toast.error(error.message);
+    } finally {
+      setExporting(false);
+    }
   };
 
   const rows = table.getRowModel().rows;
@@ -91,6 +98,7 @@ export default function ApplicationTable({ applications, total, allTotal, status
         statusCounts={statusCounts}
         onChange={navigate}
         onExport={handleExportCsv}
+        exporting={exporting}
       />
       {filtered && <ActiveFilters params={params} onChange={navigate} />}
 

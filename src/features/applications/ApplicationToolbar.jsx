@@ -103,7 +103,7 @@ function ColumnsMenu({ table }) {
 
 // Filters on the left; selection actions, export and columns on the right.
 // Wraps onto more lines on narrow screens.
-export default function ApplicationToolbar({ table, params, statusCounts, onChange, onExport }) {
+export default function ApplicationToolbar({ table, params, statusCounts, onChange, onExport, exporting = false }) {
   const selectedIds = table.getSelectedRowModel().rows.map((row) => row.original.id);
 
   return (
@@ -123,7 +123,9 @@ export default function ApplicationToolbar({ table, params, statusCounts, onChan
           size="sm"
           className="h-8 px-2.5 text-xs"
           onClick={onExport}
-          title="Export the rows on this page to CSV"
+          disabled={exporting}
+          title="Export all applications to CSV"
+          aria-label="Export all applications to CSV"
         >
           <FileDown className="mr-1.5 h-3.5 w-3.5" /> CSV
         </Button>
