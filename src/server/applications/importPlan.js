@@ -18,7 +18,7 @@ export const FIELDS = ["company", "role", "status", "appliedDate", "location", "
 const SYNONYMS = {
   company: ["company", "employer", "organization", "organisation", "company name"],
   role: ["role", "title", "position", "job title", "job", "role title"],
-  status: ["status", "stage", "state"],
+  status: ["status", "stage"],
   appliedDate: ["applied date", "date applied", "applied", "applied on", "date", "application date"],
   location: ["location", "city", "where"],
   link: ["link", "url", "portal link", "job link", "posting", "job url", "job posting"],
@@ -57,7 +57,7 @@ const STATUS_WORDS = {
   pending: "Pending", "in progress": "Pending", "in review": "Pending", "under review": "Pending", waiting: "Pending",
   interviewed: "Interviewed", interview: "Interviewed", interviewing: "Interviewed", onsite: "Interviewed", "on-site": "Interviewed", "final round": "Interviewed", technical: "Interviewed",
   offered: "Offered", offer: "Offered", accepted: "Offered",
-  rejected: "Rejected", declined: "Rejected", no: "Rejected", closed: "Rejected", "not selected": "Rejected", "turned down": "Rejected",
+  rejected: "Rejected", no: "Rejected", closed: "Rejected", "not selected": "Rejected", "turned down": "Rejected",
   withdrew: "Withdrew", withdrawn: "Withdrew", cancelled: "Withdrew", canceled: "Withdrew",
 };
 
@@ -127,8 +127,10 @@ export function detectDateOrder(values) {
     if (!match) continue;
     numeric++;
     if (Number(match[1]) > 12) dayFirst = true;
-    else if (Number(match[2]) > 12) monthFirst = true;
+    if (Number(match[2]) > 12) monthFirst = true;
   }
+  // Both kinds in one column: no single order reads them all
+  if (dayFirst && monthFirst) return { order: "dmy", ambiguous: true, mixed: true };
   if (dayFirst) return { order: "dmy", ambiguous: false };
   if (monthFirst) return { order: "mdy", ambiguous: false };
   return { order: "mdy", ambiguous: numeric > 0 };
@@ -141,14 +143,18 @@ const nameKey = (company, role, date) => {
   return name && date ? `${name}|${normalizeRole(role)}|${date}` : "";
 };
 
-// A link without its fragment or trailing slash, so the same posting matches
-function linkKey(link) {
+// A link without its fragment or trailing slash, so the same posting matches.
+// It only counts as the same application with the same company: two companies
+// can share a generic careers link.
+function linkKey(link, company) {
+  const name = normalizeCompany(company);
+  if (!name) return "";
   const normalized = normalizeHttpUrl(link || "");
   if (!normalized) return "";
   try {
     const url = new URL(normalized);
     url.hash = "";
-    return url.href.replace(/\/+$/, "").toLowerCase();
+    return `${name}|${url.href.replace(/\/+$/, "").toLowerCase()}`;
   } catch {
     return "";
   }
@@ -175,7 +181,7 @@ function emptyPlan(extra) {
   return {
     headers: [], delimiter: ",", mapping: {}, needsMapping: false, dateOrder: "mdy", dateOrderAmbiguous: false,
     totals: { rows: 0, ready: 0, duplicates: 0, undated: 0, errors: 0, truncated: false },
-    unknownStatuses: [], rows: [], ...extra,
+    unknownStatuses: [], rows: [], dateOrderMixed: false, columnsTruncated: false, blankStatuses: 0, ...extra,
   };
 }
 
@@ -186,13 +192,14 @@ function emptyPlan(extra) {
 export function planImport({ text, options = {}, existing = [], today }) {
   const parsed = parseCsv(text, { maxRows: MAX_IMPORT_ROWS + 1, maxColumns: MAX_IMPORT_COLUMNS });
   if (!parsed.rows.length) throw new HttpError(400, "This file is empty. The first row must hold the column headings.");
+  const columnsTruncated = parsed.columnsDropped === true;
   const clean = (value) => unguardFormula(String(value ?? "").trim()).trim();
   const headers = parsed.rows[0].map(clean);
   const dataRows = parsed.rows.slice(1);
   if (!dataRows.length) throw new HttpError(400, "This file has headings but no rows to import.");
 
   const mapping = detectMapping(headers, options.mapping);
-  if (mapping.company === null) return emptyPlan({ headers, delimiter: parsed.delimiter, mapping, needsMapping: true });
+  if (mapping.company === null) return emptyPlan({ headers, delimiter: parsed.delimiter, mapping, needsMapping: true, columnsTruncated });
 
   const cells = dataRows.slice(0, MAX_IMPORT_ROWS).map((record) => record.map(clean));
   const pick = (record, field) => (mapping[field] === null ? "" : record[mapping[field]] ?? "");
@@ -205,13 +212,14 @@ export function planImport({ text, options = {}, existing = [], today }) {
   for (const item of existing) {
     const key = nameKey(item.company, item.role, item.appliedDate);
     if (key) seenNames.add(key);
-    const link = linkKey(item.link);
+    const link = linkKey(item.link, item.company);
     if (link) seenLinks.add(link);
   }
 
   const totals = { rows: 0, ready: 0, duplicates: 0, undated: 0, errors: 0, truncated: parsed.truncated || dataRows.length > MAX_IMPORT_ROWS };
   const unknown = new Map();
   const rows = [];
+  let blankStatuses = 0;
 
   cells.forEach((record, index) => {
     const line = index + 2;
@@ -284,7 +292,7 @@ export function planImport({ text, options = {}, existing = [], today }) {
 
     if (row.outcome === "ready") {
       const name = nameKey(row.company, row.role, row.appliedDate);
-      const link = linkKey(row.link);
+      const link = linkKey(row.link, row.company);
       const alike = (name && seenNames.has(name)) || (link && seenLinks.has(link));
       if (alike && options.includeDuplicates !== true) {
         row.outcome = "duplicate";
@@ -294,6 +302,8 @@ export function planImport({ text, options = {}, existing = [], today }) {
         if (link) seenLinks.add(link);
       }
     }
+
+    if (row.outcome !== "error" && !rawStatus) blankStatuses++;
 
     if (row.outcome === "ready") totals.ready++;
     else if (row.outcome === "duplicate") totals.duplicates++;
@@ -305,6 +315,7 @@ export function planImport({ text, options = {}, existing = [], today }) {
   return {
     headers, delimiter: parsed.delimiter, mapping, needsMapping: false,
     dateOrder, dateOrderAmbiguous: mapping.appliedDate !== null && detected.ambiguous,
+    dateOrderMixed: mapping.appliedDate !== null && detected.mixed === true, columnsTruncated, blankStatuses,
     totals, unknownStatuses: [...unknown.values()], rows,
   };
 }

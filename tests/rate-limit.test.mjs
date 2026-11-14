@@ -15,3 +15,16 @@ test("rate limit allows an explicit grant, rejects denial, and retains PDF avail
   await assert.rejects(enforceRateLimit({ rpc: async () => ({ data: false, error: null }) }, "generate-resume"), error => error.status === 429);
   await enforceRateLimit({ rpc: async () => ({ error: { code: "PGRST202", message: "not installed" } }) }, "download-resume");
 });
+
+test("an unknown key says the migration is missing; other failures stay generic", async () => {
+  const unknown = { rpc: async () => ({ data: null, error: { code: "P0001", message: "Unknown rate limit key: export-data" } }) };
+  await assert.rejects(
+    enforceRateLimit(unknown, "export-data"),
+    (error) => error.status === 503 && error.message === "This feature needs the latest database migration. See supabase/migrations."
+  );
+  await assert.rejects(
+    enforceRateLimit({ rpc: async () => ({ data: null, error: { code: "42501", message: "denied" } }) }, "export-data"),
+    (error) => error.status === 503 && error.message === "Usage checks are temporarily unavailable. Please try again shortly."
+  );
+  await enforceRateLimit(unknown, "download-resume");
+});

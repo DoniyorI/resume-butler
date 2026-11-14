@@ -159,7 +159,7 @@ test("back to pending clears decided_on", async () => {
   assert.equal(db.tables.application_offers[0].decided_on, null);
 });
 
-test("decideBy creates an all-day step, then reschedules it; clearing leaves it alone", async () => {
+test("decideBy creates an all-day step, then reschedules it; null leaves it alone", async () => {
   const db = seeded();
   const created = await service.saveOffer(db, user, appId, terms({ decideBy: "2026-11-20" }));
   assert.equal(created.deadlineError, undefined);
@@ -171,10 +171,11 @@ test("decideBy creates an all-day step, then reschedules it; clearing leaves it 
   assert.equal(db.tables.application_activities.length, 1);
   assert.equal(db.tables.application_activities[0].due_on, "2026-11-25");
 
-  // The same date again changes nothing; an empty one leaves the step alone
+  // The same date again changes nothing; null or undefined leaves the step alone
   await service.saveOffer(db, user, appId, terms({ decideBy: "2026-11-25" }));
-  await service.saveOffer(db, user, appId, terms({ decideBy: "" }));
   await service.saveOffer(db, user, appId, terms({ decideBy: null }));
+  await service.saveOffer(db, user, appId, terms({ decideBy: undefined }));
+  assert.equal(db.tables.application_activities[0].status, "open");
   assert.equal(db.tables.application_activities.length, 1);
   assert.equal(db.tables.application_activities[0].due_on, "2026-11-25");
 
@@ -192,6 +193,40 @@ test("decideBy creates an all-day step, then reschedules it; clearing leaves it 
   const result = await service.saveOffer(noActivities, user, appId, terms({ decideBy: "2026-11-20" }));
   assert.equal(result.deadlineError, undefined);
   assert.equal(noActivities.tables.application_offers.length, 1);
+});
+
+test("an empty decide-by cancels every open step; null leaves them", async () => {
+  const db = seeded({
+    application_activities: [
+      deadline(),
+      deadline({ id: "66666666-6666-4666-8666-666666666666", due_on: "2026-11-25" }),
+      deadline({ id: "77777777-7777-4777-8777-777777777777", kind: "follow_up" }),
+    ],
+  });
+  await service.saveOffer(db, user, appId, terms({ decideBy: null }));
+  assert.deepEqual(db.tables.application_activities.map((r) => r.status), ["open", "open", "open"]);
+  const result = await service.saveOffer(db, user, appId, terms({ decideBy: "" }));
+  assert.equal(result.deadlineError, undefined);
+  assert.deepEqual(db.tables.application_activities.map((r) => r.status), ["cancelled", "cancelled", "open"]);
+  assert.equal((await service.getOffer(db, user, appId)).decideBy, null);
+});
+
+test("a decided offer ignores decideBy; pending again takes it", async () => {
+  const db = seeded({ application_activities: [deadline()] });
+  await service.saveOffer(db, user, appId, terms());
+  await service.decideOffer(db, user, appId, { decision: "accepted", decidedOn: "2026-11-12" });
+  assert.equal(db.tables.application_activities[0].status, "done");
+
+  await service.saveOffer(db, user, appId, terms({ decideBy: "2026-11-20" }));
+  assert.equal(db.tables.application_activities.length, 1);
+  assert.equal(db.tables.application_activities[0].status, "done");
+  await service.saveOffer(db, user, appId, terms({ decideBy: "" }));
+  assert.equal(db.tables.application_activities[0].status, "done");
+
+  await service.decideOffer(db, user, appId, { decision: "pending" });
+  await service.saveOffer(db, user, appId, terms({ decideBy: "2026-11-30" }));
+  assert.equal(db.tables.application_activities.length, 2);
+  assert.deepEqual(db.tables.application_activities.map((r) => [r.status, r.due_on]), [["done", "2026-11-20"], ["open", "2026-11-30"]]);
 });
 
 test("a step failure keeps the offer and reports deadlineError", async () => {

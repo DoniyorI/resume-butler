@@ -46,6 +46,20 @@ test("a unique violation is a duplicate, another error is a failure, the rest co
   assert.doesNotMatch(logged[0], /Co\d|Secret/);
 });
 
+test("commit stops starting batches once the time budget is spent and counts what it left", async () => {
+  const db = database();
+  const plan = planOf(...Array.from({ length: 20 }, (_, i) => `Co${i},Dev,2026-01-05,,`));
+  let clock = 0;
+  const now = () => (clock += 30_000); // started at 30s; each check is 30s later
+  const result = await commitImport(db, user, plan, { now, budgetMs: 40_000 });
+  assert.equal(result.imported, 8);
+  assert.equal(result.notAttempted, 12);
+  assert.equal(db.tables.applications.length, 8);
+  const full = await commitImport(database(), user, plan);
+  assert.equal(full.notAttempted, 0);
+  assert.equal(full.imported, 20);
+});
+
 test("loadExistingForImport reads only the user's applications", async () => {
   const db = database({ applications: [
     { id: "a", user_id: user, company: "Acme", role: "Dev", applied_date: "2026-01-05", portal_link: "https://x.example" },

@@ -125,13 +125,31 @@ async function setDecideBy(supabase, userId, applicationId, decideBy) {
   });
 }
 
+// Cancel every open decide-by step: the user cleared the date
+async function clearDecideBy(supabase, userId, applicationId) {
+  const { open, setupPending } = await openDeadlines(supabase, userId, applicationId);
+  if (setupPending) return;
+  for (const step of open) await setActivityStatus(supabase, userId, step.id, "cancelled");
+}
+
 /**
- * Save the offer's terms (never the decision). `decideBy` ("YYYY-MM-DD", or ""
- * or null to leave the step alone) goes to the offer-deadline step after the
- * offer is written; if that fails the offer is kept and `deadlineError` is set.
+ * Save the offer's terms (never the decision). `decideBy` goes to the
+ * offer-deadline step after the offer is written: "YYYY-MM-DD" sets it, ""
+ * (the user cleared the field) cancels the open steps, null or undefined
+ * (field not shown) leaves them alone. It is ignored unless the offer is
+ * pending, so a decided offer never gets an open step back. If the step
+ * change fails the offer is kept and `deadlineError` is set.
  */
 export async function saveOffer(supabase, userId, applicationId, input) {
   await assertOwnsApplication(supabase, userId, applicationId);
+  const current = await supabase
+    .from(TABLE)
+    .select("decision")
+    .eq("user_id", userId)
+    .eq("application_id", applicationId)
+    .maybeSingle();
+  check(current.error);
+  const pending = !current.data || (current.data.decision || "pending") === "pending";
   const { data, error } = await supabase
     .from(TABLE)
     .upsert(
@@ -155,9 +173,10 @@ export async function saveOffer(supabase, userId, applicationId, input) {
   check(error);
 
   const result = { offer: toOffer(data) };
-  if (input.decideBy) {
+  if (pending && (input.decideBy || input.decideBy === "")) {
     try {
-      await setDecideBy(supabase, userId, applicationId, input.decideBy);
+      if (input.decideBy === "") await clearDecideBy(supabase, userId, applicationId);
+      else await setDecideBy(supabase, userId, applicationId, input.decideBy);
     } catch (failure) {
       console.error("saveOffer deadline:", failure);
       result.deadlineError = true;

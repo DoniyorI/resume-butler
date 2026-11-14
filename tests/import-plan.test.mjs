@@ -38,7 +38,7 @@ test("empty files and header-only files are 400s", () => {
 });
 
 test("status families map, empty is the default, unknown is kept in the notes", () => {
-  const cases = { Applied: "Applied", SUBMITTED: "Applied", "phone screen": "Reached Out", "Under Review": "Pending", Interviewing: "Interviewed", "on-site": "Interviewed", Accepted: "Offered", "Not selected": "Rejected", no: "Rejected", Withdrawn: "Withdrew", canceled: "Withdrew", "": "Applied" };
+  const cases = { Applied: "Applied", SUBMITTED: "Applied", "phone screen": "Reached Out", "Under Review": "Pending", Interviewing: "Interviewed", "on-site": "Interviewed", Accepted: "Offered", "Not selected": "Rejected", no: "Rejected", Closed: "Rejected", Withdrawn: "Withdrew", canceled: "Withdrew", "": "Applied" };
   const rows = Object.keys(cases).map((s) => `Acme${s},"${s}",2026-01-05`);
   const p = plan(csv("Company,Status,Date", ...rows));
   Object.values(cases).forEach((expected, i) => assert.equal(p.rows[i].status, expected));
@@ -108,6 +108,7 @@ test("duplicates against existing rows, earlier rows and links", () => {
   const existing = [
     { company: "Acme Inc.", role: "Software Engineer", appliedDate: "2026-01-05", link: "" },
     { company: "Other", role: "Dev", appliedDate: "2025-05-05", link: "https://jobs.example/p/1/" },
+    { company: "Zed", role: "Ops", appliedDate: "2025-05-06", link: "https://jobs.example/p/1/" },
   ];
   const text = csv(
     "Company,Role,Date,Link",
@@ -116,7 +117,7 @@ test("duplicates against existing rows, earlier rows and links", () => {
     "Acme,Software Engineer,2026-01-06,",
     "Zed,QA,2026-02-01,https://jobs.example/p/1#top",
     "Yan,QA,2026-02-02,https://x.example/a",
-    "Yan2,QA2,2026-02-03,HTTPS://X.example/a/"
+    "Yan,QA2,2026-02-03,HTTPS://X.example/a/"
   );
   const p = plan(text, { existing });
   assert.deepEqual(p.rows.map((r) => r.outcome), ["duplicate", "ready", "duplicate", "duplicate", "ready", "duplicate"]);
@@ -171,4 +172,48 @@ test("pay, workplace and employment type", () => {
   assert.equal(p.rows[0].workplace, "hybrid");
   assert.equal(p.rows[1].pay, "");
   assert.equal(p.rows[1].notes, "Imported pay: negotiable\nImported workplace: maybe");
+});
+
+test("a shared link is a duplicate only for the same company", () => {
+  const existing = [{ company: "Other", role: "Dev", appliedDate: "2025-05-05", link: "https://careers.example/jobs" }];
+  const p = plan(
+    csv(
+      "Company,Role,Date,Link",
+      "Other,QA,2026-02-01,https://careers.example/jobs/",
+      "Different,QA,2026-02-01,https://careers.example/jobs",
+      "First,QA,2026-02-02,https://careers.example/all",
+      "Second,QA,2026-02-02,https://careers.example/all",
+      "First,Ops,2026-02-03,https://careers.example/all"
+    ),
+    { existing }
+  );
+  assert.deepEqual(p.rows.map((r) => r.outcome), ["duplicate", "ready", "ready", "ready", "duplicate"]);
+});
+
+test("a column mixing day-first and month-first dates is flagged", () => {
+  assert.deepEqual(detectDateOrder(["13/1/2026", "1/13/2026"]), { order: "dmy", ambiguous: true, mixed: true });
+  const p = plan(csv("Company,Date", "A,13/1/2026", "B,1/13/2026", "C,2/3/2026"));
+  assert.equal(p.dateOrderMixed, true);
+  assert.equal(p.dateOrderAmbiguous, true);
+  assert.equal(plan(csv("Company,Date", "A,13/1/2026", "B,2/3/2026")).dateOrderMixed, false);
+});
+
+test("columns beyond 40 are reported", () => {
+  const wide = (n) => csv(["Company", ...Array.from({ length: n - 1 }, (_, i) => `c${i}`)].join(","), "Acme");
+  assert.equal(plan(wide(45)).columnsTruncated, true);
+  assert.equal(plan(wide(40)).columnsTruncated, false);
+});
+
+test("a State column is not the status, and declined is an unknown status", () => {
+  const p = plan(csv("Company,State,Date", "A,CA,2026-01-05"));
+  assert.equal(p.mapping.status, null);
+  const d = plan(csv("Company,Status,Date", "A,Declined,2026-01-05"));
+  assert.equal(d.rows[0].status, "Applied");
+  assert.deepEqual(d.unknownStatuses, [{ value: "Declined", count: 1 }]);
+});
+
+test("blank statuses are counted, errors are not", () => {
+  const p = plan(csv("Company,Status,Date", "A,,2026-01-05", "B,Applied,2026-01-05", ",,2026-01-05", "C, ,2026-01-05"));
+  assert.equal(p.blankStatuses, 2);
+  assert.equal(plan(csv("Company,Date", "A,2026-01-05", "B,2026-01-05")).blankStatuses, 2);
 });

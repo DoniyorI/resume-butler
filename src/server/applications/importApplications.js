@@ -6,7 +6,8 @@ import { insertApplication } from "@/server/applications/insertApplication";
 
 const PAGE = 1000;
 const MAX_EXISTING = 20_000;
-const CONCURRENCY = 5;
+const CONCURRENCY = 8;
+const COMMIT_BUDGET_MS = 40_000;
 const UNDO_CHUNK = 100;
 const MAX_UNDO = 500;
 const UNDO_WINDOW_MS = 60 * 60 * 1000;
@@ -55,11 +56,20 @@ function insertArgs(row) {
   ];
 }
 
-/** Insert every ready row of a plan. A row that fails does not stop the others. */
-export async function commitImport(supabase, userId, plan) {
+/**
+ * Insert every ready row of a plan. A row that fails does not stop the others.
+ * No new batch starts once `budgetMs` has passed; `notAttempted` counts the
+ * ready rows left untried (importing the file again skips the ones added).
+ */
+export async function commitImport(supabase, userId, plan, { now = Date.now, budgetMs = COMMIT_BUDGET_MS } = {}) {
   const ready = plan.rows.filter((row) => row.outcome === "ready");
-  const result = { imported: 0, failed: 0, duplicates: 0, ids: [] };
+  const result = { imported: 0, failed: 0, duplicates: 0, notAttempted: 0, ids: [] };
+  const started = now();
   for (let i = 0; i < ready.length; i += CONCURRENCY) {
+    if (now() - started >= budgetMs) {
+      result.notAttempted = ready.length - i;
+      break;
+    }
     const outcomes = await Promise.all(
       ready.slice(i, i + CONCURRENCY).map(async (row) => {
         try {

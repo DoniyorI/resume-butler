@@ -84,6 +84,10 @@ const NOT_INCLUDED = [
   "PDF files themselves are not included, only their details.",
 ];
 
+// Only a missing TABLE (a migration not applied) is an empty section. A missing
+// column or any other error means rows could not be read: the section is incomplete.
+const isMissingTable = (error) => error?.code === "42P01" || error?.code === "PGRST205";
+
 function stripped(row) {
   const copy = { ...row };
   for (const key of NEVER_EXPORT) delete copy[key];
@@ -187,7 +191,7 @@ export async function* exportJsonChunks(supabase, userId, { now = new Date() } =
 
     counts[section.name] = count;
     if (wasTruncated) truncated.push(section.name);
-    if (failed && !isSetupPending(failed)) {
+    if (failed && !isMissingTable(failed)) {
       // Names the section only, never a row
       console.error("export_section_failed", { section: section.name, code: failed.code || "unknown" });
       incomplete.push(section.name);

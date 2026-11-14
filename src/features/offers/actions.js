@@ -20,6 +20,10 @@ const date = z
   .union([z.string().refine(isValidDateKey, "That date doesn't exist. Pick a real calendar date."), z.literal(""), z.null()])
   .optional()
   .transform((value) => value || null);
+// Unlike the other dates, "" is kept: it means the user cleared the field
+const decideBy = z
+  .union([z.string().refine(isValidDateKey, "That date doesn't exist. Pick a real calendar date."), z.literal(""), z.null()])
+  .optional();
 const text = (max, label) =>
   z.string().max(max, `Keep ${label} under ${max.toLocaleString("en-US")} characters`).default("");
 
@@ -39,7 +43,7 @@ const saveInput = z.object({
   benefits: text(1000, "the benefits"),
   startDate: date,
   receivedOn: date,
-  decideBy: date,
+  decideBy,
   notes: text(5000, "notes"),
 });
 

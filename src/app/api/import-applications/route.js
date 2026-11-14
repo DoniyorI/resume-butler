@@ -81,6 +81,7 @@ export async function POST(request) {
     return NextResponse.json({
       imported: result.imported,
       failed: result.failed,
+      notAttempted: result.notAttempted,
       skipped: { duplicates: plan.totals.duplicates + result.duplicates, undated: plan.totals.undated, errors: plan.totals.errors },
       truncated: plan.totals.truncated,
       ids: result.ids,

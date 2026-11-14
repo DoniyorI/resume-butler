@@ -132,8 +132,10 @@ export default function ImportApplications() {
           <h2 className="font-semibold">Imported {plural(result.imported, "application", "applications")}.</h2>
           {skippedLine(result) ? <p className="text-sm text-muted-foreground">{skippedLine(result)}</p> : null}
           {result.failed ? <p className="text-sm text-red-700">{plural(result.failed, "row", "rows")} could not be saved. Try importing the file again; rows already added are skipped as already tracked.</p> : null}
+          {result.notAttempted > 0 ? <p className="text-sm text-amber-900">{plural(result.notAttempted, "row was", "rows were")} not imported because the import ran out of time. Import the file again to add them; rows already imported are skipped as duplicates.</p> : null}
           {result.truncated ? <p className="text-sm text-muted-foreground">The file has more than 500 rows. Only the first 500 were read; import the rest in a second file.</p> : null}
           {undone !== null ? <p className="text-sm">Removed {plural(undone, "application", "applications")}.</p> : null}
+          {undone === null && result.ids.length ? <p className="text-xs text-muted-foreground">Undo removes the applications this import added, including any changes you have made to them since. Available for one hour.</p> : null}
           <div className="flex flex-wrap items-center gap-3">
             {undone === null && result.ids.length ? <Button type="button" variant="outline" size="sm" onClick={undo} disabled={busy}>Undo import</Button> : null}
             <Link href="/applications" className="text-sm font-medium text-brand hover:underline">Go to applications</Link>
@@ -180,6 +182,7 @@ export default function ImportApplications() {
               ) : null}
             </div>
             {dateMapped && preview.dateOrderAmbiguous ? <p className="text-sm text-amber-900">These dates can be read both ways; check the first rows below.</p> : null}
+            {dateMapped && preview.dateOrderMixed ? <p className="text-sm text-amber-900">This column mixes day-first and month-first dates. Rows that cannot be read in the chosen order are listed below and skipped.</p> : null}
           </section>
 
           {preview.needsMapping ? (
@@ -189,6 +192,8 @@ export default function ImportApplications() {
               <section className={card} aria-label="Preview">
                 <h2 className="font-semibold">Preview</h2>
                 <p className="text-sm" role="status">{totalsLine(totals)}</p>
+                {preview.columnsTruncated ? <p className="text-sm text-muted-foreground">Only the first 40 columns of this file were read.</p> : null}
+                {preview.blankStatuses > 0 ? <p className="text-sm text-muted-foreground">{plural(preview.blankStatuses, "row has", "rows have")} no status and will be imported as Applied.</p> : null}
                 {totals.truncated ? <p className="text-sm text-muted-foreground">This file has more than 500 rows. Only the first 500 will be imported; import the rest in a second file.</p> : null}
                 {preview.unknownStatuses.length ? (
                   <p className="text-sm text-muted-foreground">
@@ -209,7 +214,7 @@ export default function ImportApplications() {
                   <table className="w-full min-w-[640px] text-left text-sm">
                     <caption className="sr-only">First rows of the file and what will happen to each</caption>
                     <thead className="bg-muted/50 text-xs text-muted-foreground">
-                      <tr>{["Line", "Company", "Role", "Status", "Applied", "Outcome"].map((h) => <th key={h} scope="col" className="px-3 py-2 font-medium">{h}</th>)}</tr>
+                      <tr>{["Row", "Company", "Role", "Status", "Applied", "Outcome"].map((h) => <th key={h} scope="col" className="px-3 py-2 font-medium">{h}</th>)}</tr>
                     </thead>
                     <tbody className="divide-y">
                       {preview.rows.map((row) => {
@@ -233,7 +238,7 @@ export default function ImportApplications() {
                   <div className="space-y-1">
                     <h3 className="text-sm font-medium">Rows that will be skipped</h3>
                     <ul className="list-disc space-y-0.5 pl-5 text-sm text-muted-foreground">
-                      {preview.problems.map((p) => <li key={p.line}>Line {p.line}: {p.reason}</li>)}
+                      {preview.problems.map((p) => <li key={p.line}>Row {p.line}: {p.reason}</li>)}
                     </ul>
                   </div>
                 ) : null}

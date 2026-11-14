@@ -39,7 +39,7 @@ test("the formula guard covers = + - @ tab and CR", () => {
 });
 
 test("each delimiter is detected, ignoring ones inside quotes", () => {
-  assert.deepEqual(parseCsv("a,b,c\n1,2,3"), { rows: [["a", "b", "c"], ["1", "2", "3"]], delimiter: ",", truncated: false });
+  assert.deepEqual(parseCsv("a,b,c\n1,2,3"), { rows: [["a", "b", "c"], ["1", "2", "3"]], delimiter: ",", truncated: false, columnsDropped: false });
   const semi = parseCsv('a;b;c\n1;"x;y";3');
   assert.equal(semi.delimiter, ";");
   assert.deepEqual(semi.rows, [["a", "b", "c"], ["1", "x;y", "3"]]);
@@ -94,4 +94,9 @@ test("a 1 MB input parses in one linear pass", () => {
   assert.equal(parseCsv(`"${big}`).rows[0][0].length, 1_000_000);
   assert.equal(parseCsv(big).rows[0][0].length, 1_000_000);
   assert.ok(performance.now() - started < 500);
+});
+
+test("columnsDropped reports fields cut by maxColumns", () => {
+  assert.equal(parseCsv("a,b,c\n1,2,3", { maxColumns: 2 }).columnsDropped, true);
+  assert.equal(parseCsv("a,b\n1,2", { maxColumns: 2 }).columnsDropped, false);
 });

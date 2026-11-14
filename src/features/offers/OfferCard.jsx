@@ -51,6 +51,8 @@ function decisionText(offer) {
  */
 export default function OfferCard({ applicationId, offer, decideBy, deadlineAvailable, setupPending }) {
   const [form, setForm] = useState(() => initialState(offer, decideBy));
+  // Whether a decide-by step exists, so an untouched empty field is not read as "cleared"
+  const [hasDeadline, setHasDeadline] = useState(Boolean(decideBy));
   // One request at a time, so a double click can't send it twice
   const [busy, setBusy] = useState(false);
   // "accepted" or "declined" while the confirm area is open
@@ -65,6 +67,7 @@ export default function OfferCard({ applicationId, offer, decideBy, deadlineAvai
   }
 
   const decision = offer?.decision || "pending";
+  const showDecideBy = deadlineAvailable && decision === "pending";
   const saved =
     offer?.baseAmount == null
       ? ""
@@ -102,11 +105,15 @@ export default function OfferCard({ applicationId, offer, decideBy, deadlineAvai
           benefits: form.benefits,
           startDate: form.startDate,
           receivedOn: form.receivedOn,
-          decideBy: deadlineAvailable ? form.decideBy : "",
+          // "" tells the server the user cleared the date; null leaves the step alone
+          decideBy: !showDecideBy ? null : form.decideBy || (hasDeadline ? "" : null),
           notes: form.notes,
         }),
       (data) => {
-        if (!data.deadlineError) toast.success("Offer saved");
+        if (!data.deadlineError) {
+          setHasDeadline(showDecideBy && Boolean(form.decideBy));
+          toast.success("Offer saved");
+        }
       }
     );
   };
@@ -128,6 +135,9 @@ export default function OfferCard({ applicationId, offer, decideBy, deadlineAvai
         }),
       () => {
         setDeciding(null);
+        // The decide-by step is done; the old date must not come back on the next save
+        setForm((current) => ({ ...current, decideBy: "" }));
+        setHasDeadline(false);
         toast.success(next === "pending" ? "Decision cleared" : next === "accepted" ? "Offer accepted" : "Offer declined");
       }
     );
@@ -143,8 +153,9 @@ export default function OfferCard({ applicationId, offer, decideBy, deadlineAvai
         {saved && <p className="text-sm font-medium">{saved}</p>}
 
         <form onSubmit={save} className="space-y-3" aria-label="Offer terms">
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_auto_5rem]">
-            <div className="space-y-1.5">
+          {/* The card sits in the narrow side column, so rows hold at most two controls */}
+          <div className="grid grid-cols-[minmax(0,1fr)_5.5rem] gap-3">
+            <div className="col-span-2 space-y-1.5">
               <Label htmlFor={fieldId("amount")} className="text-xs">
                 Base pay
               </Label>
@@ -163,7 +174,7 @@ export default function OfferCard({ applicationId, offer, decideBy, deadlineAvai
                 Pay period
               </Label>
               <Select value={form.basePeriod} onValueChange={set("basePeriod")}>
-                <SelectTrigger id={fieldId("period")} className="sm:w-32">
+                <SelectTrigger id={fieldId("period")}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -214,7 +225,7 @@ export default function OfferCard({ applicationId, offer, decideBy, deadlineAvai
             />
           </div>
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor={fieldId("received")} className="text-xs">
                 Offer received on
@@ -227,7 +238,7 @@ export default function OfferCard({ applicationId, offer, decideBy, deadlineAvai
               </Label>
               <Input id={fieldId("start")} type="date" value={form.startDate} onChange={(e) => set("startDate")(e.target.value)} />
             </div>
-            {deadlineAvailable && (
+            {showDecideBy && (
               <div className="space-y-1.5">
                 <Label htmlFor={fieldId("decide-by")} className="text-xs">
                   Decide by

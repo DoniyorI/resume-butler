@@ -189,6 +189,21 @@ test("a table that does not exist yet is empty, not incomplete", async () => {
   assert.deepEqual(doc.data.applications.map((r) => r.id), ["a1"]);
 });
 
+test("a missing column is incomplete, not an empty section", async () => {
+  const original = console.error;
+  console.error = () => {};
+  try {
+    for (const code of ["42703", "PGRST204"]) {
+      const db = database(seed());
+      db.fail("application_offers", "select", { code, message: "column missing" });
+      const doc = JSON.parse(await collect(db));
+      assert.deepEqual(doc.summary.incomplete, ["applicationOffers"]);
+    }
+  } finally {
+    console.error = original;
+  }
+});
+
 test("any other failure is incomplete and the document stays valid", async () => {
   const logged = [];
   const original = console.error;

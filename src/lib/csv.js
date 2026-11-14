@@ -56,6 +56,7 @@ export function parseCsv(input, { maxRows = 5000, maxColumns = 60 } = {}) {
   const length = text.length;
   const rows = [];
   let truncated = false;
+  let columnsDropped = false;
   let row = [];
   let i = 0;
 
@@ -91,6 +92,7 @@ export function parseCsv(input, { maxRows = 5000, maxColumns = 60 } = {}) {
       field = text.slice(start, i);
     }
     if (row.length < maxColumns) row.push(field);
+    else columnsDropped = true;
 
     if (i < length && text.charCodeAt(i) === delimiterCode) { i++; continue; }
 
@@ -104,5 +106,5 @@ export function parseCsv(input, { maxRows = 5000, maxColumns = 60 } = {}) {
     }
     if (i >= length) break;
   }
-  return { rows, delimiter, truncated };
+  return { rows, delimiter, truncated, columnsDropped };
 }
