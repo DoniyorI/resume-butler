@@ -409,3 +409,109 @@ test("before migration 020: reads are setupPending, writes say how to fix it", a
   db.fail("application_activities", "select", { code: "57014", message: "timeout" });
   await assert.rejects(service.listActivities(db, user, { applicationId: appId }), (e) => e.code === "57014");
 });
+
+// ---------- offers: record, decision and closing the search ----------
+
+const { SEARCH_CLOSED_DAYS } = await import("@/server/activities/suggest");
+const offerOf = (applicationId, decision, decidedOn = null) => ({ applicationId, decision, decidedOn });
+const kindsOf = (list) => list.map((item) => item.kind);
+
+test("offer rule: an Offered application with no offer record asks to record it", () => {
+  const offered = app(appId, "Offered", { company: "Acme" });
+  const [first] = suggestNextSteps({ applications: [offered], offers: [], today });
+  assert.equal(first.title, "Record your offer");
+  assert.equal(first.reason, "Record the terms and decision deadline for your offer from Acme.");
+  assert.equal(first.kind, "offer_deadline");
+  assert.equal(first.href, `/applications/${appId}#offer`);
+  // A pending record without a deadline step keeps the original wording
+  const [pending] = suggestNextSteps({ applications: [offered], offers: [offerOf(appId, "pending")], today });
+  assert.equal(pending.title, "Record your offer deadline");
+  assert.equal(pending.reason, "Record the decision deadline for your offer from Acme.");
+  // An open deadline step still suppresses it
+  assert.deepEqual(suggestNextSteps({ applications: [offered], offers: [], activities: [activity({ kind: "offer_deadline" })], today }), []);
+});
+
+test("offer rule: a decided offer is no longer asked about", () => {
+  const offered = app(appId, "Offered");
+  assert.deepEqual(suggestNextSteps({ applications: [offered], offers: [offerOf(appId, "declined", "2026-10-01")], today }), []);
+  // Accepted long ago: the offer rule is silent too, and nothing closes the search
+  assert.deepEqual(suggestNextSteps({ applications: [offered], offers: [offerOf(appId, "accepted", "2026-01-01")], today }), []);
+});
+
+test("search_closed: an accepted offer asks to withdraw the other open applications", () => {
+  const accepted = app(appId, "Offered", { company: "Acme" });
+  const others = [app(otherApp, "Applied"), app(uuid(5), "Interviewed"), app(uuid(6), "Rejected"), app(uuid(7), "Withdrew")];
+  const result = suggestNextSteps({
+    applications: [...others, accepted],
+    offers: [offerOf(appId, "accepted", addDays(today, -3))],
+    today,
+  });
+  assert.equal(result.length, 1);
+  assert.equal(result[0].kind, "search_closed");
+  assert.equal(result[0].title, "Close out your search");
+  assert.equal(result[0].href, "/applications");
+  assert.match(result[0].reason, /^You accepted the offer from Acme on .+\. 2 other applications are still open: withdraw the ones you are no longer pursuing\.$/);
+  const one = suggestNextSteps({ applications: [accepted, app(otherApp, "Applied")], offers: [offerOf(appId, "accepted", today)], today });
+  assert.match(one[0].reason, /1 other application is still open/);
+});
+
+test("search_closed: first in order, suppresses new-thread rules, keeps inbox and other offers", () => {
+  const accepted = app(appId, "Offered", { company: "Acme" });
+  const waiting = app(otherApp, "Applied", { applied_date: addDays(today, -20) });
+  const interviewed = app(uuid(5), "Interviewed");
+  const reached = app(uuid(6), "Reached Out");
+  const secondOffer = app(uuid(7), "Offered", { company: "Beta" });
+  const result = suggestNextSteps({
+    applications: [accepted, waiting, interviewed, reached, secondOffer],
+    offers: [offerOf(appId, "accepted", addDays(today, -1))],
+    savedJobs: [{ id: "s1", company: "X", role: "Y", createdAt: `${addDays(today, -30)}T00:00:00Z`, applicationId: null, band: "strong" }],
+    watched: [{ id: "w1", firstSeenAt: `${today}T00:00:00Z`, band: "strong" }],
+    pendingEmailCount: 2,
+    today,
+  });
+  assert.deepEqual(kindsOf(result), ["search_closed", "offer_deadline", "inbox"]);
+  // Without the accepted offer the suppressed rules are back
+  const normal = suggestNextSteps({
+    applications: [accepted, waiting, interviewed, reached],
+    offers: [],
+    savedJobs: [{ id: "s1", company: "X", role: "Y", createdAt: `${addDays(today, -30)}T00:00:00Z`, applicationId: null, band: "strong" }],
+    watched: [{ id: "w1", firstSeenAt: `${today}T00:00:00Z`, band: "strong" }],
+    today,
+  });
+  for (const kind of ["interview", "recruiter_screen", "follow_up", "saved_job_fit", "watchlist_fit"]) {
+    assert.ok(kindsOf(normal).includes(kind), kind);
+  }
+});
+
+test("search_closed: 60 days is the boundary, and with no other open application only the suppression remains", () => {
+  assert.equal(SEARCH_CLOSED_DAYS, 60);
+  const accepted = app(appId, "Offered");
+  const waiting = app(otherApp, "Interviewed");
+  const at = (days) => suggestNextSteps({ applications: [accepted, waiting], offers: [offerOf(appId, "accepted", addDays(today, -days))], today });
+  assert.deepEqual(kindsOf(at(60)), ["search_closed"]);
+  // 61 days on, the search is no longer closing and the normal rules return
+  assert.deepEqual(kindsOf(at(61)), ["interview"]);
+  // N = 0: no suggestion, but the rules that open new threads stay quiet
+  const none = suggestNextSteps({
+    applications: [accepted, app(otherApp, "Rejected"), app(uuid(5), "Withdrew")],
+    offers: [offerOf(appId, "accepted", today)],
+    pendingEmailCount: 1,
+    today,
+  });
+  assert.deepEqual(kindsOf(none), ["inbox"]);
+  const quiet = suggestNextSteps({
+    applications: [accepted, app(otherApp, "Reached Out")],
+    offers: [offerOf(appId, "accepted", today), offerOf(otherApp, "pending")],
+    today,
+  });
+  assert.deepEqual(kindsOf(quiet), ["search_closed"]);
+});
+
+test("omitting offers leaves every existing suggestion as it was", () => {
+  const offered = app(appId, "Offered", { company: "Acme" });
+  const interviewed = app(otherApp, "Interviewed");
+  const without = suggestNextSteps({ applications: [offered, interviewed], today });
+  assert.deepEqual(without.map((s) => s.title), ["Record your offer deadline", "Plan the next round"]);
+  assert.equal(without[0].reason, "Record the decision deadline for your offer from Acme.");
+  assert.deepEqual(suggestNextSteps({ applications: [offered, interviewed], offers: null, today }), without);
+});

@@ -15,6 +15,7 @@ import {
 } from "@/features/applications/listParams";
 import SuggestionsBanner from "@/features/suggestions/SuggestionsBanner";
 import { getPendingSummary } from "@/features/suggestions/data";
+import { listOfferDecisions } from "@/server/offers/service";
 
 export const metadata = { title: "Applications" };
 
@@ -25,6 +26,21 @@ async function ApplicationsList({ params }) {
     getPendingSummary(supabase, user.id),
     getUnresolvedExtensionEvents(supabase),
   ]);
+
+  // Accepted or declined offers for the rows on this page; none before
+  // migration 022, and a failure just leaves the suffix off
+  const decisions = await listOfferDecisions(
+    supabase,
+    user.id,
+    applications.map((application) => application.id)
+  ).catch((error) => {
+    console.warn("Could not load offer decisions:", error.message);
+    return new Map();
+  });
+  const rowsWithOffers = applications.map((application) => ({
+    ...application,
+    offerDecision: decisions.get(application.id) || null,
+  }));
 
   // Past the last page (e.g. after deleting every row on it): go to the last
   // real page with the same filters and sort
@@ -39,7 +55,7 @@ async function ApplicationsList({ params }) {
       <SuggestionsBanner count={pendingSuggestions.count} latestAt={pendingSuggestions.latestAt} />
       <ExtensionMatchReview events={unmatched} />
       <ApplicationTable
-        applications={applications}
+        applications={rowsWithOffers}
         total={total}
         allTotal={allTotal}
         statusCounts={statusCounts}

@@ -8,10 +8,12 @@ import { loadMasterCv } from "@/server/resume/loadCv";
 import ApplicationEditor from "@/features/applications/ApplicationEditor";
 import SubmissionPanel from "@/features/applications/SubmissionPanel";
 import { getApplicationDetail } from "@/features/applications/data";
+import OfferCard from "@/features/offers/OfferCard";
 import NextSteps from "@/features/activities/NextSteps";
 import { ACTIVITY_KINDS } from "@/features/activities/kinds";
 import { requirePageUser } from "@/server/auth";
 import { listActivities } from "@/server/activities/service";
+import { getOffer } from "@/server/offers/service";
 
 export async function generateMetadata({ params }) {
   const detail = await getApplicationDetail(params.id);
@@ -58,6 +60,14 @@ export default async function ApplicationDetailPage({ params, searchParams }) {
   // ?step=interview (from a dashboard suggestion) opens the add form on that kind
   const step = ACTIVITY_KINDS.includes(searchParams?.step) ? searchParams.step : undefined;
 
+  // Shown for an Offered application or one that already has an offer record;
+  // before migration 022 it is one quiet line. Any other failure hides the card.
+  const offer = await getOffer(supabase, user.id, detail.application.id).catch((error) => {
+    console.warn("Could not load the offer:", error.message);
+    return null;
+  });
+  const showOffer = Boolean(offer) && (detail.application.status === "Offered" || Boolean(offer.offer));
+
   const fit = await loadFit(supabase, user.id, detail);
   const resumeId = detail.application.resumeId;
 
@@ -88,6 +98,17 @@ export default async function ApplicationDetailPage({ params, searchParams }) {
               <p className="text-xs text-muted-foreground">Based on the saved job description.</p>
             </CardContent>
           </Card>
+        ) : null
+      }
+      offer={
+        showOffer ? (
+          <OfferCard
+            applicationId={detail.application.id}
+            offer={offer.offer}
+            decideBy={offer.decideBy}
+            deadlineAvailable={offer.deadlineAvailable}
+            setupPending={offer.setupPending}
+          />
         ) : null
       }
       nextSteps={

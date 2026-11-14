@@ -119,6 +119,7 @@ export default function ApplicationEditor({
   resumeContent,
   submissionPanel,
   nextSteps,
+  offer,
   fit,
 }) {
   const [form, dispatch] = useReducer(formReducer, application, initForm);
@@ -486,6 +487,7 @@ export default function ApplicationEditor({
         </div>
 
         <aside className="space-y-5">
+          {offer}
           {nextSteps}
           <StatusTimeline history={statusHistory} />
           <LinkedDocuments resumeId={application.resumeId} coverLetterId={application.coverLetterId} />

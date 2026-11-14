@@ -33,12 +33,12 @@ try {
     grant execute on all functions in schema auth to anon,authenticated,service_role;`);
   const directory = new URL("../supabase/migrations/", import.meta.url);
   const files = (await readdir(directory)).filter(f => /^\d{3}_.*\.sql$/.test(f)).sort();
-  equal(files.at(-1), "021_watchlist.sql");
+  assert.ok(files.includes("021_watchlist.sql")); assertions++;
   for (const file of files) {
     await pg.exec((await readFile(new URL(file, directory), "utf8")).replace('create extension if not exists "uuid-ossp";', ""));
     if (file.startsWith("012_")) await pg.exec("grant all on all tables in schema public to authenticated,service_role");
   }
-  assertions++; // 001-021 applied
+  assertions++; // all migrations applied
 
   await pg.query("insert into auth.users(id,email) values($1,'watch-qa@example.test'),($2,'other-qa@example.test')", [user, other]);
 

@@ -26,8 +26,10 @@ export default function StatusCell({ row }) {
     });
   };
 
+  const offerDecision = row.original.offerDecision;
+
   return (
-    <div className="flex justify-start">
+    <div className="flex items-center justify-start">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
@@ -54,6 +56,11 @@ export default function StatusCell({ row }) {
           ))}
         </DropdownMenuContent>
       </DropdownMenu>
+      {(offerDecision === "accepted" || offerDecision === "declined") && (
+        <span className="ml-0.5 text-xs text-muted-foreground">
+          {offerDecision === "accepted" ? "Accepted" : "Declined"}
+        </span>
+      )}
     </div>
   );
 }

@@ -19,6 +19,10 @@ const FIT_BANDS = ["strong", "good"];
 // Watched postings first seen this recently count as new
 const WATCHED_NEW_DAYS = 7;
 
+// After accepting an offer, the search counts as closing for this many days
+export const SEARCH_CLOSED_DAYS = 60;
+const CLOSED_STATUSES = ["Rejected", "Withdrew"];
+
 const DAY_MS = 86_400_000;
 const companyOf = (app) => app.company || "this company";
 const appHref = (id, kind) => `/applications/${id}?step=${kind}#next-steps`;
@@ -32,6 +36,8 @@ const appHref = (id, kind) => `/applications/${id}?step=${kind}#next-steps`;
  *   fit band from assessFit when the caller could compute it (never computed here)
  * @param {Array} input.watched [{ id, firstSeenAt, band }] open postings at watched companies with their
  *   fit band (from watchedWithBands; never computed here)
+ * @param {Array|null} input.offers [{ applicationId, decision, decidedOn }] (listOffersForSuggestions); null
+ *   when the caller has no offer data, which keeps the original offer wording
  * @param {number} input.pendingEmailCount inbox suggestions waiting for review
  * @param {string} input.today "YYYY-MM-DD"
  * @returns {Array<{ id, kind, title, reason, href, applicationId? }>}
@@ -42,6 +48,7 @@ export function suggestNextSteps({
   activities = [],
   savedJobs = [],
   watched = [],
+  offers: offerRecords = null,
   pendingEmailCount = 0,
   today,
 }) {
@@ -64,17 +71,52 @@ export function suggestNextSteps({
     return Boolean(kinds && (kind ? kinds.has(kind) : kinds.size));
   };
 
+  const offerByApp = new Map((offerRecords || []).map((record) => [record.applicationId, record]));
+
+  // An accepted offer from the last 60 days closes the search: one suggestion
+  // to withdraw the rest, and the rules that open new threads go quiet
+  const accepted = (offerRecords || [])
+    .filter((record) => record.decision === "accepted" && record.decidedOn)
+    .filter((record) => daysBetween(record.decidedOn, today) <= SEARCH_CLOSED_DAYS)
+    .filter((record) => applications.some((app) => app.id === record.applicationId))
+    .sort((a, b) => b.decidedOn.localeCompare(a.decidedOn))[0];
+  const searchClosed = Boolean(accepted);
+  const closing = [];
+  if (accepted) {
+    const stillOpen = applications.filter(
+      (app) => app.id !== accepted.applicationId && !CLOSED_STATUSES.includes(app.status)
+    ).length;
+    if (stillOpen >= 1) {
+      const company = companyOf(applications.find((app) => app.id === accepted.applicationId));
+      closing.push({
+        id: "search-closed",
+        kind: "search_closed",
+        title: "Close out your search",
+        reason: `You accepted the offer from ${company} on ${formatShortDate(accepted.decidedOn)}. ${stillOpen} other ${
+          stillOpen === 1 ? "application is" : "applications are"
+        } still open: withdraw the ones you are no longer pursuing.`,
+        href: "/applications",
+      });
+    }
+  }
+
   const offers = [];
   const interviews = [];
   const recruiters = [];
   for (const app of applications) {
-    if (app.status === "Offered" && !hasOpen(app.id, "offer_deadline")) {
+    const record = offerByApp.get(app.id);
+    if (app.status === "Offered" && ["accepted", "declined"].includes(record?.decision)) {
+      // Decided: nothing left to record
+    } else if (app.status === "Offered" && !hasOpen(app.id, "offer_deadline")) {
+      const unrecorded = offerRecords && !record;
       offers.push({
         id: `offer:${app.id}`,
         kind: "offer_deadline",
-        title: "Record your offer deadline",
-        reason: `Record the decision deadline for your offer from ${companyOf(app)}.`,
-        href: appHref(app.id, "offer_deadline"),
+        title: unrecorded ? "Record your offer" : "Record your offer deadline",
+        reason: unrecorded
+          ? `Record the terms and decision deadline for your offer from ${companyOf(app)}.`
+          : `Record the decision deadline for your offer from ${companyOf(app)}.`,
+        href: unrecorded ? `/applications/${app.id}#offer` : appHref(app.id, "offer_deadline"),
         applicationId: app.id,
       });
     } else if (app.status === "Interviewed" && !hasOpen(app.id) && !recent.has(app.id)) {
@@ -183,5 +225,8 @@ export function suggestNextSteps({
       href: "/saved-jobs",
     }));
 
+  if (searchClosed) {
+    return [...closing, ...offers, ...inbox].slice(0, SUGGESTION_LIMIT);
+  }
   return [...offers, ...interviews, ...recruiters, ...followUps, ...inbox, ...fits, ...watchlist, ...saved].slice(0, SUGGESTION_LIMIT);
 }
