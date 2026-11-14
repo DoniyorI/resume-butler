@@ -7,8 +7,8 @@ import { z } from "zod";
 import { requireUser } from "@/server/auth";
 import { parseInput, runAction } from "@/server/actionResult";
 import { HttpError } from "@/server/http";
-import { APPLICATION_STATUSES, DEFAULT_STATUS } from "@/lib/constants";
-import { normalizeHttpUrl } from "@/lib/safeUrl";
+import { DEFAULT_STATUS } from "@/lib/constants";
+import { applicationFields, commentsSchema, optionalText, statusSchema } from "@/features/applications/schema";
 import { insertApplication, payloadDetailColumns } from "@/server/applications/insertApplication";
 import { getOpportunityForUrl } from "@/server/opportunities/service";
 
@@ -16,29 +16,10 @@ const MAX_BULK = 500;
 
 const idSchema = z.string().uuid("Invalid application");
 const idsSchema = z.array(idSchema).min(1, "Select at least one application").max(MAX_BULK);
-const statusSchema = z.enum(APPLICATION_STATUSES, {
-  errorMap: () => ({ message: "Unknown status" }),
-});
-const commentsSchema = z.string().trim().max(5000, "Comments are too long");
-const optionalText = (max, label) => z.string().trim().max(max, `${label} is too long`).default("");
 const optionalId = z
   .union([z.string().uuid(), z.literal(""), z.null()])
   .optional()
   .transform((value) => value || null);
-
-// The fields the add dialog and the detail page both edit
-const applicationFields = {
-  company: z.string().trim().min(1, "Company name is required").max(200, "Company name is too long"),
-  role: optionalText(200, "Role"),
-  location: optionalText(200, "Location"),
-  portalLink: z.string().max(2048, "Portal link is too long").default("").transform(normalizeHttpUrl),
-  status: statusSchema.default(DEFAULT_STATUS),
-  comments: commentsSchema.default(""),
-  appliedDate: z
-    .union([z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date"), z.literal(""), z.null()])
-    .optional()
-    .transform((value) => value || null),
-};
 
 const createSchema = z.object({
   ...applicationFields,
