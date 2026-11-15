@@ -185,6 +185,20 @@ test("a completed sign-in stores the mailbox with its refresh token encrypted", 
   assert.equal(calls.filter((c) => isRevoke(c.url)).length, 0);
 });
 
+test("signing in with Google over an app-password connection replaces it and drops the password", async () => {
+  const db = database({ email_connections: [{ user_id: userId, provider: "imap", imap_host: "imap.gmail.com", imap_port: 993, email_address: "me@gmail.example", app_password: encryptSecret("old-app-password"), oauth_refresh_token: null, is_active: true, auto_sync: true }] });
+  const { cookie } = startGmailConnect(userId, origin);
+  const { calls, fetchImpl } = fakeGoogle([grant(), profile, [isRevoke, () => json(200, {})]]);
+  assert.equal(await finishGmailConnect(db, userId, { origin, params: callback(cookie.split(".")[0]), cookie }, { fetchImpl }), "connected");
+  assert.equal(db.tables.email_connections.length, 1);
+  const [row] = db.tables.email_connections;
+  assert.equal(row.provider, "gmail");
+  assert.equal(row.app_password, null);
+  assert.equal(row.auto_sync, true, "the daily sync setting is kept");
+  assert.equal(decryptSecret(row.oauth_refresh_token), "refresh-new");
+  assert.equal(calls.filter((c) => isRevoke(c.url)).length, 0, "nothing to revoke for an app password");
+});
+
 test("a callback with a wrong state, another user's state or a denial stores nothing", async () => {
   const db = database({ email_connections: [] });
   const { cookie } = startGmailConnect(userId, origin);

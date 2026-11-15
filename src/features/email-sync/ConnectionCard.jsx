@@ -15,7 +15,7 @@ import ScanOptions from "@/features/email-sync/ScanOptions";
 const DEFAULT_HOST = "imap.gmail.com";
 const DEFAULT_PORT = 993;
 
-function ConnectedState({ connection, scanning, onScan, onDisconnect, scanOptions, onScanOptionsChange }) {
+function ConnectedState({ connection, gmailAvailable, scanning, onScan, onDisconnect, scanOptions, onScanOptionsChange }) {
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2 p-3 bg-green-50 rounded-lg">
@@ -33,6 +33,18 @@ function ConnectedState({ connection, scanning, onScan, onDisconnect, scanOption
           </p>
         </div>
       </div>
+
+      {/* An app-password Gmail inbox can move to Google sign-in; the callback replaces this connection */}
+      {gmailAvailable && connection.provider !== "gmail" && /@(gmail|googlemail)\.com$/i.test(connection.emailAddress) && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-brand/30 bg-brand/5 p-3">
+          <p className="text-xs text-gray-600">
+            Switch to Google sign-in: no app password to manage, read-only access you can remove any time.
+          </p>
+          <Button asChild size="sm" variant="outline">
+            <a href="/api/gmail/connect">Switch to Google sign-in</a>
+          </Button>
+        </div>
+      )}
 
       <div className="rounded-lg border p-3">
         <AutoSyncToggle connection={connection} />
@@ -114,6 +126,7 @@ export default function ConnectionCard({ connection, gmailAvailable = false, sca
         {connection ? (
           <ConnectedState
             connection={connection}
+            gmailAvailable={gmailAvailable}
             scanning={scanning}
             onScan={onScan}
             scanOptions={scanOptions}
