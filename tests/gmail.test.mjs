@@ -140,6 +140,41 @@ test("Google's reason decides the message: only a lost grant asks to reconnect, 
   assert.equal(gmail.gmailReason({ error: { status: "UNAUTHENTICATED" } }), "UNAUTHENTICATED");
 });
 
+test("rate-limited reads are retried, and a message still refused is left for the next scan", async (t) => {
+  t.mock.method(console, "warn", () => {});
+  const tries = new Map();
+  const limited = json(403, { error: { code: 403, errors: [{ reason: "rateLimitExceeded" }] } });
+  const { fetchImpl } = fakeGoogle([
+    [isToken, () => json(200, { access_token: "access" })],
+    [isList, () => json(200, { messages: [{ id: "ok" }, { id: "slow" }, { id: "stuck" }], resultSizeEstimate: 3 })],
+    [isGet, (u) => {
+      const id = u.pathname.split("/").pop();
+      tries.set(id, (tries.get(id) || 0) + 1);
+      if (id === "slow" && tries.get(id) < 3) return limited;
+      if (id === "stuck") return limited;
+      return json(200, apiMessage(id));
+    }],
+  ]);
+  const emails = await gmail.fetchGmailEmails({ refreshToken: "r" }, {
+    since: new Date("2026-11-01"), before: new Date("2026-11-15"), fetchImpl, minGapMs: 0, retryBaseMs: 1,
+  });
+  assert.deepEqual(emails.map((e) => e.messageId).sort(), ["<ok@mail.example>", "<slow@mail.example>"]);
+  assert.equal(tries.get("slow"), 3);
+  assert.equal(tries.get("stuck"), 4, "the first try and three retries");
+  assert.equal(emails.truncated, 1, "the refused message counts as not processed");
+});
+
+test("message reads are spaced out to stay under Gmail's per-user rate", async () => {
+  const starts = [];
+  const { fetchImpl } = fakeGoogle([
+    [isToken, () => json(200, { access_token: "access" })],
+    [isList, () => json(200, { messages: Array.from({ length: 6 }, (_, i) => ({ id: `s${i}` })) })],
+    [isGet, (u) => { starts.push(Date.now()); return json(200, apiMessage(u.pathname.split("/").pop())); }],
+  ]);
+  await gmail.fetchGmailEmails({ refreshToken: "r" }, { since: new Date("2026-11-01"), before: new Date("2026-11-15"), fetchImpl, minGapMs: 20 });
+  assert.ok(starts.at(-1) - starts[0] >= 5 * 20 - 5, `6 reads took ${starts.at(-1) - starts[0]} ms`);
+});
+
 test("revoked or expired Google access asks the user to reconnect, without leaking tokens", async (t) => {
   t.mock.method(console, "error", () => {});
   const { fetchImpl } = fakeGoogle([[isToken, () => json(400, { error: "invalid_grant", error_description: "Token has been expired or revoked." })]]);

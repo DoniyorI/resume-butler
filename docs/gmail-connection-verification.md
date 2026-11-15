@@ -7,7 +7,7 @@ November 15, 2026. "Connect Gmail with Google" reads the inbox through the read-
 - `GET /api/gmail/connect` sends the signed-in user to Google's consent page asking for `gmail.readonly` only, with `access_type=offline` and `prompt=consent`. The state is 32 random bytes, kept with the user's ID in an httpOnly, SameSite=Lax cookie scoped to `/api/gmail` for 10 minutes.
 - `GET /api/gmail/callback` refuses a missing, forged, expired or other user's state, reports a denial, exchanges the code, refuses a grant without the Gmail permission (and revokes it), reads the mailbox address from the Gmail profile and stores the connection. Outcomes go back to `/email-sync?gmail=connected|denied|scope|expired|unavailable|setup|failed`; the page shows known outcomes only.
 - `email_connections` gains `provider` and `oauth_refresh_token` (migration 023). The refresh token is AES-256-GCM encrypted with `APP_ENCRYPTION_KEY`, never selected for the browser and listed in `NEVER_EXPORT`. A database check requires the secret that matches the provider.
-- `fetchGmailEmails` refreshes an access token per scan, lists `in:inbox` with the same Gmail search the IMAP reader uses over X-GM-RAW (date window, Promotions/Social/Forums excluded), reads up to 300 newest messages with `format=full` (8 at a time, a 25-second budget), skips attachments, honors each part's charset and keeps the `Message-ID` header, so mail already processed over IMAP is not processed again. It calls only `oauth2.googleapis.com` and `gmail.googleapis.com`.
+- `fetchGmailEmails` refreshes an access token per scan, lists `in:inbox` with the same Gmail search the IMAP reader uses over X-GM-RAW (date window, Promotions/Social/Forums excluded), reads up to 300 newest messages with `format=full` (4 at a time, one start every 30 ms to stay under Gmail's roughly 250 units a second per user, retrying a rate limit up to three times with 1, 2 and 4 second waits and leaving a message still refused for the next scan; a 25-second budget), skips attachments, honors each part's charset and keeps the `Message-ID` header, so mail already processed over IMAP is not processed again. It calls only `oauth2.googleapis.com` and `gmail.googleapis.com`.
 - Revoked or expired access (`invalid_grant`, 401, 403) gives "Reconnect Gmail in Inbox"; the daily auto-sync records the same message. Replacing a Gmail connection (with Google again or with an app password) and Disconnect revoke the old token.
 - A connected app-password inbox at a Gmail address shows "Switch to Google sign-in" (added after the owner's first try: the Google button only appeared without a connection). The round trip replaces the row in place, clears the app password and keeps the daily-sync setting.
 - Before migration 023, every connection read falls back to the IMAP-only columns and the Google round trip reports that the migration is needed (and revokes the token). Without both Google keys the button is hidden and `/api/gmail/connect` reports "not set up".
@@ -28,6 +28,10 @@ November 15, 2026. "Connect Gmail with Google" reads the inbox through the read-
 
 - The round trip with a real Google account and a real OAuth client: it needs `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` from the owner's Google Cloud project (setup in the README). After setting them: open Inbox, Connect Gmail with Google, approve, then Scan Now.
 - Message decoding against real Gmail payloads beyond the recorded shapes in the tests (multipart, HTML-only, ISO-8859-1, list headers).
+
+## First real use (November 15)
+
+The owner's first scan over Google failed: reading 300 messages 8 at a time hit Gmail's per-user rate limit (`403 rateLimitExceeded` on message reads, found once errors were logged with their step and reason), and every 403 was then shown as "Reconnect Gmail". Fixed by mapping errors on Google's reason (only a lost grant or missing permission asks to reconnect) and by pacing and retrying message reads.
 
 ## Known limits
 

@@ -13,7 +13,12 @@ const API_URL = "https://gmail.googleapis.com/gmail/v1/users/me";
 const DEFAULT_MAX_MESSAGES = 300;
 const SCAN_TIMEOUT_MS = 25_000;
 const PAGE_SIZE = 100;
-const FETCH_CONCURRENCY = 8;
+// Gmail allows each user about 250 quota units a second and a message read costs 5, so reads are
+// spread out (at most one start every MIN_GAP_MS, about 33 a second) and few run at once
+const FETCH_CONCURRENCY = 4;
+const MIN_GAP_MS = 30;
+const MAX_RETRIES = 3;
+const RETRY_BASE_MS = 1000;
 const REQUEST_TIMEOUT_MS = 10_000;
 
 const RECONNECT = "Google access to your Gmail has expired or was removed. Reconnect Gmail in Inbox.";
@@ -216,6 +221,9 @@ export function parseGmailMessage(message) {
   };
 }
 
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const isRateLimited = ({ status, body }) => status === 429 || (status === 403 && RATE_LIMITED.has(gmailReason(body)));
+
 async function mapLimited(items, limit, fn) {
   const results = new Array(items.length);
   let next = 0;
@@ -236,7 +244,15 @@ async function mapLimited(items, limit, fn) {
  */
 export async function fetchGmailEmails(
   { refreshToken },
-  { since, before, maxMessages = DEFAULT_MAX_MESSAGES, timeoutMs = SCAN_TIMEOUT_MS, fetchImpl = fetch }
+  {
+    since,
+    before,
+    maxMessages = DEFAULT_MAX_MESSAGES,
+    timeoutMs = SCAN_TIMEOUT_MS,
+    fetchImpl = fetch,
+    minGapMs = MIN_GAP_MS,
+    retryBaseMs = RETRY_BASE_MS,
+  }
 ) {
   const deadline = Date.now() + Math.max(1, Math.min(timeoutMs, SCAN_TIMEOUT_MS));
   const remaining = () => {
@@ -280,14 +296,35 @@ export async function fetchGmailEmails(
     more = Boolean(pageToken);
   } while (pageToken && ids.length < maxMessages);
 
-  const messages = await mapLimited(ids.slice(0, maxMessages), FETCH_CONCURRENCY, async (id) => {
-    const result = await call(`${API_URL}/messages/${id}?format=full`, auth);
-    if (result.status === 404) return null; // deleted between the list and the read
-    if (!result.ok) throw gmailError(result, "message");
-    return parseGmailMessage(result.body);
-  });
+  // Paced reads, retried with a growing wait when Gmail asks to slow down. A message still refused is
+  // left for the next scan (it is not marked processed) instead of failing the whole scan.
+  let nextStart = 0;
+  const pace = async () => {
+    const now = Date.now();
+    const wait = Math.max(0, nextStart - now);
+    nextStart = Math.max(now, nextStart) + minGapMs;
+    if (wait) await sleep(wait);
+  };
+  let deferred = 0;
+  const read = async (id) => {
+    for (let attempt = 0; ; attempt++) {
+      await pace();
+      const result = await call(`${API_URL}/messages/${id}?format=full`, auth);
+      if (result.status === 404) return null; // deleted between the list and the read
+      if (result.ok) return parseGmailMessage(result.body);
+      if (!isRateLimited(result)) throw gmailError(result, "message");
+      const backoff = retryBaseMs * 2 ** attempt;
+      if (attempt >= MAX_RETRIES || Date.now() + backoff >= deadline - 2_000) {
+        deferred++;
+        return null;
+      }
+      await sleep(backoff);
+    }
+  };
+  const messages = await mapLimited(ids.slice(0, maxMessages), FETCH_CONCURRENCY, read);
+  if (deferred) console.warn("Gmail reads deferred to the next scan", { deferred, of: ids.length });
 
   const emails = messages.filter((email) => email && email.messageId && email.fromAddress);
-  emails.truncated = more ? Math.max(1, estimate - ids.length) : 0;
+  emails.truncated = (more ? Math.max(1, estimate - ids.length) : 0) + deferred;
   return emails;
 }
