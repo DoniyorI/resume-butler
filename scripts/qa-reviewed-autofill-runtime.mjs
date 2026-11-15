@@ -9,11 +9,13 @@ const { chromium } = await import(pathToFileURL(process.env.PLAYWRIGHT_MODULE).h
 const profile = await mkdtemp("/tmp/resume-butler-a6-runtime-");
 const extension = fileURLToPath(new URL("../extension/", import.meta.url));
 const html = await readFile(new URL("../tests/fixtures/lever-application.html", import.meta.url), "utf8");
+const greenhouseHtml = await readFile(new URL("../tests/fixtures/greenhouse-application.html", import.meta.url), "utf8");
 const jobUrl = "https://jobs.lever.co/qa/00000000-0000-4000-8000-000000000001/apply";
+const greenhouseUrl = "https://job-boards.greenhouse.io/examplelabs/jobs/4000001";
 const answer = { id: "00000000-0000-4000-8000-000000000010", revision: 3, label: "QA project", question: "Describe a project.", answer: "I built an API.\nMeasured 25% improvement." };
-const facts = { name: "Ada Lovelace", email: "ada@example.test", phone: "", linkedin: "", github: "", portfolio: "" };
+const facts = { name: "Ada Lovelace", firstName: "Ada", lastName: "Lovelace", email: "ada@example.test", phone: "", linkedin: "", github: "", portfolio: "" };
 const gateway = { facts, profileFingerprint: "a".repeat(64), choices: [{ id: answer.id, revision: answer.revision, label: answer.label, question: answer.question }] };
-let context, root, nextId = 0, sourceReads = 0, checks = 0;
+let context, root, sessionId, nextId = 0, sourceReads = 0, checks = 0;
 const pending = new Map(), outgoing = [];
 const check = (actual, expected, message) => { assert.deepEqual(actual, expected, message); checks++; };
 try {
@@ -22,6 +24,7 @@ try {
   await context.route("**/*", async route => {
     const request = route.request(), url = new URL(request.url());
     if (url.origin === "https://jobs.lever.co" && request.method() === "GET") return route.fulfill({ contentType: "text/html", body: html });
+    if (url.origin === "https://job-boards.greenhouse.io" && request.method() === "GET" && request.isNavigationRequest()) return route.fulfill({ contentType: "text/html", body: greenhouseHtml });
     if (url.origin === "http://localhost:3000" && url.pathname.startsWith("/api/extension/")) {
       let body;
       if (url.pathname.endsWith("/autofill")) {
@@ -32,7 +35,7 @@ try {
       else return route.abort();
       return route.fulfill({ contentType: "application/json", body: JSON.stringify(body), headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "Authorization, Content-Type" } });
     }
-    if (url.origin === "https://jobs.lever.co") outgoing.push(request.method());
+    if (url.origin === "https://jobs.lever.co" || url.origin === "https://job-boards.greenhouse.io") outgoing.push(request.method());
     return route.abort();
   });
   const worker = context.serviceWorkers()[0] || await context.waitForEvent("serviceworker", { timeout: 15000 });
@@ -42,15 +45,18 @@ try {
 
   // This toolbar popup is absent from Playwright's page list. Locate its
   // actual target through the public CDP transport rather than using a fake tab.
-  await worker.evaluate(() => chrome.action.openPopup());
-  const popupContext = (await worker.evaluate(() => chrome.runtime.getContexts({ contextTypes: ["POPUP"] })))[0];
-  check(Boolean(popupContext), true, "a real toolbar popup must exist");
-  root = await context.browser().newBrowserCDPSession();
-  const targets = await root.send("Target.getTargets");
-  const target = targets.targetInfos.find(item => item.url === popupContext.documentUrl);
-  if (!target) console.log(JSON.stringify({ popupDocument: popupContext.documentUrl, extensionTargets: targets.targetInfos.filter(item => item.url.startsWith("chrome-extension://")).map(item => ({ type: item.type, url: item.url })) }));
-  assert.ok(target, "real popup target");
-  const { sessionId } = await root.send("Target.attachToTarget", { targetId: target.targetId, flatten: false });
+  async function attachPopup() {
+    await worker.evaluate(() => chrome.action.openPopup());
+    const popupContext = (await worker.evaluate(() => chrome.runtime.getContexts({ contextTypes: ["POPUP"] })))[0];
+    check(Boolean(popupContext), true, "a real toolbar popup must exist");
+    root ||= await context.browser().newBrowserCDPSession();
+    const targets = await root.send("Target.getTargets");
+    const target = targets.targetInfos.find(item => item.url === popupContext.documentUrl);
+    if (!target) console.log(JSON.stringify({ popupDocument: popupContext.documentUrl, extensionTargets: targets.targetInfos.filter(item => item.url.startsWith("chrome-extension://")).map(item => ({ type: item.type, url: item.url })) }));
+    assert.ok(target, "real popup target");
+    ({ sessionId } = await root.send("Target.attachToTarget", { targetId: target.targetId, flatten: false }));
+  }
+  await attachPopup();
   root.on("Target.receivedMessageFromTarget", event => {
     if (event.sessionId !== sessionId) return;
     const message = JSON.parse(event.message), task = pending.get(message.id);
@@ -91,6 +97,26 @@ try {
   check(await job.locator('input[type="file"]').evaluate(element => element.files.length), 0);
   check(await job.locator('input[type="checkbox"]:checked,input[type="radio"]:checked').count(), 0);
   check(outgoing, [], "no employer submission request");
+  const leverOutgoing = outgoing.length;
+  // The same toolbar popup on a Greenhouse application form.
+  const greenhouse = await context.newPage(); await greenhouse.goto(greenhouseUrl);
+  await greenhouse.bringToFront();
+  await greenhouse.locator("#email").fill("manually-entered@example.test");
+  await attachPopup();
+  await waitFor("!document.getElementById('autofill').hidden && document.getElementById('autofill-platform').textContent === 'Greenhouse'");
+  await evaluate("document.getElementById('autofill-review').click()");
+  await waitFor("!document.getElementById('autofill-body').hidden && !document.getElementById('autofill-apply').disabled");
+  check(await evaluate("document.getElementById('autofill-fields').textContent.includes('Lovelace')"), true);
+  await evaluate("document.getElementById('autofill-apply').click()");
+  await waitFor("/filled/.test(document.getElementById('autofill-status').textContent)");
+  check(await greenhouse.locator("#first_name").inputValue(), "Ada");
+  check(await greenhouse.locator("#last_name").inputValue(), "Lovelace");
+  check(await greenhouse.locator("#email").inputValue(), "manually-entered@example.test");
+  check(await greenhouse.locator("#phone").inputValue(), "");
+  check(await greenhouse.locator("#question_1006").inputValue(), answer.answer);
+  check(await greenhouse.locator("#gender, #country, #question_1007").evaluateAll(items => items.map(item => item.value)), ["", "", ""]);
+  check(await greenhouse.locator('input[type="file"]').evaluateAll(items => items.map(item => item.files.length)), [0, 0]);
+  check(outgoing.length, leverOutgoing, "no Greenhouse submission request");
   const persisted = await worker.evaluate(async () => JSON.stringify({ local: await chrome.storage.local.get(null), session: await chrome.storage.session.get(null) }));
   check(persisted.includes("Ada Lovelace"), false, "private proposed values must remain in worker memory");
   check(persisted.includes("Measured 25% improvement."), false);

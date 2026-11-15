@@ -15,10 +15,10 @@ const jobUrl = "https://jobs.lever.co/qa/00000000-0000-4000-8000-000000000001/ap
 const connection = { userId: "owner", origin: "https://resume-butler.vercel.app", email: "qa@example.test", token: "private-token" };
 const facts = { name: "Ada Lovelace", email: "ada@example.test", phone: "", linkedin: "", github: "", portfolio: "" };
 const approved = { id: "00000000-0000-4000-8000-000000000010", revision: 3, label: "API project", question: "Describe a project.", answer: "I built an API.\nMeasured 25% improvement." };
-let failSource = false, revoked = false;
+let failSource = false, revoked = false, activeUrl = jobUrl;
 const controller = createAutofillReview({
   connectedAccount: async () => connection,
-  activeTab: async () => ({ id: 7, url: jobUrl }),
+  activeTab: async () => ({ id: 7, url: activeUrl }),
   api: async (_path, options = {}) => {
     if (failSource) throw new Error("Connection unavailable. Review again when connected.");
     if (options.method !== "POST") return { facts, profileFingerprint: "a".repeat(64), choices: [{ ...approved, answer: undefined }] };
@@ -26,7 +26,7 @@ const controller = createAutofillReview({
     return { facts, profileFingerprint: "a".repeat(64), answers: options.body.answerSelections.map(() => approved) };
   },
   sendToTab: async (_tabId, message) => {
-    if (message.type === "autofill:scan") return { ok: true, inventoryId: "inventory", url: jobUrl, title: "QA Engineer", fields: [
+    if (message.type === "autofill:scan") return { ok: true, inventoryId: "inventory", url: activeUrl, title: "QA Engineer", fields: [
       { id: "name", label: "Full name", kind: "profile", sourceKey: "name", empty: true, maxLength: -1, multiline: false },
       { id: "email", label: "Email", kind: "profile", sourceKey: "email", empty: false, maxLength: -1, multiline: false },
       { id: "phone", label: "Phone", kind: "profile", sourceKey: "phone", empty: true, maxLength: -1, multiline: false },
@@ -37,7 +37,7 @@ const controller = createAutofillReview({
     return { ok: true, outcomes: message.values.map(field => ({ fieldId: field.fieldId, status: field.fieldId === "name" ? "preserved" : "filled" })) };
   },
 });
-await page.exposeFunction("qaMessage", async message => {
+await context.exposeFunction("qaMessage", async message => {
   const handlers = { "autofill-prepare": "prepare", "autofill-select": "selectAnswer", "autofill-fill": "fill", "autofill-copy": "copyField" };
   try {
     if (handlers[message.type]) return await controller[handlers[message.type]](message);
@@ -48,14 +48,15 @@ await page.exposeFunction("qaMessage", async message => {
     return { ok: true };
   } catch (error) { return { ok: false, error: error.message }; }
 });
-await page.addInitScript(jobUrl => {
+const stubChrome = jobUrl => {
   window.chrome = {
     runtime: { sendMessage: (message, callback) => window.qaMessage(message).then(callback), lastError: null },
     tabs: { query: async () => [{ id: 7, url: jobUrl }], sendMessage: (_id, _message, callback) => callback({ site: "lever", jobId: "00000000-0000-4000-8000-000000000001", company: "QA", role: "QA Engineer", url: jobUrl, description: "Fictional posting" }) },
     management: { getSelf: callback => callback({ installType: "development" }) },
   };
   Object.defineProperty(navigator, "clipboard", { value: { writeText: async () => { throw new Error("Clipboard denied"); } } });
-}, jobUrl);
+};
+await page.addInitScript(stubChrome, jobUrl);
 await context.route("**/*", async route => {
   const path = new URL(route.request().url()).pathname;
   if (!/^\/(?:popup\/(?:popup\.html|popup\.css|popup\.js|autofill\.js|job-score\.js)|icons\/icon-32\.png)$/.test(path)) return route.abort();
@@ -114,6 +115,37 @@ try {
   await page.getByRole("button", { name: /Review fields|Review again/ }).click();
   await page.getByRole("status").filter({ hasText: /Connection unavailable/ }).waitFor();
   check(await page.getByRole("button", { name: "I applied to this", exact: true }).isEnabled(), true, "autofill failures must not disable capture");
+  // The same popup on a Greenhouse application form, and not on look-alikes.
+  const greenhouseUrl = "https://job-boards.greenhouse.io/examplelabs/jobs/4000001";
+  const gh = await context.newPage();
+  gh.on("pageerror", error => pageErrors.push(error.message));
+  await gh.addInitScript(stubChrome, greenhouseUrl);
+  activeUrl = greenhouseUrl; revoked = false; failSource = false;
+  await gh.goto("https://popup.example.test/popup/popup.html");
+  await gh.getByRole("button", { name: "Review fields", exact: true }).waitFor({ timeout: 5000 });
+  check(await gh.locator("#autofill-platform").textContent(), "Greenhouse");
+  await gh.getByRole("button", { name: "Review fields", exact: true }).click();
+  await gh.getByRole("group", { name: "Full name", exact: true }).waitFor({ timeout: 5000 });
+  const writesBefore = writes.length;
+  await gh.getByRole("button", { name: /Fill .*selected field/ }).click();
+  await gh.getByRole("status").filter({ hasText: /filled/ }).waitFor();
+  check(writes.length, writesBefore + 1, "Greenhouse fill reaches the same worker path");
+  check(writes.at(-1).type, "autofill:apply");
+  const embed = await context.newPage();
+  await embed.addInitScript(stubChrome, "https://job-boards.greenhouse.io/embed/job_app?for=examplelabs&token=4000001");
+  await embed.goto("https://popup.example.test/popup/popup.html");
+  await embed.locator("#autofill").waitFor({ state: "attached" });
+  await embed.getByRole("button", { name: "I applied to this", exact: true }).waitFor({ timeout: 5000 });
+  check(await embed.locator("#autofill").isVisible(), true);
+  for (const other of ["https://boards.greenhouse.io/examplelabs/jobs/4000001", "https://job-boards.greenhouse.io/examplelabs/jobs/4000001/apply", "https://jobs.lever.co.evil.example/qa/00000000-0000-4000-8000-000000000001/apply"]) {
+    const bad = await context.newPage();
+    await bad.addInitScript(stubChrome, other);
+    await bad.goto("https://popup.example.test/popup/popup.html");
+    await bad.getByRole("button", { name: "I applied to this", exact: true }).waitFor({ timeout: 5000 }).catch(() => {});
+    await bad.waitForTimeout(300);
+    check(await bad.locator("#autofill").isVisible(), false, other);
+    await bad.close();
+  }
   check(pageErrors, []);
   console.log(JSON.stringify({ checks, writes: writes.length, pageErrors, result: "pass", screenshots: ["/tmp/resume-butler-a6-popup.png", "/tmp/resume-butler-a6-popup-narrow.png"] }));
 } finally { await browser.close(); }

@@ -11,6 +11,21 @@
   const send = message => new Promise(resolve => chrome.runtime.sendMessage(message, reply => resolve(chrome.runtime.lastError ? null : reply)));
   let current = null;
 
+  // Same rules as ../autofillUrls.js (the worker's copy); a test keeps them in step.
+  const LEVER_PATH = /^\/[^/]+\/[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}\/apply\/?$/i;
+  function platformFor(value) {
+    try {
+      const url = new URL(value);
+      if (url.username || url.password) return null;
+      if (url.origin === "https://jobs.lever.co") return LEVER_PATH.test(url.pathname) ? "Lever" : null;
+      if (url.origin !== "https://job-boards.greenhouse.io") return null;
+      if (/^\/[A-Za-z0-9_-]{1,100}\/jobs\/\d{1,20}\/?$/.test(url.pathname)) return "Greenhouse";
+      if (url.pathname !== "/embed/job_app") return null;
+      const boards = url.searchParams.getAll("for"), tokens = url.searchParams.getAll("token");
+      return boards.length === 1 && /^[A-Za-z0-9_-]{1,100}$/.test(boards[0]) && tokens.length === 1 && /^\d{1,20}$/.test(tokens[0]) ? "Greenhouse" : null;
+    } catch { return null; }
+  }
+
   function status(text, error = false) {
     $("autofill-status").textContent = text;
     $("autofill-status").classList.toggle("fill-error", error);
@@ -178,7 +193,9 @@
     let tab;
     try { [tab] = await chrome.tabs.query({ active: true, currentWindow: true }); } catch { return; }
     if (current !== state) return;
-    try { if (new URL(tab?.url).origin !== "https://jobs.lever.co" || !/\/apply\/?$/.test(new URL(tab.url).pathname)) return; } catch { return; }
+    const platform = platformFor(tab?.url);
+    if (!platform) return;
+    $("autofill-platform").textContent = platform;
     state.base = { account: { userId: connection.userId, origin: connection.origin }, tab: { id: tab.id, url: tab.url } };
     $("job").before($("autofill"));
     $("autofill").hidden = false;
@@ -188,5 +205,5 @@
     status("Contact details come from your Master CV. Existing input stays as you entered it."); resumeChanged();
   }
 
-  globalThis.RB_autofillUi = { init, resumeChanged };
+  globalThis.RB_autofillUi = { init, resumeChanged, platformFor };
 })();

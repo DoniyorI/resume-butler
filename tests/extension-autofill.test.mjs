@@ -37,7 +37,7 @@ test("autofill returns only the owner's contact facts and currently approved met
     answer(), { ...answer(), id: secondId, user_id: other, answer: "PRIVATE" },
     { ...answer(), id: "draft", approved_at: null }, { ...answer(), id: "archived", archived_at: "2026-10-29" },
   ]), owner);
-  assert.deepEqual(result.facts, { name: "Ada Lovelace", email: "ada@example.test", phone: "+1 202 555 0140", linkedin: "https://linkedin.com/in/ada", github: "https://github.com/ada", portfolio: "https://ada.example.test/" });
+  assert.deepEqual(result.facts, { name: "Ada Lovelace", firstName: "Ada", lastName: "Lovelace", email: "ada@example.test", phone: "+1 202 555 0140", linkedin: "https://linkedin.com/in/ada", github: "https://github.com/ada", portfolio: "https://ada.example.test/" });
   assert.deepEqual(result.choices, [{ id: answerId, label: "A project", question: "Describe a project.", revision: 3 }]);
   assert.match(result.profileFingerprint, /^[a-f0-9]{64}$/);
   assert.equal(JSON.stringify(result).includes("PRIVATE"), false);
@@ -72,7 +72,7 @@ test("reuse checks current ownership, revision, approval and archive status", as
 
 test("unsafe or incomplete legacy facts are omitted rather than guessed or truncated", async () => {
   const result = await getAutofillContext(db([{ ...profile(), last_name: "", phone: "x".repeat(51), email: "invalid", linkedin: "javascript:alert(1)", github: "https://password:secret@example.test", portfolio: "file:///etc/passwd" }]), owner);
-  assert.deepEqual(result.facts, { name: "", email: "", phone: "", linkedin: "", github: "", portfolio: "" });
+  assert.deepEqual(result.facts, { name: "", firstName: "Ada", lastName: "", email: "", phone: "", linkedin: "", github: "", portfolio: "" });
 });
 
 test("source selections reject duplicate, excessive or malformed answer references", () => {

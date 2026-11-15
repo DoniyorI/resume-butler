@@ -1,6 +1,6 @@
 # Resume Butler Chrome extension
 
-Save openings before applying, choose a working resume, compare job keywords, and automatically track submissions on LinkedIn Easy Apply, Greenhouse, Lever and Ashby. Version0.5.0 includes updated LinkedIn capture; reviewed filling remains available on English Lever application forms. Plain Manifest V3: no build step.
+Save openings before applying, choose a working resume, compare job keywords, and automatically track submissions on LinkedIn Easy Apply, Greenhouse, Lever and Ashby. Version0.5.0 includes updated LinkedIn capture; reviewed filling is available on English Lever and Greenhouse application forms. Plain Manifest V3: no build step.
 
 ## Fit panel (0.6.0)
 
@@ -15,6 +15,10 @@ In the toolbar popup, choose a working resume or leave **Master CV / decide late
 This is wording coverage, not proficiency, interview probability, experience-duration/eligibility verification or PDF readability. It makes no AI calls. Comparison is an explicit popup action: resume contents remain server-side, and the posting page receives neither your resume nor the result. The connection and current tab are checked before returning results; changed contexts require another comparison. Saving and recording remain available when comparison fails.
 
 Migration **018** gives new extension-created applications source notes such as **Added from LinkedIn**, derived from the posting link. It also replaces untouched generic extension notes; edited notes remain unchanged. Migration018 is installed in the configured project. No other schema change, permission or dependency is needed. [Verification and limits](../docs/extension-capture-score-verification.md). Reload the unpacked extension after updating.
+
+## Reviewed Greenhouse filling (0.7.0)
+
+Open a Greenhouse application form at `https://job-boards.greenhouse.io/<board>/jobs/<id>` (or `/embed/job_app?for=<board>&token=<id>`), then the toolbar popup, and review exactly as on Lever. Supported contact fields: first name, last name, email, phone, and LinkedIn, GitHub and website questions; plain custom text questions can use approved answers. Country, yes/no and other dropdowns, demographic questions, resume and cover-letter files and their pasted text stay manual. Forms inside an iframe on a company's own site are not supported (top frame only), and the old `boards.greenhouse.io` address is not an autofill host. The shared safety rules (no submit, no file attachment, existing input kept) live in `content/autofill-core.js`; `content/autofill.js` (Lever) and `content/autofill-greenhouse.js` only describe each site's form. Reload the unpacked extension after updating.
 
 ## Reviewed Lever filling (0.4.0)
 
@@ -53,7 +57,9 @@ After changing files here, click the reload button on the extension's card in `c
 | `content/job-reader.js` | Reads company, role, location and description (JSON-LD first, then the site's selectors) |
 | `content/detector.js` | Remembers postings, spots the submission, reports it |
 | `content/toast.js` | The "Added to Resume Butler, Undo" notice on the job site |
-| `content/autofill.js` | Top-frame Lever field inventory, visibility/identity/deadline checks and safe writes without submit or file actions |
+| `content/autofill-core.js` | Shared reviewed-autofill core: inventory caps, visibility/identity/deadline checks and safe writes without submit or file actions |
+| `content/autofill.js`, `content/autofill-greenhouse.js` | Top-frame Lever and Greenhouse adapters: how each site's form is found, labelled and classified |
+| `autofillUrls.js` | The application-form URLs where reviewed filling is offered (the popup keeps a tested copy) |
 | `popup/` | Save/correct the posting, select a working resume, review Lever fields, copy fallback and submission tracking |
 
 A submission counts when the site moves to its confirmation page (Greenhouse `/confirmation`, Lever `/thanks`), or when a "thanks for applying" / "Your application was sent" message appears after you click submit that wasn't on the page before (LinkedIn Easy Apply, Ashby, and the others as a fallback). When you clicked submit for that job, it's added automatically: a "Tracking application" notice appears in the top-right corner, then "Added to Resume Butler" with Undo. A confirmation page with no submit click first (a link opened directly, say) only asks "Did you apply?" with an Add button. On LinkedIn the success text counts only inside the Easy Apply dialog.

@@ -1,6 +1,10 @@
 // Private, short-lived review state for the MV3 worker. No source values are
 // persisted, and only explicitly selected values cross into a job-site script.
-const PROFILE_KEYS = ["name", "email", "phone", "linkedin", "github", "portfolio"];
+import { supportedAutofillUrl } from "./autofillUrls.js";
+const PROFILE_KEYS = ["name", "firstName", "lastName", "email", "phone", "linkedin", "github", "portfolio"];
+// An older server may not send these two yet; a missing value is empty, not an error.
+const OPTIONAL_KEYS = ["firstName", "lastName"];
+const fact = (facts, key) => facts?.[key] ?? (OPTIONAL_KEYS.includes(key) ? "" : undefined);
 const REVIEW_MS = 5 * 60 * 1000;
 const sameAccount = (a, b) => a && b && a.userId === b.userId && a.origin === b.origin && a.token === b.token;
 const sameTab = (a, b) => a && b && a.id === b.id && a.url === b.url && (!a.pendingUrl || a.pendingUrl === b.url);
@@ -8,15 +12,11 @@ const questionKey = value => value.normalize("NFKC").replace(/\s+/g, " ").trim()
 const expired = () => new Error("This review expired or changed. Review the fields again.");
 
 function supportedTab(tab) {
-  try {
-    const url = new URL(tab.url);
-    return Number.isInteger(tab.id) && !url.username && !url.password && url.origin === "https://jobs.lever.co" &&
-      /^\/[^/]+\/[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}\/apply\/?$/i.test(url.pathname) && (!tab.pendingUrl || tab.pendingUrl === tab.url);
-  } catch { return false; }
+  return Number.isInteger(tab?.id) && typeof tab.url === "string" && supportedAutofillUrl(tab.url) && (!tab.pendingUrl || tab.pendingUrl === tab.url);
 }
 
 function validateContext(context, scan, tab) {
-  if (!/^[a-f0-9]{64}$/.test(context?.profileFingerprint) || PROFILE_KEYS.some(key => typeof context?.facts?.[key] !== "string" || context.facts[key].length > 2048) ||
+  if (!/^[a-f0-9]{64}$/.test(context?.profileFingerprint) || PROFILE_KEYS.some(key => typeof fact(context?.facts, key) !== "string" || fact(context.facts, key).length > 2048) ||
       !Array.isArray(context.choices) || context.choices.length > 100 || context.choices.some(item => typeof item.id !== "string" || typeof item.label !== "string" || typeof item.question !== "string" || !Number.isInteger(item.revision) || item.revision < 1)) throw expired();
   if (!scan?.ok || scan.url !== tab.url || typeof scan.inventoryId !== "string" || !Array.isArray(scan.fields) || scan.fields.length > 100 ||
       new Set(scan.fields.map(field => field.id)).size !== scan.fields.length || scan.fields.some(field =>
@@ -66,7 +66,7 @@ export function createAutofillReview({ api, connectedAccount, activeTab, sendToT
     const result = await sources(plan, fields);
     for (const field of fields) {
       if (field.kind === "profile") {
-        if (result.facts?.[field.sourceKey] !== field.value) throw expired();
+        if (fact(result.facts, field.sourceKey) !== field.value) throw expired();
       } else {
         const answer = result.answers.find(item => item.id === field.answerId && item.revision === field.answerRevision);
         const choice = plan.choices.find(item => item.id === field.answerId);
@@ -104,12 +104,12 @@ export function createAutofillReview({ api, connectedAccount, activeTab, sendToT
       await assertContext(account, message.tab, version);
       validateContext(context, scan, message.tab);
       const plan = { id: randomId(), account, tab: { id: message.tab.id, url: message.tab.url }, epoch: version,
-        inventoryId: scan.inventoryId, profileFingerprint: context.profileFingerprint, title: typeof scan.title === "string" ? scan.title.slice(0, 250) : "Lever application",
+        inventoryId: scan.inventoryId, profileFingerprint: context.profileFingerprint, title: typeof scan.title === "string" ? scan.title.slice(0, 250) : "Application form",
         expiresAt: now() + REVIEW_MS, choices: context.choices.map(({ id, label, question, revision }) => ({ id, label, question, revision })),
         manual: scan.manual.map(({ label, reason }) => ({ label, reason })), fields: [], busy: false, consumed: false };
       plan.fields = scan.fields.map(field => {
         const matches = field.kind === "answer" && field.empty ? plan.choices.filter(choice => questionKey(choice.question) === questionKey(field.label)) : [];
-        return { ...field, value: field.kind === "profile" ? context.facts[field.sourceKey] : "", sourceLabel: field.kind === "profile" ? "Master CV" : "",
+        return { ...field, value: field.kind === "profile" ? fact(context.facts, field.sourceKey) : "", sourceLabel: field.kind === "profile" ? "Master CV" : "",
           ...(matches.length === 1 && { answerId: matches[0].id, answerRevision: matches[0].revision, sourceLabel: matches[0].label }) };
       });
       const defaults = plan.fields.filter(field => field.answerId);

@@ -8,6 +8,7 @@ const modulePath = process.env.PLAYWRIGHT_MODULE;
 if (!modulePath) throw new Error("Set PLAYWRIGHT_MODULE to an installed Playwright module.");
 const { chromium } = await import(pathToFileURL(modulePath).href);
 const html = await readFile(new URL("../tests/fixtures/lever-application.html", import.meta.url), "utf8");
+const core = new URL("../extension/content/autofill-core.js", import.meta.url);
 const adapter = new URL("../extension/content/autofill.js", import.meta.url);
 const browser = await chromium.launch({ channel: "chrome", headless: true });
 const context = await browser.newContext();
@@ -33,7 +34,7 @@ await page.addInitScript(() => {
 });
 const url = "https://jobs.lever.co/qa/00000000-0000-4000-8000-000000000001/apply";
 const send = message => page.evaluate(value => window.__message(value), message);
-async function reset() { await page.goto(url); await page.addScriptTag({ content: await readFile(adapter, "utf8") }); }
+async function reset() { await page.goto(url); await page.addScriptTag({ content: await readFile(core, "utf8") }); await page.addScriptTag({ content: await readFile(adapter, "utf8") }); }
 async function scan() { const result = await send({ type: "autofill:scan" }); assert.equal(result?.ok, true); return result; }
 const apply = (inventory, values) => send({ type: "autofill:apply", inventoryId: inventory.inventoryId, expiresAt: Date.now() + 300000, values });
 const values = (inventory, key, value) => [{ fieldId: inventory.fields.find(field => field.sourceKey === key).id, value }];

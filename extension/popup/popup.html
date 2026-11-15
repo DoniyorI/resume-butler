@@ -12,7 +12,7 @@
     </header>
 
     <section id="disconnected" hidden>
-      <p class="lead">Save openings and track submissions on LinkedIn, Greenhouse, Lever and Ashby. Reviewed autofill is available on Lever application forms.</p>
+      <p class="lead">Save openings and track submissions on LinkedIn, Greenhouse, Lever and Ashby. Reviewed autofill is available on Lever and Greenhouse application forms.</p>
       <button id="connect" class="primary" type="button">Connect to Resume Butler</button>
       <button id="connect-local" class="link" type="button" hidden>Connect to localhost:3000 instead</button>
       <p class="result"><a href="https://resume-butler.vercel.app/privacy" target="_blank" rel="noopener">Privacy &amp; data use</a></p>
@@ -61,7 +61,7 @@
       </p>
 
       <section id="autofill" class="card autofill-panel" hidden aria-labelledby="autofill-title">
-        <div class="fill-heading"><h2 id="autofill-title">Fill application</h2><span class="fill-platform">Lever</span></div>
+        <div class="fill-heading"><h2 id="autofill-title">Fill application</h2><span id="autofill-platform" class="fill-platform">Lever</span></div>
         <p class="muted">Review your details before filling this form.</p>
         <button id="autofill-review" class="secondary" type="button">Review fields</button>
         <p id="autofill-status" class="result muted" role="status" aria-live="polite"></p>

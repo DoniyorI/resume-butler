@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Example Labs - Application</title>
+<style>body{font:16px sans-serif;max-width:680px;margin:32px auto}.field-wrapper{margin:12px 0}input,textarea{display:block;padding:8px}label{display:block}textarea{width:95%;height:90px}.visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}.hidden{display:none}.phone-input__phone{display:inline-block}</style></head>
+<body><main><h1 class="section-header">Staff Quality Engineer</h1>
+<form id="application-form" class="application--form" method="get">
+<div class="field-wrapper"><div class="text-input-wrapper"><label for="first_name" id="first_name-label">First Name<span>*</span></label><div class="input-wrapper"><input id="first_name" type="text" aria-label="First Name" autocomplete="given-name" maxlength="255"></div></div></div>
+<div class="field-wrapper"><div class="text-input-wrapper"><label for="last_name">Last Name*</label><div class="input-wrapper"><input id="last_name" type="text" aria-label="Last Name" autocomplete="family-name"></div></div></div>
+<div class="field-wrapper"><div class="text-input-wrapper"><label for="email">Email*</label><div class="input-wrapper"><input id="email" type="text" aria-label="Email" autocomplete="email"></div></div></div>
+<div class="field-wrapper"><fieldset class="phone-input"><legend>Phone</legend>
+  <div class="phone-input__country"><label id="country-label" for="country">Country</label><input id="country" type="text" role="combobox" aria-autocomplete="list" aria-labelledby="country-label" class="select__input"></div>
+  <div class="phone-input__phone"><label for="phone">Phone</label><input id="phone" type="tel" aria-label="Phone"></div></fieldset></div>
+<div class="field-wrapper"><label for="resume">Resume/CV</label><input id="resume" type="file" class="visually-hidden"><button type="button" id="resume-manual">Enter manually</button><textarea id="resume_text" class="hidden" aria-label="Resume text"></textarea></div>
+<div class="field-wrapper"><label for="cover_letter">Cover Letter</label><input id="cover_letter" type="file" class="visually-hidden"><button type="button" id="cover-manual">Enter manually</button><textarea id="cover_letter_text" class="hidden" aria-label="Cover letter text"></textarea></div>
+<div class="field-wrapper"><div class="text-input-wrapper"><label for="question_1001">LinkedIn Profile</label><div class="input-wrapper"><input id="question_1001" type="text" aria-label="LinkedIn Profile"></div></div></div>
+<div class="field-wrapper"><div class="text-input-wrapper"><label for="question_1002">Website</label><div class="input-wrapper"><input id="question_1002" type="text" aria-label="Website"></div></div></div>
+<div class="field-wrapper"><div class="text-input-wrapper"><label for="question_1003">GitHub URL</label><div class="input-wrapper"><input id="question_1003" type="text" aria-label="GitHub URL"></div></div></div>
+<div class="field-wrapper"><div class="text-input-wrapper"><label for="question_1004">What name should we use during interviews?</label><div class="input-wrapper"><input id="question_1004" type="text" aria-label="What name should we use during interviews?"></div></div></div>
+<div class="field-wrapper"><div class="text-input-wrapper"><label for="question_1005">Tell us about a test strategy you led.*</label><div class="input-wrapper"><textarea id="question_1005" aria-label="Tell us about a test strategy you led."></textarea></div></div></div>
+<div class="field-wrapper"><div class="text-input-wrapper"><label for="question_1006">Describe a project.*</label><div class="input-wrapper"><textarea id="question_1006" aria-label="Describe a project."></textarea></div></div></div>
+<div class="field-wrapper"><label id="question_1007-label">Are you authorized to work in the country of this role?*</label><div class="select__control"><input id="question_1007" type="text" role="combobox" aria-autocomplete="list" aria-labelledby="question_1007-label" class="select__input"></div><input class="select-shell-requiredInput" tabindex="-1" autocomplete="off" required></div>
+<div class="field-wrapper"><label id="question_1008-label">Will you need visa sponsorship?*</label><div class="select__control"><input id="question_1008" type="text" role="combobox" aria-autocomplete="list" aria-labelledby="question_1008-label" class="select__input"></div><input class="select-shell-requiredInput" tabindex="-1" autocomplete="off" required></div>
+<div class="field-wrapper"><label id="gender-label">Gender</label><div class="select__control"><input id="gender" type="text" role="combobox" aria-autocomplete="list" aria-labelledby="gender-label" class="select__input"></div></div>
+<div class="field-wrapper"><label id="veteran_status-label">Veteran Status</label><div class="select__control"><input id="veteran_status" type="text" role="combobox" aria-autocomplete="list" aria-labelledby="veteran_status-label" class="select__input"></div></div>
+<div class="field-wrapper hidden"><label for="question_1009">Hidden question</label><input id="question_1009" type="text" aria-label="Hidden question"></div>
+<div class="field-wrapper"><label for="question_1010">Disabled question</label><input id="question_1010" type="text" aria-label="Disabled question" disabled></div>
+<div class="field-wrapper"><label for="question_1011">Preferred pronunciation</label><input id="question_1011" type="text" aria-label="Preferred pronunciation"></div>
+<div class="field-wrapper"><label for="question_1012">Preferred pronunciation</label><input id="question_1012" type="text" aria-label="Preferred pronunciation"></div>
+<button type="submit" class="btn btn--pill">Submit application</button>
+</form></main>
+<script>
+// Mimic a React-controlled input: the "state" copy of the value is restored on
+// re-render unless an input event updated it first.
+for (const id of ["first_name", "email"]) {
+  const input = document.getElementById(id);
+  let state = "";
+  input.addEventListener("input", () => { state = input.value; });
+  window.rerender = window.rerender || (() => {});
+  const previous = window.rerender;
+  window.rerender = () => { previous(); const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set; setter.call(input, state); };
+  input.__state = () => state;
+}
+</script>
+</body></html>

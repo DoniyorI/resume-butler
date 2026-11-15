@@ -33,6 +33,7 @@ async function contactSources(admin, userId) {
   const email = contactText(profile.email, 254);
   const facts = {
     name: first && last ? `${first} ${last}` : "",
+    firstName: first, lastName: last,
     email: z.string().email().safeParse(email).success ? email : "",
     phone: contactText(profile.phone, 50),
     linkedin: contactUrl(profile.linkedin), github: contactUrl(profile.github), portfolio: contactUrl(profile.portfolio),
