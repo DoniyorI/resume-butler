@@ -6,6 +6,7 @@ import { autofillPlatform, supportedAutofillUrl } from "../extension/autofillUrl
 import { createAutofillReview } from "../extension/autofillReview.js";
 
 const lever = "https://jobs.lever.co/qa/00000000-0000-4000-8000-000000000001/apply";
+const ashby = "https://jobs.ashbyhq.com/examplelabs/7458d4e9-da2e-47bd-98cb-adfda43d42b2/application";
 const gh = "https://job-boards.greenhouse.io/examplelabs/jobs/4000001";
 // [url, platform or null]
 const table = [
@@ -13,6 +14,27 @@ const table = [
   [gh, "greenhouse"], [gh + "/", "greenhouse"], [gh + "?gh_src=abc#app", "greenhouse"],
   ["https://job-boards.greenhouse.io/embed/job_app?for=examplelabs&token=4000001", "greenhouse"],
   ["https://job-boards.greenhouse.io/embed/job_app?token=4000001&for=examplelabs", "greenhouse"],
+  [ashby, "ashby"], [ashby + "/", "ashby"], [ashby + "?utm_source=abc#form", "ashby"],
+  ["https://jobs.ashbyhq.com/example.labs-2/7458D4E9-DA2E-47BD-98CB-ADFDA43D42B2/application", "ashby"],
+  // Ashby: the job page, other tabs, malformed ids, look-alikes, scheme, credentials, ports
+  ["https://jobs.ashbyhq.com/examplelabs/7458d4e9-da2e-47bd-98cb-adfda43d42b2", null],
+  ["https://jobs.ashbyhq.com/examplelabs/7458d4e9-da2e-47bd-98cb-adfda43d42b2/", null],
+  ["https://jobs.ashbyhq.com/examplelabs/7458d4e9-da2e-47bd-98cb-adfda43d42b2/application/extra", null],
+  ["https://jobs.ashbyhq.com/examplelabs/7458d4e9-da2e-47bd-98cb-adfda43d42b2/applications", null],
+  ["https://jobs.ashbyhq.com/examplelabs/not-a-uuid/application", null],
+  ["https://jobs.ashbyhq.com/examplelabs/7458d4e9-da2e-17bd-98cb-adfda43d42b2/application", null],
+  ["https://jobs.ashbyhq.com/examplelabs/7458d4e9-da2e-47bd-18cb-adfda43d42b2/application", null],
+  ["https://jobs.ashbyhq.com/application", null], ["https://jobs.ashbyhq.com/examplelabs", null], ["https://jobs.ashbyhq.com/", null],
+  ["https://jobs.ashbyhq.com/exa%20mple/7458d4e9-da2e-47bd-98cb-adfda43d42b2/application", null],
+  ["https://jobs.ashbyhq.com.evil.example/examplelabs/7458d4e9-da2e-47bd-98cb-adfda43d42b2/application", null],
+  ["https://evil-jobs.ashbyhq.com/examplelabs/7458d4e9-da2e-47bd-98cb-adfda43d42b2/application", null],
+  ["https://app.ashbyhq.com/examplelabs/7458d4e9-da2e-47bd-98cb-adfda43d42b2/application", null],
+  ["https://ashbyhq.com/examplelabs/7458d4e9-da2e-47bd-98cb-adfda43d42b2/application", null],
+  ["http://jobs.ashbyhq.com/examplelabs/7458d4e9-da2e-47bd-98cb-adfda43d42b2/application", null],
+  ["https://user:pw@jobs.ashbyhq.com/examplelabs/7458d4e9-da2e-47bd-98cb-adfda43d42b2/application", null],
+  ["https://user@jobs.ashbyhq.com/examplelabs/7458d4e9-da2e-47bd-98cb-adfda43d42b2/application", null],
+  ["https://jobs.ashbyhq.com:8443/examplelabs/7458d4e9-da2e-47bd-98cb-adfda43d42b2/application", null],
+  ["https://example-company.com/careers?ashby_jid=7458d4e9-da2e-47bd-98cb-adfda43d42b2", null],
   // look-alike hosts, scheme, credentials, ports
   ["https://jobs.lever.co.evil.example/qa/00000000-0000-4000-8000-000000000001/apply", null],
   ["https://job-boards.greenhouse.io.evil.example/examplelabs/jobs/4000001", null],
@@ -50,7 +72,7 @@ async function popupPlatform() {
   return context.RB_autofillUi.platformFor;
 }
 
-test("the worker accepts only Lever and Greenhouse application form URLs", () => {
+test("the worker accepts only Lever, Greenhouse and Ashby application form URLs", () => {
   for (const [url, platform] of table) {
     assert.equal(autofillPlatform(url), platform, String(url));
     assert.equal(supportedAutofillUrl(url), platform !== null, String(url));

@@ -63,3 +63,21 @@ Greenhouse (`job-boards.greenhouse.io`, top frame) shares the Lever write proced
 
 **To use it:** reload the unpacked extension in `chrome://extensions` (0.7.0).
 
+
+## Ashby (extension 0.8.0)
+
+Ashby (`jobs.ashbyhq.com/<org>/<uuid>/application`, top frame) uses the same core as Lever and Greenhouse (`extension/content/autofill-core.js`). The core gained two optional adapter hooks for a page with no `<form>` element: `owner(element, root)` (replaces the `element.form` re-check; Lever and Greenhouse do not supply it and keep `element.form`) and `extraManual(root)` (lists controls that are not inputs, such as the yes/no button pair). The adapter is `extension/content/autofill-ashby.js`. Its root is the single parent that holds the one application container and any survey container; zero or several containers, an invisible root or a survey outside it give "This Ashby form is not ready or its layout is unsupported. Complete it manually.", which is also what a page that has not rendered yet returns. The fixture `tests/fixtures/ashby-application.html` is synthetic (fictional company and wording) and models a read-only render of a public posting on November 14, 2026: no form element, field entries keyed by `data-field-path`, a location combobox whose label points at nothing, UUID-named custom questions, a yes/no button pair with a hidden checkbox, radio and checkbox groups whose ids change on every load, a diversity survey in a sibling container, a hidden reCAPTCHA textarea, an unlabelled uploader, a plain submit button, fields rendered about 300 ms after load and a controlled name field.
+
+### Ashby evidence (November 14, 2026)
+
+| Check | Result |
+|---|---|
+| Lever and Greenhouse after the core hooks | `qa-reviewed-autofill.mjs` 61 checks and `qa-reviewed-autofill-greenhouse.mjs` 102 checks, unchanged, 0 page errors, 0 requests |
+| Ashby adapter fixture | `scripts/qa-reviewed-autofill-ashby.mjs`: 137 checks pass, 0 page errors, 0 requests; 0 clicks of any kind, 0 clicks on the submit button, 0 submit events and 0 submit attempts by autofill (a positive control confirms the counters see a real click); not-ready page, late render, radio group ids that change per load, controlled fields keep their value, typed input kept, hidden/disabled/changed/moved controls skipped, root, URL and during-write changes stop the batch, long and multiline text not truncated or flattened |
+| Popup fixture | `scripts/qa-reviewed-autofill-popup.mjs`: 33 checks pass, including the Ashby application URL and Ashby job-page and look-alike URLs that get no panel |
+| Real unpacked MV3 runtime | `scripts/qa-reviewed-autofill-runtime.mjs`: 35 checks pass in Chrome for Testing; the real popup fills the Ashby fixture (name and approved answer), keeps a typed email, leaves location, choices, files and yes/no alone, 0 clicks, 0 employer requests |
+| URL rules | `tests/extension-autofill-urls.test.mjs`: worker and popup copies agree on every Ashby case (application URL with query, trailing slash and uppercase id; job page without `/application`; malformed ids; look-alike hosts; http; credentials; ports) |
+
+**Limits.** Top frame only: Ashby boards embedded in an iframe on a company's site are not filled. The location picker, yes/no buttons, radios, checkboxes, comboboxes, the diversity survey, files and the resume uploader stay manual. The fixture is synthetic and was grounded in one read-only render of one public posting; no live Ashby form was filled or submitted, and other boards may be customised. Because the page is a React app, a re-render that replaces the root or a field after review makes the next fill stop with "The form changed. Review its fields again before filling."
+
+**To use it:** reload the unpacked extension in `chrome://extensions` (0.8.0).

@@ -13,11 +13,13 @@
 
   // Same rules as ../autofillUrls.js (the worker's copy); a test keeps them in step.
   const LEVER_PATH = /^\/[^/]+\/[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}\/apply\/?$/i;
+  const ASHBY_PATH = /^\/[A-Za-z0-9._-]{1,100}\/[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}\/application\/?$/i;
   function platformFor(value) {
     try {
       const url = new URL(value);
       if (url.username || url.password) return null;
       if (url.origin === "https://jobs.lever.co") return LEVER_PATH.test(url.pathname) ? "Lever" : null;
+      if (url.origin === "https://jobs.ashbyhq.com") return ASHBY_PATH.test(url.pathname) ? "Ashby" : null;
       if (url.origin !== "https://job-boards.greenhouse.io") return null;
       if (/^\/[A-Za-z0-9_-]{1,100}\/jobs\/\d{1,20}\/?$/.test(url.pathname)) return "Greenhouse";
       if (url.pathname !== "/embed/job_app") return null;

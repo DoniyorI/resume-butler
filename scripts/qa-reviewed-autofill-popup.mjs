@@ -131,13 +131,32 @@ try {
   await gh.getByRole("status").filter({ hasText: /filled/ }).waitFor();
   check(writes.length, writesBefore + 1, "Greenhouse fill reaches the same worker path");
   check(writes.at(-1).type, "autofill:apply");
+  // The same popup on an Ashby application form.
+  const ashbyUrl = "https://jobs.ashbyhq.com/examplelabs/7458d4e9-da2e-47bd-98cb-adfda43d42b2/application";
+  const ashby = await context.newPage();
+  ashby.on("pageerror", error => pageErrors.push(error.message));
+  await ashby.addInitScript(stubChrome, ashbyUrl);
+  activeUrl = ashbyUrl;
+  await ashby.goto("https://popup.example.test/popup/popup.html");
+  await ashby.getByRole("button", { name: "Review fields", exact: true }).waitFor({ timeout: 5000 });
+  check(await ashby.locator("#autofill-platform").textContent(), "Ashby");
+  await ashby.getByRole("button", { name: "Review fields", exact: true }).click();
+  await ashby.getByRole("group", { name: "Full name", exact: true }).waitFor({ timeout: 5000 });
+  const writesBeforeAshby = writes.length;
+  await ashby.getByRole("button", { name: /Fill .*selected field/ }).click();
+  await ashby.getByRole("status").filter({ hasText: /filled/ }).waitFor();
+  check(writes.length, writesBeforeAshby + 1, "Ashby fill reaches the same worker path");
+  check(writes.at(-1).type, "autofill:apply");
+  check(/Reviewed autofill is available on Lever, Greenhouse and Ashby application forms\./.test(await ashby.locator(".lead").textContent()), true, "the popup copy names all three");
+  activeUrl = greenhouseUrl;
   const embed = await context.newPage();
   await embed.addInitScript(stubChrome, "https://job-boards.greenhouse.io/embed/job_app?for=examplelabs&token=4000001");
   await embed.goto("https://popup.example.test/popup/popup.html");
   await embed.locator("#autofill").waitFor({ state: "attached" });
   await embed.getByRole("button", { name: "I applied to this", exact: true }).waitFor({ timeout: 5000 });
   check(await embed.locator("#autofill").isVisible(), true);
-  for (const other of ["https://boards.greenhouse.io/examplelabs/jobs/4000001", "https://job-boards.greenhouse.io/examplelabs/jobs/4000001/apply", "https://jobs.lever.co.evil.example/qa/00000000-0000-4000-8000-000000000001/apply"]) {
+  for (const other of ["https://boards.greenhouse.io/examplelabs/jobs/4000001", "https://job-boards.greenhouse.io/examplelabs/jobs/4000001/apply", "https://jobs.lever.co.evil.example/qa/00000000-0000-4000-8000-000000000001/apply",
+    "https://jobs.ashbyhq.com/examplelabs/7458d4e9-da2e-47bd-98cb-adfda43d42b2", "https://jobs.ashbyhq.com.evil.example/examplelabs/7458d4e9-da2e-47bd-98cb-adfda43d42b2/application"]) {
     const bad = await context.newPage();
     await bad.addInitScript(stubChrome, other);
     await bad.goto("https://popup.example.test/popup/popup.html");

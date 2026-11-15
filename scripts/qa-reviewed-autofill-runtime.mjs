@@ -10,8 +10,10 @@ const profile = await mkdtemp("/tmp/resume-butler-a6-runtime-");
 const extension = fileURLToPath(new URL("../extension/", import.meta.url));
 const html = await readFile(new URL("../tests/fixtures/lever-application.html", import.meta.url), "utf8");
 const greenhouseHtml = await readFile(new URL("../tests/fixtures/greenhouse-application.html", import.meta.url), "utf8");
+const ashbyHtml = await readFile(new URL("../tests/fixtures/ashby-application.html", import.meta.url), "utf8");
 const jobUrl = "https://jobs.lever.co/qa/00000000-0000-4000-8000-000000000001/apply";
 const greenhouseUrl = "https://job-boards.greenhouse.io/examplelabs/jobs/4000001";
+const ashbyUrl = "https://jobs.ashbyhq.com/examplelabs/7458d4e9-da2e-47bd-98cb-adfda43d42b2/application";
 const answer = { id: "00000000-0000-4000-8000-000000000010", revision: 3, label: "QA project", question: "Describe a project.", answer: "I built an API.\nMeasured 25% improvement." };
 const facts = { name: "Ada Lovelace", firstName: "Ada", lastName: "Lovelace", email: "ada@example.test", phone: "", linkedin: "", github: "", portfolio: "" };
 const gateway = { facts, profileFingerprint: "a".repeat(64), choices: [{ id: answer.id, revision: answer.revision, label: answer.label, question: answer.question }] };
@@ -25,6 +27,7 @@ try {
     const request = route.request(), url = new URL(request.url());
     if (url.origin === "https://jobs.lever.co" && request.method() === "GET") return route.fulfill({ contentType: "text/html", body: html });
     if (url.origin === "https://job-boards.greenhouse.io" && request.method() === "GET" && request.isNavigationRequest()) return route.fulfill({ contentType: "text/html", body: greenhouseHtml });
+    if (url.origin === "https://jobs.ashbyhq.com" && request.method() === "GET" && request.isNavigationRequest()) return route.fulfill({ contentType: "text/html", body: ashbyHtml });
     if (url.origin === "http://localhost:3000" && url.pathname.startsWith("/api/extension/")) {
       let body;
       if (url.pathname.endsWith("/autofill")) {
@@ -35,7 +38,7 @@ try {
       else return route.abort();
       return route.fulfill({ contentType: "application/json", body: JSON.stringify(body), headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "Authorization, Content-Type" } });
     }
-    if (url.origin === "https://jobs.lever.co" || url.origin === "https://job-boards.greenhouse.io") outgoing.push(request.method());
+    if (url.origin === "https://jobs.lever.co" || url.origin === "https://job-boards.greenhouse.io" || url.origin === "https://jobs.ashbyhq.com") outgoing.push(request.method());
     return route.abort();
   });
   const worker = context.serviceWorkers()[0] || await context.waitForEvent("serviceworker", { timeout: 15000 });
@@ -117,11 +120,34 @@ try {
   check(await greenhouse.locator("#gender, #country, #question_1007").evaluateAll(items => items.map(item => item.value)), ["", "", ""]);
   check(await greenhouse.locator('input[type="file"]').evaluateAll(items => items.map(item => item.files.length)), [0, 0]);
   check(outgoing.length, leverOutgoing, "no Greenhouse submission request");
+  // The same toolbar popup on an Ashby application form: no <form>, fields rendered after load.
+  const ashby = await context.newPage();
+  await ashby.addInitScript(() => { window.__clicks = 0; document.addEventListener("click", () => { window.__clicks++; }, true); });
+  await ashby.goto(ashbyUrl);
+  await ashby.bringToFront();
+  await ashby.waitForSelector(".ashby-application-form-field-entry", { state: "attached" });
+  await ashby.locator("#_systemfield_email").fill("manually-entered@example.test");
+  await attachPopup();
+  await waitFor("!document.getElementById('autofill').hidden && document.getElementById('autofill-platform').textContent === 'Ashby'");
+  await evaluate("document.getElementById('autofill-review').click()");
+  await waitFor("!document.getElementById('autofill-body').hidden && !document.getElementById('autofill-apply').disabled");
+  check(await evaluate("document.getElementById('autofill-fields').textContent.includes('Ada Lovelace')"), true);
+  check(await evaluate("document.getElementById('autofill-manual-list').textContent.includes('Where will you work from?')"), true, "the location question is listed as manual");
+  await evaluate("document.getElementById('autofill-apply').click()");
+  await waitFor("/filled/.test(document.getElementById('autofill-status').textContent)");
+  check(await ashby.locator("#_systemfield_name").inputValue(), "Ada Lovelace");
+  check(await ashby.locator("#_systemfield_email").inputValue(), "manually-entered@example.test");
+  check(await ashby.locator('[id="3a1f0c52-6d4e-4a7b-9c10-0d1e2f3a4b05"]').inputValue(), answer.answer);
+  check(await ashby.locator('input[role="combobox"]').evaluateAll(items => items.map(item => item.value)), ["", ""]);
+  check(await ashby.locator('input[type="file"]').evaluateAll(items => items.map(item => item.files.length)), [0, 0]);
+  check(await ashby.locator('input[type="radio"],input[type="checkbox"]').evaluateAll(items => items.filter(item => item.checked).length), 0);
+  check(await ashby.evaluate(() => [window.__clicks, window.__submitAttempts]), [0, 0], "no click and no submit attempt on the Ashby page");
+  check(outgoing.length, leverOutgoing, "no Ashby submission request");
   const persisted = await worker.evaluate(async () => JSON.stringify({ local: await chrome.storage.local.get(null), session: await chrome.storage.session.get(null) }));
   check(persisted.includes("Ada Lovelace"), false, "private proposed values must remain in worker memory");
   check(persisted.includes("Measured 25% improvement."), false);
   check(sourceReads >= 3, true, "source reads and final approval checks use the actual worker transport");
-  console.log(JSON.stringify({ checks, sourceReads, runtime: "real unpacked MV3 and toolbar popup", data: "intercepted fictional gateway and Lever form", employerRequests: outgoing.length, result: "pass" }));
+  console.log(JSON.stringify({ checks, sourceReads, runtime: "real unpacked MV3 and toolbar popup", data: "intercepted fictional gateway and Lever, Greenhouse and Ashby forms", employerRequests: outgoing.length, result: "pass" }));
 } finally {
   for (const task of pending.values()) { clearTimeout(task.timer); task.reject(new Error("Runtime check closed.")); }
   await root?.detach().catch(() => {}); await context?.close(); await rm(profile, { recursive: true, force: true });

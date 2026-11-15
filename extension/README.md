@@ -1,6 +1,6 @@
 # Resume Butler Chrome extension
 
-Save openings before applying, choose a working resume, compare job keywords, and automatically track submissions on LinkedIn Easy Apply, Greenhouse, Lever and Ashby. Version0.5.0 includes updated LinkedIn capture; reviewed filling is available on English Lever and Greenhouse application forms. Plain Manifest V3: no build step.
+Save openings before applying, choose a working resume, compare job keywords, and automatically track submissions on LinkedIn Easy Apply, Greenhouse, Lever and Ashby. Version0.5.0 includes updated LinkedIn capture; reviewed filling is available on English Lever, Greenhouse and Ashby application forms. Plain Manifest V3: no build step.
 
 ## Fit panel (0.6.0)
 
@@ -15,6 +15,10 @@ In the toolbar popup, choose a working resume or leave **Master CV / decide late
 This is wording coverage, not proficiency, interview probability, experience-duration/eligibility verification or PDF readability. It makes no AI calls. Comparison is an explicit popup action: resume contents remain server-side, and the posting page receives neither your resume nor the result. The connection and current tab are checked before returning results; changed contexts require another comparison. Saving and recording remain available when comparison fails.
 
 Migration **018** gives new extension-created applications source notes such as **Added from LinkedIn**, derived from the posting link. It also replaces untouched generic extension notes; edited notes remain unchanged. Migration018 is installed in the configured project. No other schema change, permission or dependency is needed. [Verification and limits](../docs/extension-capture-score-verification.md). Reload the unpacked extension after updating.
+
+## Reviewed Ashby filling (0.8.0)
+
+Open an Ashby application form at `https://jobs.ashbyhq.com/<org>/<posting-id>/application`, wait for the fields to appear, then open the toolbar popup and review exactly as on Lever and Greenhouse. If the page is still rendering (or Ashby changes its layout) the review says "This Ashby form is not ready or its layout is unsupported", and **Review again** works once the fields are there. Supported contact fields: name, email, phone (when the board asks for it), and LinkedIn, GitHub and website questions; plain custom text questions and text areas can use approved answers. The location picker, yes/no button pairs, radio and checkbox groups, comboboxes, the optional diversity survey, resume files and the "autofill from resume" uploader stay manual. Ashby's submit is a plain button; the extension never clicks it or any other button. Top frame only: Ashby boards embedded in an iframe on a company's own site are not supported. Ashby has no `<form>` element, so the adapter works from the element that holds the application and survey containers and re-checks it, the URL and each control before every write (`content/autofill-ashby.js`). Reload the unpacked extension after updating.
 
 ## Reviewed Greenhouse filling (0.7.0)
 
@@ -58,7 +62,7 @@ After changing files here, click the reload button on the extension's card in `c
 | `content/detector.js` | Remembers postings, spots the submission, reports it |
 | `content/toast.js` | The "Added to Resume Butler, Undo" notice on the job site |
 | `content/autofill-core.js` | Shared reviewed-autofill core: inventory caps, visibility/identity/deadline checks and safe writes without submit or file actions |
-| `content/autofill.js`, `content/autofill-greenhouse.js` | Top-frame Lever and Greenhouse adapters: how each site's form is found, labelled and classified |
+| `content/autofill.js`, `content/autofill-greenhouse.js`, `content/autofill-ashby.js` | Top-frame Lever, Greenhouse and Ashby adapters: how each site's form is found, labelled and classified |
 | `autofillUrls.js` | The application-form URLs where reviewed filling is offered (the popup keeps a tested copy) |
 | `popup/` | Save/correct the posting, select a working resume, review Lever fields, copy fallback and submission tracking |
 

@@ -1,5 +1,5 @@
 // Shared, platform-neutral part of reviewed autofill. A site adapter (Lever,
-// Greenhouse) supplies how to find and describe its form; this file owns the
+// Greenhouse, Ashby) supplies how to find and describe its form; this file owns the
 // inventory, the caps and the whole write procedure, so every platform keeps the
 // same rules: never submit, never attach a file, never overwrite typed input.
 (() => {
@@ -25,6 +25,9 @@
   //   signature(element)   JSON string identifying one control
   //   question(element)    the wrapper that must stay the same between scan and write
   //   identity(element)    the control's name or id, for duplicate detection
+  //   owner?(element, root)  the root the control still belongs to, or null (default: element.form;
+  //                        an adapter without a <form> element, like Ashby, supplies this)
+  //   extraManual?(root)   [{ label, reason }] for controls that are not inputs (button pairs)
   //   skip?(element, label)  true to ignore a control silently (checked before editability)
   //   classify(element, label)  { manual: reason, label? } | { kind, sourceKey? }
   //   title()              the posting's title
@@ -56,6 +59,7 @@
         }
         fields.set(field.id, field);
       }
+      for (const item of adapter.extraManual?.(form) || []) addManual(item.label, item.reason);
       if (fields.size > 100 || manual.length > 100) throw new Error("This form has too many fields for reviewed autofill. Complete it manually.");
       inventory = { id: crypto.randomUUID(), url: location.href, form, signature: adapter.formSignature(form), fields };
       return { ok: true, inventoryId: inventory.id, url: inventory.url, title: String(adapter.title() || document.title).trim().slice(0, 250),
@@ -66,6 +70,8 @@
       try { return inventory && inventory.url === location.href && adapter.currentForm() === inventory.form && inventory.signature === adapter.formSignature(inventory.form); }
       catch { return false; }
     }
+
+    const ownerOf = element => adapter.owner ? adapter.owner(element, inventory.form) : element.form;
 
     function apply(message) {
       const timely = () => Number.isFinite(message.expiresAt) && Date.now() < message.expiresAt && document.visibilityState === "visible";
@@ -78,7 +84,7 @@
         const field = inventory.fields.get(fieldId), element = field.element;
         let status;
         if (!timely() || !inventoryCurrent()) status = "changed";
-        else if (!element.isConnected || element.form !== inventory.form || adapter.question(element) !== field.question || adapter.signature(element) !== field.signature) status = "changed";
+        else if (!element.isConnected || ownerOf(element) !== inventory.form || adapter.question(element) !== field.question || adapter.signature(element) !== field.signature) status = "changed";
         else if (!visible(element) || !editable(element)) status = "unavailable";
         else if (element.value !== "") status = "preserved";
         else if (element.maxLength >= 0 && value.length > element.maxLength || element.tagName === "INPUT" && /[\r\n]/.test(value)) status = "too-long";
