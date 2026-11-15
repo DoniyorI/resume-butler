@@ -1,15 +1,20 @@
-import { Briefcase, CalendarDays, Clock, Target, TrendingUp } from "lucide-react";
+import Link from "next/link";
+import { Briefcase, CalendarDays, ChevronRight, Clock, Target, TrendingUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { RESPONSE_WINDOW_DAYS } from "@/features/dashboard/data";
 import { MIN_GROUP_SIZE } from "@/features/dashboard/report";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-function SectionCard({ icon: Icon, label, value, badge, footer }) {
-  return (
-    <Card className="bg-gradient-to-t from-brand/5 to-card shadow-sm">
+// With `href` the whole card is one link (nothing inside it is interactive)
+function SectionCard({ icon: Icon, label, value, badge, footer, href }) {
+  const card = (
+    <Card
+      className={`h-full bg-gradient-to-t from-brand/5 to-card shadow-sm ${href ? "transition-colors group-hover:border-brand/40 group-hover:bg-muted/30" : ""}`}
+    >
       <CardHeader className="space-y-1 p-4">
         <CardDescription className="flex items-center gap-1.5">
           <Icon className="h-4 w-4" /> {label}
+          {href && <ChevronRight className="ml-auto h-4 w-4 opacity-60 group-hover:opacity-100" aria-hidden="true" />}
         </CardDescription>
         <div className="flex flex-wrap items-center gap-2">
           <CardTitle className={`font-semibold tabular-nums ${String(value).length > 10 ? "text-base" : "text-2xl"}`}>{value}</CardTitle>
@@ -22,6 +27,15 @@ function SectionCard({ icon: Icon, label, value, badge, footer }) {
         {footer && <p className="text-xs text-muted-foreground">{footer}</p>}
       </CardHeader>
     </Card>
+  );
+  if (!href) return card;
+  return (
+    <Link
+      href={href}
+      className="group block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+    >
+      {card}
+    </Link>
   );
 }
 
@@ -56,18 +70,21 @@ export default function SectionCards({ stats }) {
       <SectionCard
         icon={TrendingUp}
         label="Response rate"
+        href="/insights?tab=report"
         value={rateValue(stats.responses, stats.responseRate)}
         footer={rateFooter(stats.responses, "heard back")}
       />
       <SectionCard
         icon={Target}
         label="Offer rate"
+        href="/insights?tab=report"
         value={rateValue(stats.offers, stats.offerRate)}
         footer={rateFooter(stats.offers, "reached an offer")}
       />
       <SectionCard
         icon={Clock}
         label="Median days to first response"
+        href="/insights?tab=flow"
         value={hasResponseTime ? `${stats.medianResponseDays} days` : "—"}
         footer={
           hasResponseTime

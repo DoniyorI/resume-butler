@@ -37,30 +37,36 @@ export function DashboardSkeleton() {
           <CardBlock key={i} lines={2} />
         ))}
       </div>
-      {/* Today (2/3) beside waiting on a reply, goal and inbox (1/3) */}
+      {/* Today and recent applications (2/3) beside the action cards and Insights (1/3) */}
       <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-3">
-        <CardBlock className="h-72 xl:col-span-2" lines={4} />
+        <div className="flex flex-col gap-4 xl:col-span-2">
+          <CardBlock className="h-72" lines={4} />
+          <CardBlock className="h-72" lines={4} />
+        </div>
         <div className="flex flex-col gap-4">
           <CardBlock className="h-36" />
           <CardBlock className="h-28" />
           <CardBlock className="h-28" />
+          <CardBlock className="h-36" />
         </div>
       </div>
-      {/* Collapsible sections: the first one open, three slim headers */}
-      <div className="flex flex-col gap-4">
-        <div className="rounded-lg border bg-card">
-          <div className="flex items-center gap-3 px-6 py-3">
-            <Skeleton className="h-5 w-44" />
-            <Skeleton className="h-4 w-32" />
-          </div>
-          <Skeleton className="mx-6 mb-4 h-[300px] rounded-md" />
-        </div>
-        {Array.from({ length: 3 }, (_, i) => (
-          <div key={i} className="flex items-center gap-3 rounded-lg border bg-card px-6 py-3">
-            <Skeleton className="h-5 w-32" />
-            <Skeleton className="h-4 w-56 max-w-[50%]" />
-          </div>
-        ))}
+    </div>
+  );
+}
+
+// src/app/(app)/insights/page.jsx
+export function InsightsSkeleton() {
+  return (
+    <div className="flex w-full flex-col gap-4 px-4 pb-10 pt-[85px] md:px-6" aria-busy="true">
+      <div className="space-y-2">
+        <Skeleton className="h-3 w-20" />
+        <Skeleton className="h-6 w-32" />
+        <Skeleton className="h-4 w-72 max-w-full" />
+      </div>
+      <Skeleton className="h-10 w-80 max-w-full" />
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+        <Skeleton className="h-[420px] rounded-xl xl:col-span-2" />
+        <Skeleton className="h-[330px] rounded-xl" />
       </div>
     </div>
   );

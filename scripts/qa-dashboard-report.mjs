@@ -2,8 +2,8 @@
 //   response rate "x of N", offer rate, median days to first response, the Application flow
 //   (Reached Out is not "Awaiting response"), the follow-up card, the four report tables for chosen
 //   groups, "too few to compare", the month link, 375px overflow, a second user's empty report,
-//   and the dashboard's shape: Activity / Application flow / Search report start collapsed and render nothing
-//   until opened, the open state survives a reload, no Status breakdown, "Show N more" in Today.
+//   the dashboard's shape (no charts, report or collapsible sections; an Insights card; stat cards link
+//   to /insights; "Show N more" in Today) and /insights (?tab=activity|flow|report, invalid tab falls back).
 // Creates disposable @example.test users and deletes everything it created in `finally`.
 // Never prints the password, keys or tokens.
 //
@@ -128,44 +128,70 @@ try {
 
   await step("0-login", [], async () => { await login(page, email); await page.goto(`${base}/`, { waitUntil: "networkidle" }); });
 
-  const header = (p, title) => p.locator("button[aria-expanded]").filter({ hasText: title }).first();
-  const expanded = async (p, title) => (await header(p, title).getAttribute("aria-expanded")) === "true";
-  const openSection = async (p, title) => { if (!(await expanded(p, title))) await header(p, title).click(); assert.equal(await expanded(p, title), true, `${title} opens`); };
   const inDom = (p, sel) => p.locator(sel).count();
+  const insights = (p, tab) => p.goto(`${base}/insights${tab ? `?tab=${tab}` : ""}`, { waitUntil: "networkidle" });
 
-  await step("0a-collapsed-first-load", ["0-login"], async () => {
-    assert.equal(await expanded(page, "Recent applications"), true, "Recent applications starts open");
-    for (const t of ["Activity", "Application flow", "Search report"]) assert.equal(await expanded(page, t), false, `${t} starts collapsed`);
-    // Summaries are visible while collapsed
-    const summaries = await flat(page.locator("main, body").first());
-    assert.ok(summaries.includes(`${SEED.filter(s => s.offset >= -29).length} applications in the last 30 days`) || /\d+ applications? in the last 30 days/.test(summaries), "Activity summary");
-    assert.ok(summaries.includes(`How your ${SEED.length} applications moved from Applied to now`), "flow summary");
-    assert.ok(summaries.includes("Outcomes by source, job site, resume, month and workplace"), "report summary");
-    // Nothing of the collapsed sections is in the DOM, so the lazy charts have not loaded
-    assert.equal(await inDom(page, "#search-report"), 0, "report not rendered");
-    assert.equal(await inDom(page, "section[data-report-table]"), 0, "report tables not rendered");
-    assert.equal(await inDom(page, "svg.recharts-surface"), 0, "no chart rendered");
-    assert.ok(!summaries.includes("Where your applications are now"), "Activity content absent");
-    await shot(page, "dashboard-desktop-collapsed.png");
-  });
-
-  await step("0b-sections-open-and-persist", ["0a-collapsed-first-load"], async () => {
-    await openSection(page, "Search report");
-    await page.locator("#search-report").waitFor();
-    await page.reload({ waitUntil: "networkidle" });
-    assert.equal(await expanded(page, "Search report"), true, "Search report is still open after a reload");
-    assert.equal(await expanded(page, "Activity"), false, "Activity stays closed");
-    await page.locator("#search-report").waitFor();
-    await openSection(page, "Activity");
-    await openSection(page, "Application flow");
-    await page.getByText("Where your applications are now (current status)").waitFor();
-    await page.waitForFunction(() => [...document.querySelectorAll("svg text")].some(t => /Awaiting response/.test(t.textContent)));
+  await step("0a-dashboard-shape", ["0-login"], async () => {
     const body = await flat(page.locator("main, body").first());
+    assert.equal(await inDom(page, "section[aria-label][id] button[aria-expanded], [id$=\"-panel\"][hidden]"), 0, "no collapsible sections");
+    assert.equal(await inDom(page, "#search-report"), 0, "no report");
+    assert.equal(await inDom(page, "section[data-report-table]"), 0, "no report tables");
+    assert.equal(await inDom(page, "svg.recharts-surface"), 0, "no chart");
+    assert.ok(!body.includes("Where your applications are now"), "Pipeline absent");
     assert.ok(!/Status breakdown/i.test(body), "Status breakdown is gone");
-    await shot(page, "dashboard-desktop-all-open.png");
+    assert.ok(body.includes("Recent applications") && /View all \(\d+\)/.test(body), "Recent applications card with View all (N)");
+    assert.ok(await page.locator("tbody tr").count() <= 6, "at most 6 recent rows");
+    // The Insights card: three rows, each a link to its tab, with a summary
+    const card = page.getByText("Charts and a report of your own records").locator("xpath=ancestor::div[contains(@class,'border')][1]");
+    const text = await flat(card);
+    assert.ok(/\d+ applications? in the last 30 days/.test(text), text);
+    assert.ok(text.includes(`How ${SEED.length} applications moved`), text);
+    assert.ok(text.includes("Outcomes by source, resume and more"), text);
+    for (const tab of ["activity", "flow", "report"]) assert.equal(await card.locator(`a[href="/insights?tab=${tab}"]`).count(), 1, `Insights card links to ${tab}`);
+    await shot(page, "dashboard-desktop.png");
   });
 
-  await step("0c-today-show-more", ["0-login"], async () => {
+  await step("0b-insights-links", ["0a-dashboard-shape"], async () => {
+    for (const [label, tab] of [["Search report", "report"], ["Application flow", "flow"], ["Activity", "activity"]]) {
+      await page.goto(`${base}/`, { waitUntil: "networkidle" });
+      await page.locator(`a[href="/insights?tab=${tab}"]`).filter({ hasText: label }).first().click();
+      await page.waitForURL(`**/insights?tab=${tab}`);
+      assert.equal(await page.locator('[role="tablist"]').first().locator('[data-state="active"]').innerText(), label, `${tab} tab is active`);
+    }
+    // Stat cards are links too
+    await page.goto(`${base}/`, { waitUntil: "networkidle" });
+    await page.locator('a[href="/insights?tab=report"]').filter({ hasText: "Response rate" }).click();
+    await page.waitForURL("**/insights?tab=report");
+    await page.locator("#search-report").waitFor();
+  });
+
+  await step("0c-tabs", ["0a-dashboard-shape"], async () => {
+    // Activity is the default and an invalid tab falls back to it; the Pipeline renders, nothing else does
+    for (const url of [null, "activity", "nonsense"]) {
+      await insights(page, url);
+      assert.equal(await page.locator('[role="tablist"]').first().locator('[data-state="active"]').innerText(), "Activity", `${url} -> Activity`);
+      await page.getByText("Where your applications are now (current status)").waitFor();
+      assert.equal(await inDom(page, "#search-report"), 0, "report not rendered on Activity");
+    }
+    const body = await flat(page.locator("main, body").first());
+    assert.ok(body.includes("Counts and charts from your own records. Descriptive only."), "subtitle");
+    assert.equal(await page.locator('a[href="/"]').filter({ hasText: "Dashboard" }).count() > 0, true, "back link");
+    await shot(page, "insights-activity-desktop.png");
+    // Flow
+    await insights(page, "flow");
+    await page.waitForFunction(() => [...document.querySelectorAll("svg text")].some(t => /Awaiting response/.test(t.textContent)));
+    assert.equal(await inDom(page, "#search-report"), 0, "report not rendered on Flow");
+    // Clicking a tab changes the URL, and Back returns to the previous tab
+    await page.getByRole("tab", { name: "Search report" }).click();
+    await page.waitForURL("**/insights?tab=report");
+    await page.locator("#search-report").waitFor();
+    await page.goBack();
+    await page.waitForURL("**/insights?tab=flow");
+    assert.equal(await page.locator('[role="tablist"]').first().locator('[data-state="active"]').innerText(), "Application flow", "Back returns to Flow");
+  });
+
+  await step("0d-today-show-more", ["0-login"], async () => {
+    await page.goto(`${base}/`, { waitUntil: "networkidle" });
     const items = page.locator('section[aria-label="Suggested next steps"] li');
     await items.first().waitFor();
     assert.equal(await items.count(), 4, "four suggestions by default");
@@ -179,6 +205,7 @@ try {
   });
 
   await step("1-cards", ["0-login"], async () => {
+    await page.goto(`${base}/`, { waitUntil: "networkidle" });
     const cards = await flat(page.locator("div.grid.grid-cols-2").first());
     observed.cards = cards;
     const pct = n => Math.round((n / total.apps) * 100);
@@ -189,16 +216,19 @@ try {
     assert.ok(!/Avg\. response time/.test(cards));
   });
 
-  await step("2-copy", ["0b-sections-open-and-persist"], async () => {
+  await step("2-copy", ["0a-dashboard-shape"], async () => {
+    await page.goto(`${base}/`, { waitUntil: "networkidle" });
     const body = await flat(page.locator("main, body").first());
     assert.ok(!body.includes("A short follow-up email often gets a response"), "unsupported follow-up claim is gone");
     assert.ok(body.includes("Still at Applied after 14 days."), "factual follow-up line stays");
     const waiting = SEED.filter(s => s.status === "Applied" && s.offset <= -14).length;
     assert.ok(body.includes(`Waiting on a reply ${waiting}`), `waiting count ${waiting}`);
-    assert.ok(body.includes("Where your applications are now (current status)"), "pipeline says it shows the current status");
+    await insights(page, "activity");
+    await page.getByText("Where your applications are now (current status)").waitFor();
   });
 
-  await step("3-flow", ["0b-sections-open-and-persist"], async () => {
+  await step("3-flow", ["0c-tabs"], async () => {
+    await insights(page, "flow");
     const applied = SEED.filter(s => s.status === "Applied").length, reached = SEED.filter(s => s.status === "Reached Out").length;
     await page.waitForFunction(() => [...document.querySelectorAll("svg text")].some(t => /Awaiting response/.test(t.textContent)));
     const labels = await page.evaluate(() => [...document.querySelectorAll("svg text")].map(t => t.textContent));
@@ -206,9 +236,12 @@ try {
     const num = re => Number((labels.find(t => re.test(t)) || "").replace(/\D+/g, ""));
     assert.equal(num(/^Awaiting response/), applied, `Awaiting response counts only applications at Applied (${applied})`);
     assert.equal(num(/^Employer reached out/), reached, `Reached Out has its own node (${reached})`);
+    await shot(page, "insights-flow-desktop.png");
   });
 
-  await step("4-report-source", ["0b-sections-open-and-persist"], async () => {
+  await step("4-report-source", ["0c-tabs"], async () => {
+    await insights(page, "report");
+    await page.locator("#search-report").waitFor();
     const note = await flat(page.locator("#search-report"));
     assert.ok(note.includes(`for the ${ELIGIBLE.length} of ${SEED.length} applications applied 14 or more days ago`), note.slice(0, 300));
     assert.ok(note.includes("too few to compare") && note.includes("describes your search only"));
@@ -221,7 +254,8 @@ try {
     assert.equal((await tableRow("report-source", "From email"))[2], "too few to compare", "a small group has no percentage");
   });
 
-  await step("5-report-resume-workplace", ["0b-sections-open-and-persist"], async () => {
+  await step("5-report-resume-workplace", ["0c-tabs"], async () => {
+    await page.locator("#search-report").waitFor();
     assert.deepEqual(await tableRow("report-resume", RESUME_A), cell(stat(ELIGIBLE.filter(s => s.resume === "A"))));
     assert.deepEqual(await tableRow("report-resume", RESUME_B), cell(stat(ELIGIBLE.filter(s => s.resume === "B"))));
     assert.deepEqual(await tableRow("report-resume", "No resume linked"), cell(stat(ELIGIBLE.filter(s => !s.resume))));
@@ -230,7 +264,8 @@ try {
     assert.deepEqual(await tableRow("report-workplace", "Hybrid"), cell(stat(ELIGIBLE.filter(s => s.workplace === "hybrid"))));
   });
 
-  await step("6-report-month", ["0b-sections-open-and-persist"], async () => {
+  await step("6-report-month", ["0c-tabs"], async () => {
+    await page.locator("#search-report").waitFor();
     const months = [...new Set(ELIGIBLE.map(monthLabel))];
     let sum = 0;
     for (const label of months) {
@@ -245,25 +280,32 @@ try {
     const href = await link.getAttribute("href");
     observed.monthHref = href;
     assert.ok(/^\/applications\?from=\d{4}-\d{2}-01&to=\d{4}-\d{2}-\d{2}$/.test(href), href);
-    await shot(page, "report-desktop.png");
+    await shot(page, "insights-report-desktop.png");
   });
 
   await step("7-mobile-375", ["0-login"], async () => {
     await page.setViewportSize({ width: 375, height: 812 });
     try {
-      await page.goto(`${base}/`, { waitUntil: "networkidle" });
       const measure = () => page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, inner: window.innerWidth }));
+      await page.goto(`${base}/`, { waitUntil: "networkidle" });
       const w = await measure();
       observed.mobile = w;
-      assert.ok(w.scroll <= w.inner + 1, `horizontal overflow (${w.scroll} > ${w.inner})`);
-      // The open state was saved above, so the sections are open here and must fit too
-      await page.locator("#search-report").waitFor();
-      const open = await measure();
-      observed.mobileOpen = open;
-      assert.ok(open.scroll <= open.inner + 1, `horizontal overflow with sections open (${open.scroll} > ${open.inner})`);
-      const order = await page.evaluate(() => ["Waiting on a reply", "Goal", "Inbox"].map(t => [...document.querySelectorAll("h3, h2")].findIndex(h => h.textContent.includes(t))));
-      observed.mobileOrder = order;
+      assert.ok(w.scroll <= w.inner + 1, `dashboard horizontal overflow (${w.scroll} > ${w.inner})`);
+      observed.mobileOrder = await page.evaluate(() => {
+        const titles = ["Today", "Waiting on a reply", "Recent applications", "Goal", "Inbox", "Insights"];
+        const found = titles.map(t => { const h = [...document.querySelectorAll("h3, h2")].find(h => h.textContent.trim().startsWith(t)); return h ? [t, Math.round(h.getBoundingClientRect().top + scrollY)] : [t, null]; });
+        return found.filter(([, y]) => y !== null).sort((a, b) => a[1] - b[1]).map(([t]) => t);
+      });
       await shot(page, "dashboard-mobile.png");
+      for (const tab of ["activity", "flow", "report"]) {
+        await insights(page, tab);
+        if (tab === "report") await page.locator("#search-report").waitFor();
+        if (tab === "activity") await page.getByText("Where your applications are now (current status)").waitFor();
+        const m = await measure();
+        observed[`mobile-${tab}`] = m;
+        assert.ok(m.scroll <= m.inner + 1, `insights ${tab} horizontal overflow (${m.scroll} > ${m.inner})`);
+        if (tab === "report") await shot(page, "insights-mobile.png");
+      }
     } finally { await page.setViewportSize({ width: 1280, height: 1000 }); }
   });
 
@@ -281,7 +323,8 @@ try {
       const cards = await flat(second.locator("div.grid.grid-cols-2").first());
       assert.ok(cards.includes("Response rate Not enough history yet"), `no 0% without history (${cards})`);
       assert.ok(!/Response rate 0%/.test(cards));
-      await openSection(second, "Search report");
+      await second.goto(`${base}/insights?tab=report`, { waitUntil: "networkidle" });
+      await second.locator("#search-report").waitFor();
       const report = await flat(second.locator("#search-report"));
       assert.ok(report.includes("Not enough history yet"), report);
       assert.ok(!report.includes(RESUME_A) && !report.includes("Browser extension"));

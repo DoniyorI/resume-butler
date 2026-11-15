@@ -21,7 +21,7 @@ function shortDate(value) {
 
 // The newest applications, a jump-off to the full table. `items` come from
 // getDashboardStats().recent.
-export default function RecentApplications({ items, total, className, bare = false }) {
+export default function RecentApplications({ items, total, className }) {
   const viewAll = (
     <Button asChild variant="ghost" size="sm" className="h-8 text-brand hover:text-brand">
       <Link href="/applications">
@@ -30,16 +30,12 @@ export default function RecentApplications({ items, total, className, bare = fal
       </Link>
     </Button>
   );
-  // bare: inside a CollapsibleSection, which already carries the title
-  const Wrapper = bare ? "div" : Card;
   return (
-    <Wrapper className={cn("flex flex-col", className)}>
-      {bare ? null : (
-        <CardHeader className="flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-base">Recent applications</CardTitle>
-          {viewAll}
-        </CardHeader>
-      )}
+    <Card className={cn("flex flex-col", className)}>
+      <CardHeader className="flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-lg">Recent applications</CardTitle>
+        {viewAll}
+      </CardHeader>
       <CardContent className="flex-1 px-0 pb-2">
         {items.length === 0 ? (
           <p className="px-6 py-8 text-center text-sm text-muted-foreground">
@@ -87,8 +83,7 @@ export default function RecentApplications({ items, total, className, bare = fal
             </TableBody>
           </Table>
         )}
-        {bare && total > 0 && <div className="flex justify-end px-4 pt-2">{viewAll}</div>}
       </CardContent>
-    </Wrapper>
+    </Card>
   );
 }

@@ -62,7 +62,7 @@ export function median(values) {
 // No reply after this long is worth a follow-up email
 export const FOLLOW_UP_AFTER_DAYS = 14;
 const FOLLOW_UP_LIMIT = 6;
-const RECENT_LIMIT = 8;
+const RECENT_LIMIT = 6;
 
 // Applications still at "Applied" (never moved on) two weeks or more after
 // applying, oldest first: the ones to nudge. Also the rule behind the
@@ -195,12 +195,14 @@ async function fetchAll(buildQuery) {
 
 // Every application and status history row of the user. The dashboard loads
 // them once and shares them between the stats and the suggested next steps.
-export async function loadDashboardRows(supabase, userId) {
+// The Search report on /insights also needs the columns it groups by (`forReport`).
+const REPORT_COLUMNS = ", source, source_site, workplace_type, resume_id";
+export async function loadDashboardRows(supabase, userId, { forReport = false } = {}) {
   const [applications, history] = await Promise.all([
     fetchAll(() =>
       supabase
         .from("applications")
-        .select("id, company, role, status, applied_date, source, source_site, workplace_type, resume_id")
+        .select(`id, company, role, status, applied_date${forReport ? REPORT_COLUMNS : ""}`)
         .eq("user_id", userId)
         .order("applied_date", { ascending: false, nullsFirst: false })
         .order("created_at", { ascending: false })

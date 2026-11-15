@@ -8,23 +8,14 @@ import {
   getGoalAndName,
   groupHistoryByApplication,
   loadDashboardRows,
-  loadResumeTitles,
 } from "@/features/dashboard/data";
 import FollowUps from "@/features/dashboard/FollowUps";
 import TodayCard from "@/features/dashboard/TodayCard";
+import InsightsCard from "@/features/dashboard/InsightsCard";
 import GoalCard from "@/features/dashboard/GoalCard";
 import RecentApplications from "@/features/dashboard/RecentApplications";
 import SyncCard from "@/features/dashboard/SyncCard";
-import SearchReport from "@/features/dashboard/SearchReport";
-import { searchReport } from "@/features/dashboard/report";
-import CollapsibleSection from "@/features/dashboard/CollapsibleSection";
-import { REPORT_SUMMARY, activitySummary, flowSummary, recentSummary } from "@/features/dashboard/summaries";
 import SectionCards from "@/features/dashboard/SectionCards";
-import {
-  ApplicationFlow,
-  ApplicationsOverTime,
-  Pipeline,
-} from "@/features/dashboard/LazyCharts";
 import { toConnection } from "@/features/email-sync/data";
 import { getPendingSummary } from "@/features/suggestions/data";
 import {
@@ -61,10 +52,10 @@ async function softly(load, fallback, what) {
 }
 
 // The home page: the headline numbers, then today's to-dos (next steps beside follow-ups,
-// goal and inbox), then collapsible sections: newest applications open, trends and reports closed
+// goal and inbox) and the newest applications. Charts and the report live on /insights.
 export default async function DashboardPage() {
   const { supabase, user } = await requirePageUser();
-  const [rows, { firstName, goal }, connection, pending, upcoming, activities, decideJobs, fitJobs, watched, offers, resumeTitles] = await Promise.all([
+  const [rows, { firstName, goal }, connection, pending, upcoming, activities, decideJobs, fitJobs, watched, offers] = await Promise.all([
     loadDashboardRows(supabase, user.id),
     getGoalAndName(supabase, user.id),
     loadConnection(supabase, user.id),
@@ -83,7 +74,6 @@ export default async function DashboardPage() {
     softly(watchedWithBands(supabase, user.id), [], "watched postings"),
     // Offers and their decisions; [] before migration 022, null if they can't be read
     softly(listOffersForSuggestions(supabase, user.id), null, "offers"),
-    loadResumeTitles(supabase, user.id),
   ]);
   const withBands = new Set(fitJobs.map((job) => job.id));
   const savedJobs = [...fitJobs, ...decideJobs.filter((job) => !withBands.has(job.id))];
@@ -119,52 +109,36 @@ export default async function DashboardPage() {
 
       <SectionCards stats={stats} />
 
+      {/* One column on a phone, in this order: Today, inbox (if it has updates), Waiting on a reply, Recent
+          applications, Goal, inbox, Insights. The two column wrappers only exist from xl up (display: contents
+          before), where Today and Recent stack on the left and the rest on the right. */}
       <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-3">
-        <TodayCard
-          className="xl:col-span-2"
-          upcoming={upcoming.items}
-          olderOverdue={upcoming.olderOverdue}
-          suggestions={suggestions}
-          setupPending={upcoming.setupPending}
-        />
-        <div className="flex flex-col gap-4">
-          {syncFirst && syncCard}
-          <FollowUps followUps={stats.followUps} />
-          <GoalCard goal={goal} series={stats.daily.series} />
-          {!syncFirst && syncCard}
+        <div className="contents xl:col-span-2 xl:flex xl:min-w-0 xl:flex-col xl:gap-4">
+          <div className="order-1 min-w-0 xl:order-none">
+            <TodayCard
+              upcoming={upcoming.items}
+              olderOverdue={upcoming.olderOverdue}
+              suggestions={suggestions}
+              setupPending={upcoming.setupPending}
+            />
+          </div>
+          <div className="order-4 min-w-0 xl:order-none">
+            <RecentApplications items={stats.recent} total={stats.total} />
+          </div>
         </div>
-      </div>
-
-      <div className="flex flex-col gap-4">
-        <CollapsibleSection
-          id="recent"
-          title="Recent applications"
-          summary={recentSummary(stats.total, stats.recent.length)}
-          defaultOpen
-        >
-          <RecentApplications bare items={stats.recent} total={stats.total} />
-        </CollapsibleSection>
-
-        <CollapsibleSection id="activity" title="Activity" summary={activitySummary(stats.daily.series, todayKey())}>
-          <div className="grid grid-cols-1 gap-6 px-4 sm:px-6 xl:grid-cols-3">
-            <div className="xl:col-span-2">
-              <ApplicationsOverTime bare series={stats.daily.series} />
-            </div>
-            <Pipeline bare funnel={stats.funnel} total={stats.total} />
+        <div className="contents xl:flex xl:min-w-0 xl:flex-col xl:gap-4">
+          {syncFirst && <div className="order-2 min-w-0 xl:order-none">{syncCard}</div>}
+          <div className="order-3 min-w-0 xl:order-none">
+            <FollowUps followUps={stats.followUps} />
           </div>
-        </CollapsibleSection>
-
-        <CollapsibleSection id="flow" title="Application flow" summary={flowSummary(stats.total)}>
-          <div className="px-4 sm:px-6">
-            <ApplicationFlow bare flow={stats.flow} />
+          <div className="order-5 min-w-0 xl:order-none">
+            <GoalCard goal={goal} series={stats.daily.series} />
           </div>
-        </CollapsibleSection>
-
-        <CollapsibleSection id="search-report-section" title="Search report" summary={REPORT_SUMMARY}>
-          <div className="px-4 sm:px-6">
-            <SearchReport bare report={searchReport(rows.applications, rows.history, resumeTitles)} />
+          {!syncFirst && <div className="order-6 min-w-0 xl:order-none">{syncCard}</div>}
+          <div className="order-7 min-w-0 xl:order-none">
+            <InsightsCard series={stats.daily.series} total={stats.total} today={todayKey()} />
           </div>
-        </CollapsibleSection>
+        </div>
       </div>
     </div>
   );

@@ -56,7 +56,7 @@ function ReportTable({ title, rows, groupLabel, id }) {
 
 // Counts and rates from the user's own records, split by source, resume, month
 // and workplace. Descriptive only: no advice, no comparison between small groups.
-export default function SearchReport({ report, bare = false }) {
+export default function SearchReport({ report }) {
   const description = (
     <>
       Counts from your own records, for the {report.included} of {report.total}{" "}
@@ -84,14 +84,6 @@ export default function SearchReport({ report, bare = false }) {
     </>
   );
 
-  if (bare) {
-    return (
-      <div id="search-report" className="space-y-5">
-        <p className="text-sm text-muted-foreground">{description}</p>
-        {body}
-      </div>
-    );
-  }
   return (
     <Card id="search-report">
       <CardHeader>

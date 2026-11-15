@@ -48,7 +48,7 @@ Core principle: **the user's own words and facts**. AI may pick, reorder and rew
 | Framework | Next.js 14.2 App Router, JavaScript (no TypeScript) | Server Components, Server Actions, Route Handlers, middleware |
 | UI | React 18, Tailwind CSS 3, shadcn/ui (Radix primitives), lucide-react icons, sonner toasts | `src/components/ui` holds the shadcn primitives |
 | Tables | @tanstack/react-table | Applications table |
-| Charts | recharts (incl. Sankey) | Loaded lazily on the dashboard |
+| Charts | recharts (incl. Sankey) | Loaded lazily on /insights |
 | Drag and drop | @hello-pangea/dnd | Resume section order |
 | Forms | react-hook-form + zod in a few forms; most forms use plain state | zod is the validation layer everywhere on the server |
 | Dates | date-fns, plus `@/lib/dates` helpers | Plain `YYYY-MM-DD` dates are read as local dates |
@@ -93,6 +93,7 @@ src/
     layout.js                Root: Inter font, globals.css, <Toaster>
     (app)/                   Signed-in app. layout.js: requirePageUser() + NavBar + Footer
       page.jsx               Dashboard (/)
+      insights/              Charts and the Search report (/insights?tab=activity|flow|report)
       applications/          Table (/applications), detail (/applications/[id]) and spreadsheet import (/applications/import)
       documents/             Resume and cover letter library
       watchlist/             Watched company job boards (/watchlist)
@@ -133,7 +134,8 @@ Feature folders: `activities` (next steps), `applications`, `ats`, `auth`, `cont
 
 | Path | File | What it shows |
 |---|---|---|
-| `/` | `(app)/page.jsx` | Dashboard: welcome, Today (dated next steps and suggestions), stat cards, goal, email sync card, follow-ups, recent applications, charts |
+| `/` | `(app)/page.jsx` | Dashboard ("what do I do now"): welcome, stat cards (rates link to Insights), Today (dated next steps and suggestions), recent applications, follow-ups, goal, email sync card, and an Insights card linking to `/insights` |
+| `/insights` | `(app)/insights/page.jsx` | Analysis in tabs kept in the URL (`?tab=activity` default, `flow`, `report`; anything else is activity): Applications over time and Pipeline, Application flow, Search report. Only the open tab renders, so its charts load on demand |
 | `/applications` | `(app)/applications/page.jsx` | Applications table (URL-driven filters, sort, pages of 50), suggestions banner |
 | `/applications/import` | `(app)/applications/import/page.jsx` | Import applications from a CSV file, with a preview first (see [Import](#import-from-a-spreadsheet-serverapplications-featuresapplicationsimport)); linked from the "Import" button in the applications header |
 | `/applications/[id]` | `(app)/applications/[id]/page.jsx` | Application detail: facts, editable details, job description, a "Fit for this job" card, an Offer card (when the status is Offered or an offer record exists), notes, ATS scanner, status timeline, linked documents, Next steps card (`?step=<kind>` opens its add form) |

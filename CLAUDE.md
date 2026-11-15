@@ -26,7 +26,8 @@ Node 24.x (see `engines` in package.json).
 src/
   app/                    Routes only; pages stay thin
     (app)/                Signed-in app. layout.js checks the user on the server and renders the nav.
-                          page.jsx (/) is the dashboard; the applications table is /applications
+                          page.jsx (/) is the dashboard; /insights has the charts and the Search report;
+                          the applications table is /applications
     (auth)/               login, register, forgot-password, reset-password (no nav)
     (marketing)/          about, contact (public, static)
     api/*/route.js        Route Handlers (uploads, downloads, AI, email scan, the extension API)

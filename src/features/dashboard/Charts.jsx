@@ -65,25 +65,8 @@ function fillDays(series, range) {
   return days;
 }
 
-// A chart's card, or (bare) the same content without the card and title, for use
-// inside a CollapsibleSection that already has the title
-// soleChart: the section's only chart, whose title the section header already shows
-function Frame({ bare, soleChart = false, title, description, aside, className, contentClassName, children }) {
-  if (bare) {
-    return (
-      <div className={className}>
-        <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          {/* A section can hold two charts, so each keeps a small title of its own */}
-          <div className="space-y-0.5">
-            {!soleChart && <h3 className="text-sm font-medium">{title}</h3>}
-            <p className="text-sm text-muted-foreground">{description}</p>
-          </div>
-          {aside}
-        </div>
-        <div className={contentClassName}>{children}</div>
-      </div>
-    );
-  }
+// A chart's card with its title and description (and an optional control beside them)
+function Frame({ title, description, aside, className, contentClassName, children }) {
   return (
     <Card className={className}>
       <CardHeader className={aside ? "flex flex-col gap-3 space-y-0 sm:flex-row sm:items-start sm:justify-between" : undefined}>
@@ -99,18 +82,17 @@ function Frame({ bare, soleChart = false, title, description, aside, className, 
 }
 
 // Applications per day, with a range switcher (shadcn's interactive area chart)
-export function ApplicationsOverTime({ series, bare = false }) {
+export function ApplicationsOverTime({ series }) {
   const [range, setRange] = useState("30");
   const data = useMemo(() => fillDays(series, range), [series, range]);
   const total = data.reduce((sum, day) => sum + day.count, 0);
 
   return (
     <Frame
-      bare={bare}
       className="h-full"
       title="Applications over time"
       description={`${total} ${total === 1 ? "application" : "applications"}${range === "all" ? " in total" : ` in the last ${range} days`}`}
-      contentClassName={bare ? undefined : "px-2 sm:px-6"}
+      contentClassName="px-2 sm:px-6"
       aside={
         <Tabs value={range} onValueChange={setRange}>
           <TabsList>
@@ -186,7 +168,7 @@ function BarValueLabel({ x, y, width, height, value }) {
 }
 
 // Applied → Reached Out → Interviewed → Offered, as horizontal bars with conversion
-export function Pipeline({ funnel, total, bare = false }) {
+export function Pipeline({ funnel, total }) {
   const data = funnel.map((stage) => ({
     stage: stage.label,
     count: stage.count,
@@ -196,7 +178,6 @@ export function Pipeline({ funnel, total, bare = false }) {
 
   return (
     <Frame
-      bare={bare}
       title="Pipeline"
       description="Where your applications are now (current status), out of everything you applied to"
     >
@@ -333,13 +314,11 @@ function linkedFlow(flow) {
 }
 
 // Entry streams → recorded interview milestone → shared current outcomes.
-export function ApplicationFlow({ flow, bare = false }) {
+export function ApplicationFlow({ flow }) {
   const data = useMemo(() => linkedFlow(flow), [flow]);
   const hasFlow = data.links.length > 0;
   return (
     <Frame
-      bare={bare}
-      soleChart
       title="Application flow"
       description={`${applicationsCount(flow.total)} · Entry → interviews → current outcome`}
     >
