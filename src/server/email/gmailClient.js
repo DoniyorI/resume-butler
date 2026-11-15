@@ -11,11 +11,12 @@ const REVOKE_URL = "https://oauth2.googleapis.com/revoke";
 const API_URL = "https://gmail.googleapis.com/gmail/v1/users/me";
 
 const DEFAULT_MAX_MESSAGES = 300;
-const SCAN_TIMEOUT_MS = 25_000;
+// The scan route allows 60 s; reading Gmail may use up to 32 s and leaves the rest for classification
+const SCAN_TIMEOUT_MS = 32_000;
 const PAGE_SIZE = 100;
 // Gmail allows each user about 250 quota units a second and a message read costs 5, so reads are
 // spread out (at most one start every MIN_GAP_MS, about 22 a second, half the limit) and few run at once
-const FETCH_CONCURRENCY = 4;
+const FETCH_CONCURRENCY = 6;
 const MIN_GAP_MS = 45;
 const MAX_RETRIES = 3;
 const RETRY_BASE_MS = 1000;
@@ -221,6 +222,8 @@ export function parseGmailMessage(message) {
   };
 }
 
+const timedOut = () =>
+  Object.assign(new HttpError(503, "Reading Gmail timed out. Please retry, or use a shorter date range."), { timedOut: true });
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const isRateLimited = ({ status, body }) => status === 429 || (status === 403 && RATE_LIMITED.has(gmailReason(body)));
 
@@ -257,7 +260,7 @@ export async function fetchGmailEmails(
   const deadline = Date.now() + Math.max(1, Math.min(timeoutMs, SCAN_TIMEOUT_MS));
   const remaining = () => {
     const left = deadline - Date.now();
-    if (left <= 0) throw new HttpError(503, "Reading Gmail timed out. Please retry, or use a shorter date range.");
+    if (left <= 0) throw timedOut();
     return Math.min(left, REQUEST_TIMEOUT_MS);
   };
   const call = async (url, init) => {
@@ -266,7 +269,7 @@ export async function fetchGmailEmails(
     } catch (error) {
       if (error instanceof HttpError) throw error;
       if (error?.name === "TimeoutError" || error?.name === "AbortError") {
-        throw new HttpError(503, "Reading Gmail timed out. Please retry, or use a shorter date range.");
+        throw timedOut();
       }
       throw new HttpError(503, "Gmail could not be reached. Check the connection and try again shortly.");
     }
@@ -310,10 +313,22 @@ export async function fetchGmailEmails(
     if (wait) await sleep(wait);
   };
   let deferred = 0;
+  // Out of time: what was read is kept and the rest waits for the next scan
   const read = async (id) => {
     for (let attempt = 0; ; attempt++) {
+      if (deadline - Date.now() < 1_500) {
+        deferred++;
+        return null;
+      }
       await pace();
-      const result = await call(`${API_URL}/messages/${id}?format=full`, auth);
+      let result;
+      try {
+        result = await call(`${API_URL}/messages/${id}?format=full`, auth);
+      } catch (error) {
+        if (!error?.timedOut) throw error;
+        deferred++;
+        return null;
+      }
       if (result.status === 404) return null; // deleted between the list and the read
       if (result.ok) return parseGmailMessage(result.body);
       if (!isRateLimited(result)) throw gmailError(result, "message");

@@ -176,6 +176,18 @@ test("a rate-limited listing is retried before the scan gives up", async () => {
   assert.equal(emails.length, 1);
 });
 
+test("when the time budget runs out, the messages already read are kept and the rest are deferred", async (t) => {
+  t.mock.method(console, "warn", () => {});
+  const { fetchImpl } = fakeGoogle([
+    [isToken, () => json(200, { access_token: "access" })],
+    [isList, () => json(200, { messages: Array.from({ length: 40 }, (_, i) => ({ id: `t${i}` })) })],
+    [isGet, async (u) => { await new Promise((r) => setTimeout(r, 150)); return json(200, apiMessage(u.pathname.split("/").pop())); }],
+  ]);
+  const emails = await gmail.fetchGmailEmails({ refreshToken: "r" }, { since: new Date("2026-11-01"), before: new Date("2026-11-15"), fetchImpl, minGapMs: 0, timeoutMs: 2_000 });
+  assert.ok(emails.length > 0 && emails.length < 40, `read ${emails.length}`);
+  assert.equal(emails.length + emails.truncated, 40, "every message is either read or counted as deferred");
+});
+
 test("message reads are spaced out to stay under Gmail's per-user rate", async () => {
   const starts = [];
   const { fetchImpl } = fakeGoogle([
