@@ -43,8 +43,8 @@ function Summary({ result }) {
           </div>
           {result.missing.some(({ text }) => /[À-ɏ]/.test(text)) ? (
             <p className="mt-2 text-xs text-muted-foreground">
-              This PDF draws accented letters (such as é) as a letter plus a separate mark, so the extractor reads them split
-              apart. Lines with accents can show here even when they print correctly.
+              Some PDF readers split accented letters (such as é) into a letter and a separate mark, so lines with accents can
+              show here even when they print correctly.
             </p>
           ) : null}
         </section>

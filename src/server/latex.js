@@ -209,6 +209,8 @@ function getBullets(item) {
 }
 
 const PREAMBLE = `\\documentclass[letterpaper,11pt]{article}
+\\usepackage[T1]{fontenc}
+\\usepackage{lmodern}
 \\usepackage{latexsym}
 \\usepackage[empty]{fullpage}
 \\usepackage{titlesec}
@@ -340,6 +342,8 @@ function letterContacts(header) {
 }
 
 const LETTER_PREAMBLE = `\\documentclass[letterpaper,11pt]{article}
+\\usepackage[T1]{fontenc}
+\\usepackage{lmodern}
 \\usepackage[margin=0.75in]{geometry}
 \\usepackage{fontawesome5}
 \\usepackage{xcolor}

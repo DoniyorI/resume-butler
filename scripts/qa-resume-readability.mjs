@@ -33,7 +33,7 @@ const otherEmail = `sync-qa-${run}-read-other@example.test`;
 const password = `QA!${randomBytes(24).toString("base64url")}9a`;
 const MISSING = ["42P01", "PGRST205", "PGRST200", "PGRST204"];
 
-// The fixture resume without the accented word, which the PDF fonts draw as two marks
+// The fixture resume with one bullet changed to plain ASCII
 const BULLET = "Built an efficient scheduling service in TypeScript that served 40 internal clients";
 const content = {
   ...readabilityResume,

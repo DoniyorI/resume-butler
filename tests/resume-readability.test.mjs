@@ -99,7 +99,7 @@ test("custom sections print their lines and the pdf2json page marker is not part
   assert.deepEqual(expectedLines(custom).map((l) => l.text), ["Alex Example", "Awards", "Dean's list"]);
 });
 
-test("the PDF compiled from a synthetic resume reads back, except an accented word", async () => {
+test("the PDF compiled from a synthetic resume reads back in full, accented words included", async () => {
   const buffer = await readFile(new URL("./fixtures/readability-resume.pdf", import.meta.url));
   const pages = await extractPdfPages(buffer);
   const text = await extractPdfText(buffer);
@@ -110,7 +110,9 @@ test("the PDF compiled from a synthetic resume reads back, except an accented wo
   assert.equal(result.headingsInOrder, true);
   assert.deepEqual(result.headingOrder, ["Experience", "Education", "Projects", "Technical Skills", "Certifications"]);
   assert.ok(result.contact.every((c) => c.found), "every contact value is read");
-  // pdflatex draws the accent in "résumé" as a separate mark, so the extractor reads "r ́esum ́e"
-  assert.deepEqual(result.missing, [{ section: "Projects", text: "Published a command-line tool that checks résumé files for formatting problems" }]);
-  assert.equal(result.found, result.expected - 1);
+  assert.deepEqual(result.missing, []);
+  assert.equal(result.found, result.expected);
+  assert.ok(text.includes("résumé"), "T1 fonts keep accents in the text layer");
+  assert.ok(text.includes("José Müller"), "an accented name is read as written");
+  assert.ok(text.includes("< 200 ms | handled > 5k"), "< > | are read as written");
 });

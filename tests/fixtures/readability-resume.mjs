@@ -17,7 +17,7 @@ export const readabilityResume = {
     },
     {
       companyName: "Contoso Systems", location: "Chicago, IL", position: "Software Engineer", startDate: "2018-06-01", endDate: "2020-12-01",
-      description: ["Wrote integration tests that caught regressions before release", "Reduced build times from 12 minutes to 4 minutes"],
+      description: ["Wrote integration tests that caught regressions before release", "Reduced build times from 12 minutes to 4 minutes", "Pair-programmed with José Müller on a Zürich rollout that kept p95 latency < 200 ms | handled > 5k requests"],
     },
   ],
   projects: [

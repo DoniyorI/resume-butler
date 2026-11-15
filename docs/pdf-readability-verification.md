@@ -26,7 +26,19 @@ There is no score. The dialog says it shows what a PDF text extractor reads, tha
 
 ## What it found
 
-- **Accented letters:** pdflatex in the default OT1 encoding draws an accented letter as a letter plus a separate mark, so "résumé" is extracted as "r ́esum ́e". A line containing accents is listed as not found. The dialog explains this when such a line is missing. The fix is T1 font encoding in the LaTeX preamble, but that changes the font files and so needs the page-fidelity re-measurement CLAUDE.md requires. It is left as a follow-up.
+- **Accented letters (fixed the same day):** pdflatex in the default OT1 encoding drew an accented letter as a letter plus a separate mark, so "résumé" was extracted as "r ́esum ́e". OT1 also misprinted `<`, `>` and `|`.
+  - **The change:** both preambles now load `\usepackage[T1]{fontenc}` and `\usepackage{lmodern}` (Latin Modern keeps the Computer Modern metrics).
+  - **Re-measured by compiling the same documents before and after:**
+
+    | Document | Page count | Line breaks | Largest vertical drift |
+    |---|---|---|---|
+    | Fixture resume | Unchanged | Identical | 0.11 pt |
+    | Two-page resume | Unchanged | Identical | 0.11 pt |
+    | Cover letter | Unchanged | Identical | 0.18 pt |
+
+    So the editor CSS was left as it was.
+  - **The fixture now reads back every line,** including "résumé", "José Müller" and `< 200 ms | handled > 5k`. `tests/latex-preamble.test.mjs` keeps T1 in both preambles.
+  - **The dialog's accent note remains** for the rare case it is still needed.
 - **Contact icons** come out as stray characters between contact values; the values themselves are read correctly.
 
 ## Known limits
