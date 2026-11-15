@@ -14,7 +14,7 @@ export default function FollowUps({ followUps, className }) {
           {total > 0 && <span className="text-sm font-normal text-muted-foreground">{total}</span>}
         </CardTitle>
         <CardDescription>
-          Still at Applied after {FOLLOW_UP_AFTER_DAYS} days. A short follow-up email often gets a response.
+          Still at Applied after {FOLLOW_UP_AFTER_DAYS} days.
         </CardDescription>
       </CardHeader>
       <CardContent>

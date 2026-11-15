@@ -60,8 +60,16 @@ test("unchanged applications from both streams stay visible as waiting", () => {
   const f = buildFlow(apps([...Array(30).fill("Applied"), "Reached Out"]), new Map());
   conserved(f, 31);
   assert.equal(edge(f, "entry:Applied", "outcome:Applied"), 30);
-  assert.equal(edge(f, "entry:Reached Out", "outcome:Applied"), 1);
+  assert.equal(edge(f, "entry:Reached Out", "outcome:Reached Out"), 1);
+  assert.equal(edge(f, "entry:Reached Out", "outcome:Applied"), 0);
   assert.equal(f.nodes.find((n) => n.id === "outcome:Applied").name, "Awaiting response");
+  assert.equal(f.nodes.find((n) => n.id === "outcome:Reached Out").name, "Employer reached out");
+});
+test("an application at Reached Out is never counted as awaiting a response", () => {
+  const f = buildFlow(apps(["Reached Out", "Applied"]), new Map([["fixture-0", events(["Applied", "Reached Out"])]]));
+  conserved(f, 2);
+  assert.equal(edge(f, "entry:Applied", "outcome:Reached Out"), 1);
+  assert.equal(edge(f, "entry:Applied", "outcome:Applied"), 1); // only the one still at Applied
 });
 test("missing entry history does not invent an origin or interview", () => {
   const f = buildFlow(apps(["Offered", "Rejected", "Interviewed"]), new Map());

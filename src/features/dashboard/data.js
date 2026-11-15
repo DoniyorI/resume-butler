@@ -19,17 +19,46 @@ export function groupHistoryByApplication(statusHistory) {
 // reaching out, so it counts as a reply too.
 export const RESPONSE_STATUSES = ["Reached Out", "Interviewed", "Offered"];
 
-// Applications that ever heard back: the current status or any earlier one in
-// the history is a reply (interviewed then rejected still heard back)
-export function responseSummary(applications, historyByApp = new Map()) {
-  const replied = new Set(RESPONSE_STATUSES);
-  const responses = applications.filter(
-    (app) => replied.has(app.status) || (historyByApp.get(app.id) || []).some((h) => replied.has(h.status))
-  ).length;
-  return { responses, responseRate: percent(responses, applications.length) };
+// True when the current status or any status in the history is one of `statuses`
+export function everHad(app, historyByApp, statuses) {
+  const wanted = new Set(statuses);
+  return wanted.has(app.status) || (historyByApp.get(app.id) || []).some((h) => wanted.has(h.status));
 }
 
-// Applied -> first "Interviewed" entry, in whole days
+// Rates only count applications old enough to have had a reply
+export const RESPONSE_WINDOW_DAYS = 14;
+
+// Applied at least RESPONSE_WINDOW_DAYS ago (whole days, local calendar date)
+export function isInResponseWindow(app, now = Date.now()) {
+  const applied = parseDate(app.applied_date);
+  return Boolean(applied) && Math.floor((now - applied.getTime()) / DAY_MS) >= RESPONSE_WINDOW_DAYS;
+}
+
+// Counts behind the response and offer rates. Both use the same applications:
+// the ones applied RESPONSE_WINDOW_DAYS or more ago. A rate is null when there
+// are none, so the card never shows a made-up 0%. A reply is the current status
+// or any earlier one in the history (interviewed then rejected still heard back).
+export function responseSummary(applications, historyByApp = new Map(), now = Date.now()) {
+  const eligible = applications.filter((app) => isInResponseWindow(app, now));
+  const responses = eligible.filter((app) => everHad(app, historyByApp, RESPONSE_STATUSES)).length;
+  const offers = eligible.filter((app) => everHad(app, historyByApp, ["Offered"])).length;
+  return {
+    eligible: eligible.length,
+    responses,
+    responseRate: eligible.length ? percent(responses, eligible.length) : null,
+    offers,
+    offerRate: eligible.length ? percent(offers, eligible.length) : null,
+  };
+}
+
+// Median of a list of numbers, or null when empty (even counts average the middle two)
+export function median(values) {
+  if (!values.length) return null;
+  const sorted = [...values].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+}
+
 // No reply after this long is worth a follow-up email
 export const FOLLOW_UP_AFTER_DAYS = 14;
 const FOLLOW_UP_LIMIT = 6;
@@ -62,9 +91,10 @@ function followUps(applications, historyByApp) {
   return { total: waiting.length, items: waiting.slice(0, FOLLOW_UP_LIMIT) };
 }
 
-// Days from applying to the first "Interviewed" entry. Only for applications
-// whose history shows them at "Applied" first: one added straight at
-// Interviewed has a backdated apply date, and that gap is not a response time.
+// Days from applying to the first reply (Reached Out, Interviewed or Offered
+// entry in the history). Only for applications whose history shows them at
+// "Applied" first: one added straight at a later status has a backdated apply
+// date, and that gap is not a response time.
 export function responseTimes(applications, historyByApp) {
   const times = [];
   for (const app of applications) {
@@ -72,9 +102,9 @@ export function responseTimes(applications, historyByApp) {
     if (!applied) continue;
     const history = [...(historyByApp.get(app.id) || [])].sort((a, b) => Date.parse(a.changed_at) - Date.parse(b.changed_at));
     if (history[0]?.status !== "Applied") continue;
-    const interview = history.find((h) => h.status === "Interviewed");
-    if (!interview) continue;
-    const days = Math.round((new Date(interview.changed_at) - applied) / DAY_MS);
+    const reply = history.find((h) => RESPONSE_STATUSES.includes(h.status));
+    if (!reply) continue;
+    const days = Math.round((new Date(reply.changed_at) - applied) / DAY_MS);
     if (days >= 0) times.push(days);
   }
   return times;
@@ -100,7 +130,7 @@ export function buildFlow(applications, historyByApp = new Map()) {
     const start = first === "Applied" || first === "Reached Out" ? first : "unknown";
     if (start === "unknown") unknownStarts++;
     const current = known.has(app.status) ? app.status : "unknown";
-    const outcome = current === "Reached Out" ? "Applied" : current;
+    const outcome = current;
     const source = `entry:${start}`,
       target = `outcome:${outcome}`;
     if (current === "Interviewed" || history.some((row) => row.status === "Interviewed")) {
@@ -116,6 +146,7 @@ export function buildFlow(applications, historyByApp = new Map()) {
     { id: "entry:unknown", name: "Unknown start", kind: "entry" },
     { id: "milestone:Interviewed", name: "Interviewed", kind: "milestone", status: "Interviewed" },
     { id: "outcome:Applied", name: "Awaiting response", kind: "outcome", status: "Applied" },
+    { id: "outcome:Reached Out", name: "Employer reached out", kind: "outcome", status: "Reached Out" },
     { id: "outcome:Pending", name: "Pending", kind: "outcome", status: "Pending" },
     { id: "outcome:Interviewed", name: "Still interviewing", kind: "outcome", status: "Interviewed" },
     { id: "outcome:Offered", name: "Offered", kind: "outcome", status: "Offered" },
@@ -169,7 +200,7 @@ export async function loadDashboardRows(supabase, userId) {
     fetchAll(() =>
       supabase
         .from("applications")
-        .select("id, company, role, status, applied_date")
+        .select("id, company, role, status, applied_date, source, source_site, workplace_type, resume_id")
         .eq("user_id", userId)
         .order("applied_date", { ascending: false, nullsFirst: false })
         .order("created_at", { ascending: false })
@@ -206,19 +237,19 @@ export async function getDashboardStats(supabase, userId, rows) {
   }).length;
 
   const times = responseTimes(applications, historyByApp);
-  const avgResponseDays =
-    times.length > 0 ? Math.round(times.reduce((sum, days) => sum + days, 0) / times.length) : null;
-
-  const { responses, responseRate } = responseSummary(applications, historyByApp);
+  const medianResponseDays = median(times);
+  const { eligible, responses, responseRate, offers, offerRate } = responseSummary(applications, historyByApp);
 
   return {
     total,
     statusCounts,
     responseRate,
     responses,
-    offerRate: percent(statusCounts.Offered, total),
+    responseEligible: eligible,
+    offerRate,
+    offers,
     thisWeek,
-    avgResponseDays,
+    medianResponseDays,
     responseTimeSamples: times.length,
     funnel: [
       { label: "Applied", count: total, color: STATUS_COLORS.Applied },
@@ -269,4 +300,14 @@ export async function getGoalAndName(supabase, userId) {
     goal:
       data?.goal_period && data?.goal_target ? { period: data.goal_period, target: data.goal_target } : null,
   };
+}
+
+// Resume titles for the search report ([] if they can't be read)
+export async function loadResumeTitles(supabase, userId) {
+  const { data, error } = await supabase.from("resumes").select("id, title").eq("user_id", userId);
+  if (error) {
+    console.warn("Could not load resume titles:", error.message);
+    return [];
+  }
+  return data || [];
 }

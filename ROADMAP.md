@@ -46,6 +46,8 @@ The goal is one place to learn whether a job fits, tailor a resume to it, apply,
 | M9 | More reviewed autofill adapters | A6 (continued) | Greenhouse (0.7.0) and Ashby (0.8.0) done November 14. Workday remains. [Verification](docs/reviewed-autofill-verification.md) |
 | M10 | Gmail connection | A8 | Waits on the owner's Google Cloud setup |
 | M11 | Interview preparation from the submitted package | B5 | Done November 14, no migration. A preparation page per application, built only from quotes of the posting, the Master CV and what was submitted |
+| M12 | Descriptive dashboard figures and a Search report | A10 (rest) | Done November 14, no migration. Rates count applications applied 14+ days ago and show "x of N"; groups under 5 show counts only. [Verification](docs/dashboard-report-verification.md) |
+| M13 | PDF readability checks | A9 (rest) | Next |
 
 Why the order changed, one line each:
 

@@ -227,7 +227,7 @@ export function Pipeline({ funnel, total }) {
     <Card>
       <CardHeader>
         <CardTitle className="text-lg">Pipeline</CardTitle>
-        <CardDescription>How far your applications get, out of everything you applied to</CardDescription>
+        <CardDescription>Where your applications are now (current status), out of everything you applied to</CardDescription>
       </CardHeader>
       <CardContent>
         {total === 0 ? (

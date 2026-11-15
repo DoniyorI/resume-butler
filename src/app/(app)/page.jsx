@@ -8,12 +8,15 @@ import {
   getGoalAndName,
   groupHistoryByApplication,
   loadDashboardRows,
+  loadResumeTitles,
 } from "@/features/dashboard/data";
 import FollowUps from "@/features/dashboard/FollowUps";
 import TodayCard from "@/features/dashboard/TodayCard";
 import GoalCard from "@/features/dashboard/GoalCard";
 import RecentApplications from "@/features/dashboard/RecentApplications";
 import SyncCard from "@/features/dashboard/SyncCard";
+import SearchReport from "@/features/dashboard/SearchReport";
+import { searchReport } from "@/features/dashboard/report";
 import SectionCards from "@/features/dashboard/SectionCards";
 import {
   ApplicationFlow,
@@ -60,7 +63,7 @@ async function softly(load, fallback, what) {
 // email updates, follow-ups), then the newest applications, then the trends
 export default async function DashboardPage() {
   const { supabase, user } = await requirePageUser();
-  const [rows, { firstName, goal }, connection, pending, upcoming, activities, decideJobs, fitJobs, watched, offers] = await Promise.all([
+  const [rows, { firstName, goal }, connection, pending, upcoming, activities, decideJobs, fitJobs, watched, offers, resumeTitles] = await Promise.all([
     loadDashboardRows(supabase, user.id),
     getGoalAndName(supabase, user.id),
     loadConnection(supabase, user.id),
@@ -79,6 +82,7 @@ export default async function DashboardPage() {
     softly(watchedWithBands(supabase, user.id), [], "watched postings"),
     // Offers and their decisions; [] before migration 022, null if they can't be read
     softly(listOffersForSuggestions(supabase, user.id), null, "offers"),
+    loadResumeTitles(supabase, user.id),
   ]);
   const withBands = new Set(fitJobs.map((job) => job.id));
   const savedJobs = [...fitJobs, ...decideJobs.filter((job) => !withBands.has(job.id))];
@@ -136,6 +140,8 @@ export default async function DashboardPage() {
       </div>
 
       <ApplicationFlow flow={stats.flow} />
+
+      <SearchReport report={searchReport(rows.applications, rows.history, resumeTitles)} />
     </div>
   );
 }

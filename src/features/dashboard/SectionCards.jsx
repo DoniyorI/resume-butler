@@ -1,5 +1,7 @@
 import { Briefcase, CalendarDays, Clock, Target, TrendingUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { RESPONSE_WINDOW_DAYS } from "@/features/dashboard/data";
+import { MIN_GROUP_SIZE } from "@/features/dashboard/report";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 function SectionCard({ icon: Icon, label, value, badge, footer }) {
@@ -10,7 +12,7 @@ function SectionCard({ icon: Icon, label, value, badge, footer }) {
           <Icon className="h-4 w-4" /> {label}
         </CardDescription>
         <div className="flex flex-wrap items-center gap-2">
-          <CardTitle className="text-2xl font-semibold tabular-nums">{value}</CardTitle>
+          <CardTitle className={`font-semibold tabular-nums ${String(value).length > 10 ? "text-base" : "text-2xl"}`}>{value}</CardTitle>
           {badge && (
             <Badge variant="outline" className="font-normal text-muted-foreground">
               {badge}
@@ -25,7 +27,19 @@ function SectionCard({ icon: Icon, label, value, badge, footer }) {
 
 // Headline numbers, in the style of shadcn's dashboard section cards
 export default function SectionCards({ stats }) {
-  const hasResponseTime = stats.avgResponseDays !== null;
+  const hasResponseTime = stats.medianResponseDays !== null;
+  const hasWindow = stats.responseEligible > 0;
+  // Under MIN_GROUP_SIZE the card shows the counts only, as the Search report does
+  const showRate = stats.responseEligible >= MIN_GROUP_SIZE;
+  const windowText = `of ${stats.responseEligible} applied ${RESPONSE_WINDOW_DAYS}+ days ago`;
+  const rateValue = (count, rate) =>
+    !hasWindow ? "Not enough history yet" : showRate ? `${rate}%` : `${count} of ${stats.responseEligible}`;
+  const rateFooter = (count, verb) =>
+    !hasWindow
+      ? `Counts applications applied ${RESPONSE_WINDOW_DAYS}+ days ago`
+      : showRate
+        ? `${count} ${windowText} ${verb}`
+        : `Applied ${RESPONSE_WINDOW_DAYS}+ days ago; too few for a rate yet`;
   return (
     <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
       <SectionCard
@@ -42,23 +56,23 @@ export default function SectionCards({ stats }) {
       <SectionCard
         icon={TrendingUp}
         label="Response rate"
-        value={`${stats.responseRate}%`}
-        footer={`${stats.responses} heard back from an employer`}
+        value={rateValue(stats.responses, stats.responseRate)}
+        footer={rateFooter(stats.responses, "heard back")}
       />
       <SectionCard
         icon={Target}
         label="Offer rate"
-        value={`${stats.offerRate}%`}
-        footer={`${stats.statusCounts.Offered} ${stats.statusCounts.Offered === 1 ? "offer" : "offers"}`}
+        value={rateValue(stats.offers, stats.offerRate)}
+        footer={rateFooter(stats.offers, "reached an offer")}
       />
       <SectionCard
         icon={Clock}
-        label="Avg. response time"
-        value={hasResponseTime ? `${stats.avgResponseDays} days` : "—"}
+        label="Median days to first response"
+        value={hasResponseTime ? `${stats.medianResponseDays} days` : "—"}
         footer={
           hasResponseTime
-            ? `From ${stats.responseTimeSamples} ${stats.responseTimeSamples === 1 ? "reply" : "replies"}`
-            : "No replies tracked yet"
+            ? `From ${stats.responseTimeSamples} ${stats.responseTimeSamples === 1 ? "response" : "responses"}, Applied to first reply`
+            : "No responses with a recorded date yet"
         }
       />
     </div>

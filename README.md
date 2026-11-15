@@ -6,7 +6,7 @@ Built with Next.js (App Router, JavaScript) and Supabase, deployed on Vercel.
 
 ## Features
 
-- **Dashboard**: stat cards (total, response rate, offer rate, average time to a reply), a daily or weekly application goal with streaks, follow-ups for applications with no reply after two weeks, recent applications, and charts (over time, pipeline, status breakdown, a Sankey status flow).
+- **Dashboard**: stat cards (total, response rate, offer rate, median time to a first response), a descriptive search report, a daily or weekly application goal with streaks, follow-ups for applications with no reply after two weeks, recent applications, and charts (over time, pipeline, status breakdown, a Sankey status flow).
 - **Application tracker**: a fast table with search, status and date filters, sorting, pages, bulk actions, inline status and comments, and CSV export. Each application has a detail page with its job description, pay range, workplace and employment type, notes, a status timeline, linked documents and an ATS check.
 - **Master CV**: experience, projects, education, skills and certifications, with a CV strength meter and import from a PDF or text resume.
 - **Resume studio**: edit on a page that matches the exported PDF, reorder and hide sections, see live how full the one page is, score keywords against the job (ATS-style, no AI), pick the master CV entries that fit the job, and get AI wording suggestions that may never add a technology or fact you didn't write. Export to PDF via LaTeX.
