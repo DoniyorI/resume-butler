@@ -1,6 +1,6 @@
 import "server-only";
 import { CATEGORY_STATUS, MIN_CONFIDENCE, classifyEmail, isCandidateEmail } from "@/server/email/classify";
-import { encryptStoredPassword, getConnectionCredentials, markScanned } from "@/server/email/connection";
+import { encryptStoredPassword, getConnectionCredentials, loadGmailSeenIds, markScanned, saveGmailSeenIds } from "@/server/email/connection";
 import { fetchEmails } from "@/server/email/imapClient";
 import { fetchGmailEmails } from "@/server/email/gmailClient";
 import { emailConnectionError } from "@/server/email/connectionErrors";
@@ -184,10 +184,13 @@ async function scanEmailsForUser(supabase, userId, options) {
   }
 
   let emails;
-  const scanWindow = { since, before, timeoutMs: Math.max(1, deadlineAt - Date.now() - 10_000) };
+  const isGmail = credentials.provider === "gmail";
+  // Gmail ids earlier scans finished with are not read again (Gmail limits reads per user)
+  const seenIds = isGmail ? await loadGmailSeenIds(supabase, userId) : null;
+  const scanWindow = { since, before, timeoutMs: Math.max(1, deadlineAt - Date.now() - 10_000), ...(isGmail ? { seenIds } : {}) };
   try {
     // Gmail through Google reports its own user-safe HttpError; IMAP errors are mapped below
-    emails = credentials.provider === "gmail"
+    emails = isGmail
       ? await fetchGmailEmails(credentials, scanWindow)
       : await fetchEmails(credentials, scanWindow);
   } catch (imapErr) {
@@ -217,6 +220,13 @@ async function scanEmailsForUser(supabase, userId, options) {
     .filter((email) => isCandidateEmail(email, { includeOutreach }))
     .sort((a, b) => (a.date?.getTime() ?? 0) - (b.date?.getTime() ?? 0));
   const candidates = available.slice(0, MAX_CLASSIFIED_PER_SCAN);
+  // Message-IDs this scan is done with: already processed, never a candidate under any category
+  // setting, or recorded below. Deferred and failed ones stay unread-for-Gmail so they come back.
+  const finished = new Set(
+    uniqueEmails
+      .filter((email) => processedIds.has(email.messageId) || !isCandidateEmail(email, { includeOutreach: true }))
+      .map((email) => email.messageId)
+  );
   const classifications = await mapWithConcurrency(
     candidates,
     CLASSIFY_CONCURRENCY,
@@ -312,7 +322,8 @@ async function scanEmailsForUser(supabase, userId, options) {
             .eq("user_id", userId).eq("message_id", email.messageId).maybeSingle();
           if (!existing.error && existing.data) {
             results.ignored++;
-            if (!(await recordProcessed(supabase, { ...processed, action_taken: "suggested" }))) results.errors++;
+            if (await recordProcessed(supabase, { ...processed, action_taken: "suggested" })) finished.add(email.messageId);
+            else results.errors++;
             continue;
           }
         }
@@ -335,7 +346,8 @@ async function scanEmailsForUser(supabase, userId, options) {
     // A failed classification isn't recorded, so the next scan retries it
     if (outcome !== "ignored:error") {
       const action = outcome === "merged" ? "suggested" : outcome.split(":")[0];
-      if (!(await recordProcessed(supabase, { ...processed, action_taken: action }))) results.errors++;
+      if (await recordProcessed(supabase, { ...processed, action_taken: action })) finished.add(email.messageId);
+      else results.errors++;
     }
 
     results.details.push({
@@ -346,6 +358,12 @@ async function scanEmailsForUser(supabase, userId, options) {
       status: suggestion?.status || merge?.status || null,
       outcome,
     });
+  }
+
+  if (isGmail) {
+    const handled = [...emails.filter((email) => email.gmailId && finished.has(email.messageId)).map((email) => email.gmailId), ...(emails.unusableIds || [])];
+    await saveGmailSeenIds(supabase, userId, [...seenIds], handled);
+    results.already_read = emails.alreadySeen || 0;
   }
 
   await markScanned(supabase, userId);

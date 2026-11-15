@@ -406,7 +406,7 @@ Supabase Postgres. **Row-level security is on for every table**; users can only 
 | `application_status_history` | `application_id`, status, `changed_at` | Written by triggers (`log_initial_status`, `log_status_change`), never by the app |
 | `resumes` | title, `content` JSONB (see Resume studio), `application_id` | `latex_content`, `ats_score` and the old `resume_items` / `resume_suggestions` tables are from the original design and unused |
 | `cover_letters` | title, `content` JSONB (Draft.js body) | |
-| `email_connections` | `provider` (`imap` / `gmail`, migration 023), IMAP host and port, email, `app_password` (encrypted; IMAP only), `oauth_refresh_token` (encrypted Google refresh token; Gmail only), `last_scan_at`, `auto_sync`, `last_auto_sync_at`, `last_auto_sync_error` | Neither secret is ever selected for the browser (`PUBLIC_CONNECTION_COLUMNS`) or exported. A check requires the secret that matches the provider. Reads fall back to the pre-023 columns |
+| `email_connections` | `provider` (`imap` / `gmail`, migration 023), IMAP host and port, email, `app_password` (encrypted; IMAP only), `oauth_refresh_token` (encrypted Google refresh token; Gmail only), `gmail_seen_ids` (Gmail ids a scan finished with, newest 3000, migration 024), `last_scan_at`, `auto_sync`, `last_auto_sync_at`, `last_auto_sync_error` | Neither secret is ever selected for the browser (`PUBLIC_CONNECTION_COLUMNS`) or exported. A check requires the secret that matches the provider. Reads fall back to the pre-023 columns |
 | `processed_emails` | `message_id`, subject, sender, date, classification, action taken | Each message is classified once |
 | `application_suggestions` | kind (`new` / `update`), `application_id`, company, role, status, category, confidence, summary, email fields, `state` (pending / approved / dismissed) | The review queue |
 | `api_rate_limits` | `user_id`, key, window | Via `consume_rate_limit()` (authenticated only); migrations 021 and 022 add the keys `watchlist-add`, `watchlist-check`, `export-data` and `import-applications` |
@@ -436,6 +436,7 @@ Migrations (`supabase/migrations/`, apply in order in the SQL editor):
 | `020_application_activities.sql` | `application_activities` (dated next steps), its owner-only policies, composite foreign key and per-user cap trigger |
 | `021_watchlist.sql` | `watched_companies` and `watched_postings` (watchlist), owner-only policies, composite foreign key, per-user cap triggers, column grants with `record_watch_check`, and the `watchlist-add` and `watchlist-check` rate limit keys |
 | `023_gmail_oauth.sql` | `email_connections.provider` and `oauth_refresh_token`, `app_password` nullable, checks that each provider carries its own secret |
+| `024_gmail_seen_ids.sql` | `email_connections.gmail_seen_ids`: Gmail message ids a scan finished with, so later scans read only new mail |
 | `022_offers_and_portability.sql` | `application_offers` (offer terms and decision), owner-only policies, composite foreign key, and the `export-data` and `import-applications` rate limit keys (replaces `consume_rate_limit`) |
 
 Naming: database fields are snake_case; each `data.js` maps rows to camelCase at the boundary.

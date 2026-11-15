@@ -145,6 +145,24 @@ async function getStoredRefreshToken(supabase, userId) {
   }
 }
 
+export const GMAIL_SEEN_LIMIT = 3000;
+
+// Gmail ids earlier scans fully handled; an empty set before migration 024 or on any read error
+export async function loadGmailSeenIds(supabase, userId) {
+  const { data, error } = await supabase.from("email_connections").select("gmail_seen_ids").eq("user_id", userId).maybeSingle();
+  if (error || !Array.isArray(data?.gmail_seen_ids)) return new Set();
+  return new Set(data.gmail_seen_ids);
+}
+
+// Add newly handled Gmail ids (newest first) and keep the latest GMAIL_SEEN_LIMIT. Best effort:
+// without it the next scan just reads those messages again.
+export async function saveGmailSeenIds(supabase, userId, previous, handled) {
+  if (!handled.length) return;
+  const merged = [...new Set([...handled, ...previous])].slice(0, GMAIL_SEEN_LIMIT);
+  const { error } = await supabase.from("email_connections").update({ gmail_seen_ids: merged }).eq("user_id", userId).eq("provider", "gmail");
+  if (error && !["42703", "PGRST204"].includes(error.code)) console.warn("Could not save the Gmail ids already read:", error.code || "error");
+}
+
 // Disconnecting a Gmail connection also revokes its Google access (best effort)
 export async function deleteConnection(supabase, userId) {
   const token = await getStoredRefreshToken(supabase, userId);

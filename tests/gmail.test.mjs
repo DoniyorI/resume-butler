@@ -66,6 +66,7 @@ test("a Gmail API message parses into the same shape as an IMAP message", () => 
     ],
   }));
   assert.deepEqual({ ...email, date: email.date.toISOString() }, {
+    gmailId: "m1",
     messageId: "<m1@mail.example>",
     subject: "Thanks for applying m1",
     fromName: "Acme Hiring",
@@ -118,13 +119,29 @@ test("reading Gmail refreshes access, searches the inbox window and reads each m
 test("the message cap keeps the newest messages and reports what it left out", async () => {
   const { calls, fetchImpl } = fakeGoogle([
     [isToken, () => json(200, { access_token: "access" })],
-    [isList, (u) => json(200, { messages: Array.from({ length: Number(u.searchParams.get("maxResults")) }, (_, i) => ({ id: `n${i}` })), nextPageToken: "more", resultSizeEstimate: 40 })],
+    [isList, () => json(200, { messages: Array.from({ length: 10 }, (_, i) => ({ id: `n${i}` })), nextPageToken: "more", resultSizeEstimate: 40 })],
     [isGet, (u) => json(200, apiMessage(u.pathname.split("/").pop()))],
   ]);
   const emails = await gmail.fetchGmailEmails({ refreshToken: "r" }, { since: new Date("2026-11-01"), before: new Date("2026-11-15"), maxMessages: 5, fetchImpl });
   assert.equal(emails.length, 5);
   assert.equal(emails.truncated, 35);
   assert.equal(calls.filter((c) => isList(c.url)).length, 1);
+});
+
+test("messages an earlier scan finished are skipped without a read, and listing goes on past them", async () => {
+  const pages = { "": { messages: [{ id: "s1" }, { id: "s2" }, { id: "a" }], nextPageToken: "p2", resultSizeEstimate: 5 }, p2: { messages: [{ id: "s3" }, { id: "gone" }], resultSizeEstimate: 5 } };
+  const { calls, fetchImpl } = fakeGoogle([
+    [isToken, () => json(200, { access_token: "access" })],
+    [isList, (u) => json(200, pages[u.searchParams.get("pageToken") || ""])],
+    [(u) => u.pathname.endsWith("/gone"), () => json(404, { error: { code: 404 } })],
+    [isGet, (u) => json(200, apiMessage(u.pathname.split("/").pop()))],
+  ]);
+  const emails = await gmail.fetchGmailEmails({ refreshToken: "r" }, { since: new Date("2026-11-01"), before: new Date("2026-11-15"), fetchImpl, minGapMs: 0, seenIds: new Set(["s1", "s2", "s3"]) });
+  assert.deepEqual(emails.map((e) => e.gmailId), ["a"]);
+  assert.deepEqual(calls.filter((c) => isGet(c.url)).map((c) => c.url.pathname.split("/").pop()).sort(), ["a", "gone"]);
+  assert.equal(emails.alreadySeen, 3);
+  assert.deepEqual(emails.unusableIds, ["gone"]);
+  assert.equal(emails.truncated, 0);
 });
 
 test("Google's reason decides the message: only a lost grant asks to reconnect, and the log names step and reason", (t) => {
