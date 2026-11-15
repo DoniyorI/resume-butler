@@ -27,3 +27,8 @@ export function checkResumePages({ resumeId }) {
 export async function countResumePages({ resumeId }) {
   return (await checkResumePages({ resumeId })).pages;
 }
+
+// What a PDF text extractor reads from the saved resume's PDF, and which of its lines were not found.
+export function checkResumeReadability({ resumeId }) {
+  return postJson("/api/resume-readability", { resumeId });
+}

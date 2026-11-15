@@ -8,6 +8,7 @@ import {
   Check,
   Download,
   FileDown,
+  FileSearch,
   Loader2,
   Minus,
   PanelRight,
@@ -126,7 +127,8 @@ const RESUME_DOWNLOADS = [
  * (below xl) the assistant toggle. Shared by the resume and cover letter
  * editors: `rename(title)` saves the name, `downloads` lists the formats
  * download.download(format) accepts, and `fitBadgeClassName` hides the fit
- * badge where the page shows its own gauge.
+ * badge where the page shows its own gauge. `onCheckPdfText` adds the resume's
+ * "Check PDF text" menu item.
  */
 export default function StudioToolbar({
   label = "Resume",
@@ -144,6 +146,7 @@ export default function StudioToolbar({
   fit,
   pdfPages,
   onToggleAssistant,
+  onCheckPdfText,
 }) {
   const [titleState, setTitleState] = useState({ status: "saved", error: null });
   const mergedStatus = saveStatus === "error" || titleState.status === "error" ? "error"
@@ -189,6 +192,11 @@ export default function StudioToolbar({
                 <FileDown className="mr-2 h-4 w-4" /> {formatLabel}
               </DropdownMenuItem>
             ))}
+            {onCheckPdfText ? (
+              <DropdownMenuItem onSelect={onCheckPdfText}>
+                <FileSearch className="mr-2 h-4 w-4" /> Check PDF text
+              </DropdownMenuItem>
+            ) : null}
           </DropdownMenuContent>
         </DropdownMenu>
         <Button

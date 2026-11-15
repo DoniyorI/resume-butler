@@ -16,6 +16,7 @@ import { useLinkedJob } from "@/features/resumes/studio/assistant/JobTarget";
 import { pageFit } from "@/features/resumes/studio/FitGauge";
 import PaperCanvas, { PAGE_CONTENT_PX } from "@/features/resumes/studio/PaperCanvas";
 import Paper from "@/features/resumes/studio/paper/Paper";
+import ReadabilityDialog from "@/features/resumes/studio/ReadabilityDialog";
 import StudioToolbar from "@/features/resumes/studio/StudioToolbar";
 import { useJobFit } from "@/features/resumes/studio/useJobFit";
 import { useJobMatch } from "@/features/resumes/studio/useJobMatch";
@@ -75,6 +76,7 @@ export default function ResumeStudio({ resume, masterCv, jobOptions, linkedJob =
   const [title, setTitle] = useState(resume.title);
   const download = useResumeDownload({ resumeId: resume.id, title, flush: resumeDoc.flush });
 
+  const [readabilityOpen, setReadabilityOpen] = useState(false);
   const [zoom, setZoom] = useState("fit");
   const [scale, setScale] = useState(1);
   const [fit, setFit] = useState({ usedPx: 0, limitPx: PAGE_CONTENT_PX });
@@ -358,7 +360,9 @@ export default function ResumeStudio({ resume, masterCv, jobOptions, linkedJob =
         fit={fit}
         pdfPages={pdfPages}
         onToggleAssistant={() => setAssistantOpen((open) => !open)}
+        onCheckPdfText={() => setReadabilityOpen(true)}
       />
+      <ReadabilityDialog open={readabilityOpen} onOpenChange={setReadabilityOpen} resumeId={resume.id} flush={resumeDoc.flush} />
       {resumeDoc.saveError ? <div role="alert" className="border-b border-red-200 bg-red-50 px-4 py-2 text-xs leading-relaxed text-red-800">{resumeDoc.saveError} Your edits are still visible in this tab.{resumeDoc.saveConflict ? <div className="mt-2 flex flex-wrap gap-3"><button type="button" onClick={() => downloadRecoveryCopy(resumeDoc.snapshot(), title)} className="rounded-md border border-red-200 bg-white px-3 py-1.5 font-medium">Download my copy (.json)</button><button type="button" onClick={resumeDoc.reloadLatest} className="rounded-md border border-red-200 bg-white px-3 py-1.5 font-medium">Reload latest (discard mine)</button></div> : null}</div> : null}
       <div className="relative flex min-h-0 flex-1">
         <aside

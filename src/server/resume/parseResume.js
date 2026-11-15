@@ -1,5 +1,5 @@
 import "server-only";
-import PDFParser from "pdf2json";
+import { extractPdfText } from "@/server/resume/pdfText";
 import { HttpError } from "@/server/http";
 import { chatJSON } from "@/server/openai";
 import { normalizeCvDate } from "@/lib/cvDates";
@@ -31,15 +31,6 @@ function bulletList(value) {
   return list(value, LIMITS.bullets)
     .map((b) => text(b, 1000))
     .filter(Boolean);
-}
-
-function extractPdfText(buffer) {
-  return new Promise((resolve, reject) => {
-    const pdfParser = new PDFParser(null, true);
-    pdfParser.on("pdfParser_dataReady", () => resolve(pdfParser.getRawTextContent()));
-    pdfParser.on("pdfParser_dataError", (errData) => reject(new Error(errData.parserError)));
-    pdfParser.parseBuffer(buffer);
-  });
 }
 
 const PARSE_PROMPT = `You are a resume parser. Extract structured data from the resume text below.

@@ -127,6 +127,7 @@ docs/                     ARCHITECTURE.md (the full map), chrome-extension-plan.
 | `POST /api/parse-resume` | Parse an uploaded PDF/.txt resume into the master CV |
 | `POST /api/download-resume` | Render a resume to LaTeX and compile to PDF (latex.ytotech.com) |
 | `POST /api/download-cover-letter` | Same for a cover letter |
+| `POST /api/resume-readability` | Compile the saved resume and report which of its own lines a PDF text extractor reads back (no AI, descriptive only) |
 | `POST /api/cover-letter-pages` | Compile the saved cover letter and return the PDF's page count |
 | `POST /api/rewrite-paragraph` | Three AI rewrites of one cover letter paragraph |
 | `GET/POST/DELETE /api/email-settings` | Manage the IMAP connection (password encrypted) |
