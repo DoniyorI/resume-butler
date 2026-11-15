@@ -130,6 +130,8 @@ try {
   try {
     check(await admin.from("email_connections").insert({ user_id: userId, email_address: `inbox-${run}@example.test`, app_password: "qa-not-a-real-password", last_scan_at: new Date().toISOString() }).select("id"));
     observed.inboxSeeded = true;
+    // Two email updates waiting for review: they must show once, on the Inbox card, not again in Today
+    check(await admin.from("application_suggestions").insert([1, 2].map(i => ({ user_id: userId, message_id: `qa-${run}-${i}`, kind: "new", company: `Inbox Co ${i}`, status: "Applied", category: "confirmation" }))).select("id"));
   } catch (error) { observed.inboxSeeded = `no: ${error.message.slice(0, 120)}`; }
 
   browser = await chromium.launch({ channel: "chrome", headless: true });
@@ -195,7 +197,17 @@ try {
     assert.ok(text.includes("Outcomes by source, resume and more"), text);
     for (const tab of ["activity", "flow", "report"]) assert.equal(await card.locator(`a[href="/insights?tab=${tab}"]`).count(), 1, `More insights links to ${tab}`);
     // Inbox card (a connection row was seeded)
-    if (observed.inboxSeeded === true) { const inbox = await flat(page.locator("div.rounded-lg", { has: page.locator("h3", { hasText: "Inbox" }) }).first()); assert.ok(inbox.includes("Scan now") && inbox.includes(`inbox-${run}@example.test`), inbox); }
+    if (observed.inboxSeeded === true) { const inbox = await flat(page.locator("div.rounded-lg", { has: page.locator("h3", { hasText: "Inbox" }) }).first()); assert.ok(inbox.includes("Scan now") && inbox.includes(`inbox-${run}@example.test`), inbox);
+      assert.ok(inbox.includes("2 updates to review"), inbox);
+      // Expand Today so suggestions behind "Show more" count too, then collapse it again for the layout checks
+      const more = page.getByRole("button", { name: /^Show \d+ more$/ });
+      const expanded = (await more.count()) > 0;
+      if (expanded) await more.click();
+      const body = await flat(page.locator("body"));
+      observed.inboxMentions = body.split("inbox update").length - 1 + (body.split("updates to review").length - 1);
+      assert.equal(body.split("updates to review").length - 1, 1, "inbox updates show once");
+      assert.ok(!body.includes("Review inbox updates") && !body.includes("inbox update"), "Today does not repeat the inbox");
+      if (expanded) await page.getByRole("button", { name: "Show fewer" }).click(); }
     // Layout: the sidebar never ends below the main column (no hole under the main column)
     const grid = page.locator("div.grid.items-start").first();
     const bottoms = await grid.evaluate(el => { const [main, side] = el.children; return { main: main.getBoundingClientRect().bottom + scrollY, side: side.getBoundingClientRect().bottom + scrollY, mainTop: main.getBoundingClientRect().top, sideTop: side.getBoundingClientRect().top }; });

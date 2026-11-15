@@ -82,13 +82,13 @@ export default async function DashboardPage() {
     savedJobs,
     watched,
     offers,
-    pendingEmailCount: pending.count,
+    // No pendingEmailCount: the Inbox card already shows updates waiting for review, so Today doesn't repeat it
     today: todayKey(),
   });
 
   // One column on a phone, in DOM order: stats, Today, Activity, Recent applications, Inbox, More insights.
   // From xl up the last two move to a sticky sidebar beside the main column. Inbox updates waiting for
-  // review are already a Today suggestion, so the inbox needs no place of its own at the top.
+  // review show only on the Inbox card.
   return (
     <div className="flex w-full flex-col gap-4 px-4 pb-10 pt-[85px] md:px-6">
       <DashboardHeader active="overview" />
