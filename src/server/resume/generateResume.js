@@ -20,7 +20,8 @@ function headerFromProfile(profile) {
 }
 
 // Create a new resume from the master CV entries that best fit the job.
-// Returns { resumeId }.
+// Returns { resumeId, fallback }; `fallback` names sections the model picked
+// nothing for, which were filled with recent entries (surface it as a warning).
 export async function generateResume(supabase, userId, { title, jobDescription }) {
   const [profileRes, tailored] = await Promise.all([
     supabase
@@ -47,5 +48,5 @@ export async function generateResume(supabase, userId, { title, jobDescription }
     .single();
   if (error) throw error;
 
-  return { resumeId: resume.id };
+  return { resumeId: resume.id, fallback: tailored.fallback || [] };
 }

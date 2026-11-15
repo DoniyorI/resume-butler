@@ -324,7 +324,7 @@ export default function ApplicationEditor({
                       mode="single"
                       captionLayout="dropdown-buttons"
                       selected={appliedDate || undefined}
-                      onSelect={(date) => setField("appliedDate")(date ? format(date, "yyyy-MM-dd") : "")}
+                      onSelect={(date) => date && setField("appliedDate")(format(date, "yyyy-MM-dd"))}
                       fromYear={2020}
                       toYear={2030}
                     />

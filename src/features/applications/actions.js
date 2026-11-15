@@ -154,7 +154,8 @@ export async function updateApplication(id, input) {
         status: fields.status,
         comments: fields.comments,
         job_description: fields.jobDescription,
-        applied_date: fields.appliedDate,
+        // A blank date keeps the stored one: writing null would drop the application from follow-ups and weekly counts
+        ...(fields.appliedDate && { applied_date: fields.appliedDate }),
         ...(fields.jobDetails && {
           salary_min: fields.jobDetails.salaryMin,
           salary_max: fields.jobDetails.salaryMax,

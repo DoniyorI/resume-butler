@@ -359,7 +359,7 @@ const popupHandlers = {
   "save-job": async (message) => {
     const account = await connectedAccount();
     if (message.account?.userId !== account.userId || message.account?.origin !== account.origin) throw new NotConnectedError("Your connected account changed. Reopen the popup.");
-    const result = await api("/api/extension/opportunities", { method: "POST", expectedAccount: account, body: { ...toPayload(message.job), resumeId: message.resumeId || null } });
+    const result = await api("/api/extension/opportunities", { method: "POST", expectedAccount: account, body: { ...toPayload(message.job), ...(message.resumeId !== undefined && { resumeId: message.resumeId || null }) } });
     const current = await connectedAccount();
     if (current.userId !== account.userId || current.origin !== account.origin) throw new NotConnectedError("Your connected account changed. Reopen the popup.");
     return { ok: true, ...result };

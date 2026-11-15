@@ -62,12 +62,17 @@ function followUps(applications, historyByApp) {
   return { total: waiting.length, items: waiting.slice(0, FOLLOW_UP_LIMIT) };
 }
 
-function responseTimes(applications, historyByApp) {
+// Days from applying to the first "Interviewed" entry. Only for applications
+// whose history shows them at "Applied" first: one added straight at
+// Interviewed has a backdated apply date, and that gap is not a response time.
+export function responseTimes(applications, historyByApp) {
   const times = [];
   for (const app of applications) {
     const applied = parseDate(app.applied_date);
     if (!applied) continue;
-    const interview = historyByApp.get(app.id)?.find((h) => h.status === "Interviewed");
+    const history = [...(historyByApp.get(app.id) || [])].sort((a, b) => Date.parse(a.changed_at) - Date.parse(b.changed_at));
+    if (history[0]?.status !== "Applied") continue;
+    const interview = history.find((h) => h.status === "Interviewed");
     if (!interview) continue;
     const days = Math.round((new Date(interview.changed_at) - applied) / DAY_MS);
     if (days >= 0) times.push(days);

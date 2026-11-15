@@ -41,12 +41,15 @@ async function ownedResumeId(supabase, userId, resumeId) {
   return data ? data.id : null;
 }
 
-// A re-capture never erases what is stored: an empty description and pay,
-// workplace or employment values the new capture lacks keep the stored ones.
+// A re-capture never erases what is stored: an empty role, location or
+// description, and pay, workplace or employment values the new capture lacks,
+// keep the stored ones. (The resume choice is kept by saveOpportunity.)
 export function mergeSavedPayload(stored, incoming) {
   if (!stored) return incoming;
   const merged = { ...incoming };
-  if (!`${incoming.job_description || ""}`.trim() && stored.job_description) merged.job_description = stored.job_description;
+  for (const key of ["role", "location", "job_description"]) {
+    if (!`${incoming[key] || ""}`.trim() && stored[key]) merged[key] = stored[key];
+  }
   const hasPay = incoming.salary_min != null || incoming.salary_max != null;
   for (const key of JOB_DETAIL_KEYS) {
     if (SALARY_KEYS.includes(key) && hasPay) continue;

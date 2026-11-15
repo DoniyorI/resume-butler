@@ -108,7 +108,9 @@ async function renderJob(connection) {
     const corrected = { ...job, company: $("capture-company").value, role: $("capture-role").value, location: $("capture-location").value, description: $("capture-description").value,
       ...(saved ? { salary: p.salary_min != null || p.salary_max != null ? { min: p.salary_min ?? null, max: p.salary_max ?? null, currency: p.salary_currency || "USD", period: p.salary_period || null } : null, employmentType: p.employment_type || "", workplaceType: p.workplace_type || "" } : {}),
     };
-    const result = await send({ type: "save-job", job: corrected, resumeId: select.value || null, account });
+    const result = await send({ type: "save-job", job: corrected, account,
+      // Left out when unchanged, so the server keeps the stored choice; null is an explicit "decide later"
+      ...((select.value || "") !== (saved?.resume_id || "") && { resumeId: select.value || null }) });
     $("capture-result").textContent = result?.ok ? "✓ Saved · ready when you are" : result?.error || "Not saved. Keep this popup open and try again.";
     $("save-job").disabled = false;
   };
