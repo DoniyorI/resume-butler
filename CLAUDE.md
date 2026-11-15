@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Resume Butler is a job application tracker and resume builder: Next.js 14 (App Router, JavaScript) on Supabase (Postgres, Auth). AI features (resume alignment, cover letters, bullet suggestions, resume parsing, email classification) call OpenAI `gpt-6-luna` from server code. Email sync reads the user's inbox over IMAP (a Gmail OAuth connection is planned), and the Chrome extension in `extension/` adds applications as the user submits them.
+Resume Butler is a job application tracker and resume builder: Next.js 14 (App Router, JavaScript) on Supabase (Postgres, Auth). AI features (resume alignment, cover letters, bullet suggestions, resume parsing, email classification) call OpenAI `gpt-6-luna` from server code. Email sync reads the user's inbox over IMAP or, connected with Google, through the read-only Gmail API, and the Chrome extension in `extension/` adds applications as the user submits them.
 
 **Read [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) first** for the full map: stack, request flow, every page, feature, route, action, server module and table, the AI rules, the email pipeline, the extension and security. This file is the short list of rules for changing the code.
 
@@ -73,7 +73,7 @@ src/
                           rewriteBullet, guardrails (blocks AI edits that add or swap facts),
                           parseResume, renderResume
   middleware.js           Refreshes the session and routes signed-out visitors (pages only, skips /api)
-supabase/migrations/      SQL schema, 001-022; apply in order in the Supabase SQL editor
+supabase/migrations/      SQL schema, 001-023; apply in order in the Supabase SQL editor
 extension/                Chrome extension (Manifest V3, no build step); see extension/README.md
 docs/                     ARCHITECTURE.md (the full map), chrome-extension-plan.md
 ```
@@ -108,6 +108,7 @@ docs/                     ARCHITECTURE.md (the full map), chrome-extension-plan.
 - **Interview preparation.** `/applications/[id]/prepare` is built by `buildInterviewPrep` (`@/server/interviews/prepare`), pure and without AI, from the latest unsuperseded submission (else the application's current description and resume) and `assessFit`. Every statement about the user is a verbatim quote; new wording goes in its fixed strings, which a test checks the output against.
 - **Watchlist.** `watched_companies` and `watched_postings` (migration 021) go through `@/server/watchlist/service`. The server fetches only the three fixed board API hosts in `@/server/watchlist/boards`, built from a platform and a checked token, never a URL from the user or from a board's response; board text is untrusted and passes through `htmlToText`/`cleanText`. Users cannot write `last_checked_at`, `last_error` or `open_count`: use the `record_watch_check` RPC. Another board platform is a new adapter there with recorded-shape tests.
 - **Dashboard figures.** Rates are descriptive: count applications applied `RESPONSE_WINDOW_DAYS` (14) or more days ago, show "x of N", and give no percentage for fewer than `MIN_GROUP_SIZE` (5) (`@/features/dashboard/report`). No advice, predictions or causal claims.
+- **Gmail.** "Connect Gmail with Google" (`/api/gmail/connect` → Google → `/api/gmail/callback`, logic in `@/server/email/gmailConnect`) asks only for `gmail.readonly`, binds the state to the signed-in user in an httpOnly cookie on `/api/gmail`, and stores the refresh token encrypted in `email_connections.oauth_refresh_token` with `provider = 'gmail'` (migration 023; `NEVER_EXPORT`). `@/server/email/gmailClient` calls only Google's fixed OAuth and Gmail hosts and returns the same message shape as the IMAP reader, so classification, matching and review are shared. Replacing or disconnecting a Gmail connection revokes the token. Every connection read falls back to IMAP-only columns before migration 023, and the button is hidden until both Google keys are set.
 - **Matching applications.** New submissions and confirmations only merge into an open application from the same hiring cycle (`isSameCycle`, 120 days); otherwise they're new. Email never changes applications directly: it writes `application_suggestions` for the user to approve.
 - **Loading and layout.** Each `(app)` route has a `loading.js` shaped like its page (`@/components/shared/PageSkeletons`); keep them in step with page layout changes. The header is a fixed 73px, so pages start at `pt-[85px]` and the editors at `top-[73px]`.
 - **Migrations.** Add a new numbered file in `supabase/migrations/`; never edit an applied one. The user runs it in the SQL editor, so code must keep working until it's applied (fail open, or check the column exists, as `insertApplication` (`@/server/applications/insertApplication`) and `enforceRateLimit` do). Enable RLS on every new table.
@@ -140,10 +141,12 @@ docs/                     ARCHITECTURE.md (the full map), chrome-extension-plan.
 | `GET /api/export` | Everything the account holds as streamed JSON; `?format=csv` for all applications (never credentials or hashes) |
 | `POST /api/import-applications` | CSV import: `preview` plans every row, `commit` re-plans and inserts (multipart, 1 MB, 500 rows) |
 | `GET /api/cron/watchlist` | Daily re-read of watched companies' boards (Vercel Cron, same authorization) |
+| `GET /api/gmail/connect` | Send the signed-in user to Google's consent page for read-only Gmail |
+| `GET /api/gmail/callback` | Finish the Google round trip, store the Gmail connection, return to `/email-sync?gmail=<outcome>` |
 
 ## Database (Supabase)
 
-Key tables: `profiles`, `cv_experience` (+ `_bullets`), `cv_projects` (+ `_bullets`), `cv_education`, `cv_skills`, `cv_certifications`, `applications`, `application_status_history` (trigger-logged), `resumes` (`content` JSONB), `cover_letters` (Draft.js JSONB), `email_connections` (+ `auto_sync`), `processed_emails`, `application_suggestions`, `api_rate_limits`, `auth_rate_limits` (hashed IP/email buckets for sign-in, sign-up and reset), `extension_tokens` (hashed; the extension's credentials), `job_opportunities` (saved jobs, migration 013), `application_activities` (dated next steps, migration 020), `watched_companies` and `watched_postings` (watchlist, migration 021), `application_offers` (offer terms and decision, migration 022). `applications.source` is `manual`, `email` or `extension`; migration 010 adds job details (`salary_min`/`salary_max`/`salary_currency`/`salary_period`, `workplace_type`, `employment_type`, `source_site`), built by `jobDetailColumns` (`@/lib/jobDetails`, pay parsed by `@/lib/salary`). Matching across hiring cycles: `isSameCycle` (`@/server/email/matching`), open and applied within 120 days. Goals are `profiles.goal_period` / `goal_target`. RLS is enabled on every table.
+Key tables: `profiles`, `cv_experience` (+ `_bullets`), `cv_projects` (+ `_bullets`), `cv_education`, `cv_skills`, `cv_certifications`, `applications`, `application_status_history` (trigger-logged), `resumes` (`content` JSONB), `cover_letters` (Draft.js JSONB), `email_connections` (+ `auto_sync`), `processed_emails`, `application_suggestions`, `api_rate_limits`, `auth_rate_limits` (hashed IP/email buckets for sign-in, sign-up and reset), `extension_tokens` (hashed; the extension's credentials), `job_opportunities` (saved jobs, migration 013), `application_activities` (dated next steps, migration 020), `watched_companies` and `watched_postings` (watchlist, migration 021), `application_offers` (offer terms and decision, migration 022). `email_connections.provider` is `imap` or `gmail` (migration 023). `applications.source` is `manual`, `email` or `extension`; migration 010 adds job details (`salary_min`/`salary_max`/`salary_currency`/`salary_period`, `workplace_type`, `employment_type`, `source_site`), built by `jobDetailColumns` (`@/lib/jobDetails`, pay parsed by `@/lib/salary`). Matching across hiring cycles: `isSameCycle` (`@/server/email/matching`), open and applied within 120 days. Goals are `profiles.goal_period` / `goal_target`. RLS is enabled on every table.
 
 ## Environment Variables
 
@@ -156,6 +159,8 @@ OPENAI_MODEL=         # optional; defaults to gpt-6-luna
 SUPABASE_SERVICE_ROLE_KEY=  # server-only; daily email sync, extension API, auth rate limits
 CRON_SECRET=          # Vercel sends it as a Bearer token to /api/cron/*
 NEXT_PUBLIC_EXTENSION_ID=   # optional; lets /extension/connect use externally_connectable
+GOOGLE_CLIENT_ID=           # optional; with the secret, shows "Connect Gmail with Google" in Inbox
+GOOGLE_CLIENT_SECRET=       # optional, server-only
 ```
 
 Never print or commit `.env.local` values.

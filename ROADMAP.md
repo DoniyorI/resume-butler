@@ -44,7 +44,7 @@ The goal is one place to learn whether a job fits, tailor a resume to it, apply,
 | M7 | Watchlist: target companies' public boards, new postings scored for fit | RB-13 | Done November 14. Migration 021 is applied. [Verification](docs/watchlist-verification.md) |
 | M8 | Offer closure, full export and spreadsheet import | A10 | Done November 14. Migration 022 is applied. [Verification](docs/offer-export-import-verification.md) |
 | M9 | More reviewed autofill adapters | A6 (continued) | Greenhouse (0.7.0) and Ashby (0.8.0) done November 14. Workday remains. [Verification](docs/reviewed-autofill-verification.md) |
-| M10 | Gmail connection | A8 | Waits on the owner's Google Cloud setup |
+| M10 | Gmail connection | A8 | Built November 15. Migration 023 is applied. "Connect Gmail with Google" (read-only) appears once the owner sets `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`; the round trip with a real Google account is the one step left. [Verification](docs/gmail-connection-verification.md) |
 | M11 | Interview preparation from the submitted package | B5 | Done November 14, no migration. A preparation page per application, built only from quotes of the posting, the Master CV and what was submitted |
 | M12 | Descriptive dashboard figures and a Search report | A10 (rest) | Done November 14, no migration. Rates count applications applied 14+ days ago and show "x of N"; groups under 5 show counts only. [Verification](docs/dashboard-report-verification.md) |
 | M13 | PDF readability checks | A9 (rest) | Done November 14, no migration. "Check PDF text" in the editor reads the compiled PDF back and lists the user's lines it cannot find. [Verification](docs/pdf-readability-verification.md) |

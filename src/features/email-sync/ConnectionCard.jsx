@@ -23,7 +23,7 @@ function ConnectedState({ connection, scanning, onScan, onDisconnect, scanOption
         <div>
           <p className="text-sm font-medium">{connection.emailAddress}</p>
           <p className="text-xs text-gray-500">
-            {connection.imapHost}:{connection.imapPort}
+            {connection.provider === "gmail" ? "Gmail, connected with Google (read-only)" : `${connection.imapHost}:${connection.imapPort}`}
             {connection.lastScanAt && (
               <>
                 {" "}
@@ -60,7 +60,7 @@ function ConnectedState({ connection, scanning, onScan, onDisconnect, scanOption
   );
 }
 
-export default function ConnectionCard({ connection, scanning, onScan, scanOptions, onScanOptionsChange }) {
+export default function ConnectionCard({ connection, gmailAvailable = false, scanning, onScan, scanOptions, onScanOptionsChange }) {
   const [emailAddress, setEmailAddress] = useState(connection?.emailAddress ?? "");
   const [appPassword, setAppPassword] = useState("");
   const [imapHost, setImapHost] = useState(connection?.imapHost ?? DEFAULT_HOST);
@@ -103,7 +103,11 @@ export default function ConnectionCard({ connection, scanning, onScan, scanOptio
           <Mail size={18} /> Email Connection
         </CardTitle>
         <CardDescription>
-          {connection ? `Connected: ${connection.emailAddress}` : "Connect your email account via IMAP"}
+          {connection
+            ? `Connected: ${connection.emailAddress}`
+            : gmailAvailable
+              ? "Connect Gmail with Google, or any inbox with an app password"
+              : "Connect your email account via IMAP"}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -118,6 +122,21 @@ export default function ConnectionCard({ connection, scanning, onScan, scanOptio
           />
         ) : (
           <div className="space-y-3">
+            {gmailAvailable && (
+              <>
+                {/* A plain link: the route redirects to Google's consent page */}
+                <Button asChild className="w-full">
+                  <a href="/api/gmail/connect">Connect Gmail with Google</a>
+                </Button>
+                <p className="text-xs text-gray-500">
+                  Read-only: Resume Butler can read your inbox to find application updates, and can never send,
+                  change or delete email. You can remove access any time with Disconnect.
+                </p>
+                <div className="flex items-center gap-3 pt-1 text-xs text-gray-500">
+                  <span className="h-px flex-1 bg-border" /> or use an app password <span className="h-px flex-1 bg-border" />
+                </div>
+              </>
+            )}
             <div>
               <Label htmlFor="email">Email Address</Label>
               <Input
@@ -164,13 +183,13 @@ export default function ConnectionCard({ connection, scanning, onScan, scanOptio
               </div>
             </div>
 
-            <Button onClick={handleSave} disabled={saving} className="w-full">
+            <Button onClick={handleSave} disabled={saving} className="w-full" variant={gmailAvailable ? "outline" : "default"}>
               {saving ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Connecting...
                 </>
               ) : (
-                "Connect Email"
+                gmailAvailable ? "Connect with app password" : "Connect Email"
               )}
             </Button>
           </div>

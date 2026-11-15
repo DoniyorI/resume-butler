@@ -120,7 +120,7 @@ src/
   lib/                       Safe on client and server: constants, dates, redirects, safeUrl,
                              salary, jobDetails, emailCategories, postJson, utils, supabase clients
   server/                    Server-only ("server-only" import), reusable by actions, routes, cron, extension
-supabase/migrations/         SQL schema, applied in order (001–022)
+supabase/migrations/         SQL schema, applied in order (001–023)
 extension/                   Chrome extension (see its README)
 docs/                        This file, the extension plan
 public/image/                Logo, illustrations, Lottie animations
@@ -246,7 +246,7 @@ Redirects in `next.config.mjs`: `/cv` → `/profile`, `/resumes` and `/coverlett
 - **UI**: `JobFit.jsx` shows the band and reason on each saved-job card, and "See why" lists every requirement with the quoted bullet, the years and degree comparison, the lines to judge, and what the working resume leaves out. Missing items point to the Master CV. The saved-jobs page has a Newest / Best fit switch (`?sort=fit`). `scripts/qa-saved-job-fit.mjs` is the signed-in browser check; the `4b-application-fit` step of `scripts/qa-saved-job-flow.mjs` checks the application page's card. `tests/skill-labels.test.mjs` covers the labels.
 
 ### Email sync (`features/email-sync`)
-- `ConnectionCard`: IMAP host (allowlisted in `server/email/imapHosts.js`: Gmail, Outlook and Office 365, Yahoo, iCloud), email and app password (encrypted at rest, never sent back), with a Gmail app-password guide (`GmailSetupGuide`).
+- `ConnectionCard`: with Google keys set, "Connect Gmail with Google" first (a plain link to `/api/gmail/connect`); a Gmail connection shows as "Gmail, connected with Google (read-only)". The page shows the outcome of the Google round trip from `?gmail=` (known values only). Otherwise or in addition: IMAP host (allowlisted in `server/email/imapHosts.js`: Gmail, Outlook and Office 365, Yahoo, iCloud), email and app password (encrypted at rest, never sent back), with a Gmail app-password guide (`GmailSetupGuide`).
 - `ScanOptions`: date range (default the last 14 days) and categories (confirmations, interviews, assessments, offers, rejections on by default; recruiter outreach opt-in).
 - `ScanResults`, `ScanHistory`, `AutoSyncToggle` (daily auto-sync, see the [pipeline](#email-sync-pipeline)).
 
@@ -406,7 +406,7 @@ Supabase Postgres. **Row-level security is on for every table**; users can only 
 | `application_status_history` | `application_id`, status, `changed_at` | Written by triggers (`log_initial_status`, `log_status_change`), never by the app |
 | `resumes` | title, `content` JSONB (see Resume studio), `application_id` | `latex_content`, `ats_score` and the old `resume_items` / `resume_suggestions` tables are from the original design and unused |
 | `cover_letters` | title, `content` JSONB (Draft.js body) | |
-| `email_connections` | IMAP host and port, email, `app_password` (encrypted), `last_scan_at`, `auto_sync`, `last_auto_sync_at`, `last_auto_sync_error` | The password column is never selected for the browser (`PUBLIC_CONNECTION_COLUMNS`) |
+| `email_connections` | `provider` (`imap` / `gmail`, migration 023), IMAP host and port, email, `app_password` (encrypted; IMAP only), `oauth_refresh_token` (encrypted Google refresh token; Gmail only), `last_scan_at`, `auto_sync`, `last_auto_sync_at`, `last_auto_sync_error` | Neither secret is ever selected for the browser (`PUBLIC_CONNECTION_COLUMNS`) or exported. A check requires the secret that matches the provider. Reads fall back to the pre-023 columns |
 | `processed_emails` | `message_id`, subject, sender, date, classification, action taken | Each message is classified once |
 | `application_suggestions` | kind (`new` / `update`), `application_id`, company, role, status, category, confidence, summary, email fields, `state` (pending / approved / dismissed) | The review queue |
 | `api_rate_limits` | `user_id`, key, window | Via `consume_rate_limit()` (authenticated only); migrations 021 and 022 add the keys `watchlist-add`, `watchlist-check`, `export-data` and `import-applications` |
@@ -435,6 +435,7 @@ Migrations (`supabase/migrations/`, apply in order in the SQL editor):
 | `012_application_identity.sql` | Posting identities, atomic extension receipts/replay, explicit match resolution and approval revalidation |
 | `020_application_activities.sql` | `application_activities` (dated next steps), its owner-only policies, composite foreign key and per-user cap trigger |
 | `021_watchlist.sql` | `watched_companies` and `watched_postings` (watchlist), owner-only policies, composite foreign key, per-user cap triggers, column grants with `record_watch_check`, and the `watchlist-add` and `watchlist-check` rate limit keys |
+| `023_gmail_oauth.sql` | `email_connections.provider` and `oauth_refresh_token`, `app_password` nullable, checks that each provider carries its own secret |
 | `022_offers_and_portability.sql` | `application_offers` (offer terms and decision), owner-only policies, composite foreign key, and the `export-data` and `import-applications` rate limit keys (replaces `consume_rate_limit`) |
 
 Naming: database fields are snake_case; each `data.js` maps rows to camelCase at the boundary.
@@ -458,9 +459,12 @@ Naming: database fields are snake_case; each `data.js` maps rows to camelCase at
 ```
 Scan (button, /api/scan-emails)  or  daily cron (/api/cron/email-sync → runAutoSync)
   └─ syncEmailsForUser(supabase, userId, options)
-       1. Load the connection; decrypt the app password; check the host is allowlisted (imapHosts.js)
-       2. fetchEmails (imapClient.js): IMAP over TLS, read-only, date window (default 14 days),
-          skips Gmail tabs that never hold application mail, caps message size; mailparser decodes
+       1. Load the connection; decrypt the app password or Google refresh token; for IMAP check the host
+          is allowlisted (imapHosts.js)
+       2. IMAP: fetchEmails (imapClient.js): IMAP over TLS, read-only, date window (default 14 days),
+          skips Gmail tabs that never hold application mail, caps message size; mailparser decodes.
+          Gmail: fetchGmailEmails (gmailClient.js): refresh an access token, list in:inbox with the same
+          Gmail search (messageText.js), read each message (format=full), same message shape
        3. Skip message ids already in processed_emails
        4. isCandidateEmail (classify.js): no-AI pre-filter (ATS senders, application phrases),
           so job alerts and digests don't reach the model
@@ -533,7 +537,7 @@ Full details in [extension/README.md](../extension/README.md) and [docs/chrome-e
 - **Next.js 14 is end of life** with known advisories; the 16.4 upgrade is on a branch (below).
 - **CSP still allows inline scripts**; a nonce-based CSP needs dynamic rendering and is best done after the upgrade.
 - **CAPTCHA integration is pending.** Sign-in, sign-up and password-reset forms must collect challenge tokens and pass `options.captchaToken` in their Supabase auth calls before protection is enabled. Enabling the dashboard toggle alone would block those flows. See [ROADMAP.md](../ROADMAP.md).
-- **Gmail OAuth** (instead of IMAP app passwords) is planned; see [ROADMAP.md](../ROADMAP.md).
+- **Gmail with Google sign-in** (read-only Gmail API) sits beside IMAP app passwords; it is switched on by `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`. Setup: [README](../README.md#getting-started); checks: [gmail-connection-verification.md](gmail-connection-verification.md).
 - **Unused schema**: `resumes.latex_content`, `resumes.ats_score`, `resume_items`, `resume_suggestions`, `applications.parsed_requirements` are from the original design.
 - **The email page's name** ("Email Sync") is under discussion.
 - **Caching**: data is per-user and changes often, so nothing is cached across requests; React `cache()` dedupes within a request and Server Actions revalidate paths.
@@ -582,4 +586,4 @@ The popup panel is now **Fit**, and its button **Check fit** (`popup/job-score.j
 
 ### Master CV import merge (migration019)
 
-Resume parsing normalizes bounded fields/dates and calls `merge_resume_import` using the signed-in user client. The SQL transaction scopes every row to auth.uid(), serializes per owner, merges unique compatible-date exact matches, preserves existing facts and bullets, and reports ambiguous/capacity cases. New bullets append after existing ones; case/whitespace and terminal-period duplicates are skipped without changing technical symbols such as C++/C#. No existing CV rows are deleted. Migration019 is installed;001–019 are immutable. Migrations 020 (next steps), 021 (watchlist) and 022 (offers, export and import limits) are applied by hand; the next new one is023. The importer fails safely before writes when019 is absent. Optional blank dates are normalized before CV actions validate real calendar dates. [Verification and rollout blockers](interface-import-verification.md).
+Resume parsing normalizes bounded fields/dates and calls `merge_resume_import` using the signed-in user client. The SQL transaction scopes every row to auth.uid(), serializes per owner, merges unique compatible-date exact matches, preserves existing facts and bullets, and reports ambiguous/capacity cases. New bullets append after existing ones; case/whitespace and terminal-period duplicates are skipped without changing technical symbols such as C++/C#. No existing CV rows are deleted. Migration019 is installed;001–019 are immutable. Migrations 020 (next steps), 021 (watchlist) and 022 (offers, export and import limits) are applied by hand; 023 (Gmail connection) is applied; the next new one is 024. The importer fails safely before writes when019 is absent. Optional blank dates are normalized before CV actions validate real calendar dates. [Verification and rollout blockers](interface-import-verification.md).

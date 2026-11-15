@@ -2,6 +2,7 @@ import "server-only";
 import { CATEGORY_STATUS, MIN_CONFIDENCE, classifyEmail, isCandidateEmail } from "@/server/email/classify";
 import { encryptStoredPassword, getConnectionCredentials, markScanned } from "@/server/email/connection";
 import { fetchEmails } from "@/server/email/imapClient";
+import { fetchGmailEmails } from "@/server/email/gmailClient";
 import { emailConnectionError } from "@/server/email/connectionErrors";
 import { isAllowedImapHost } from "@/server/email/imapHosts";
 import { decideEmailApplication, normalizeCompany, shouldUpdateStatus } from "@/server/email/matching";
@@ -175,7 +176,7 @@ async function scanEmailsForUser(supabase, userId, options) {
     throw new HttpError(400, "No email connection configured. Go to Inbox to connect your email.");
   }
   // Re-check stored settings, since rows saved before validation may hold any host
-  if (!isAllowedImapHost(credentials.host)) {
+  if (credentials.provider !== "gmail" && !isAllowedImapHost(credentials.host)) {
     throw new HttpError(
       400,
       "Your email connection uses an unsupported IMAP server. Reconnect your email in Inbox."
@@ -183,9 +184,17 @@ async function scanEmailsForUser(supabase, userId, options) {
   }
 
   let emails;
+  const scanWindow = { since, before, timeoutMs: Math.max(1, deadlineAt - Date.now() - 10_000) };
   try {
-    emails = await fetchEmails(credentials, { since, before, timeoutMs: Math.max(1, deadlineAt - Date.now() - 10_000) });
+    // Gmail through Google reports its own user-safe HttpError; IMAP errors are mapped below
+    emails = credentials.provider === "gmail"
+      ? await fetchGmailEmails(credentials, scanWindow)
+      : await fetchEmails(credentials, scanWindow);
   } catch (imapErr) {
+    if (imapErr instanceof HttpError) {
+      console.error("Gmail read failed", { status: imapErr.status });
+      throw imapErr;
+    }
     console.error("IMAP connection failed", { code: imapErr?.code || "unknown", source: imapErr?.source || "unknown" });
     throw emailConnectionError(imapErr);
   }

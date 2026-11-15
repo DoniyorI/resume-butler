@@ -18,6 +18,7 @@ const ID_CHUNK = 100; // 100 uuids keep the request line well under the gateway'
 // keys are deleted from every row before it is written.
 export const NEVER_EXPORT = [
   "app_password", // email_connections: encrypted IMAP password
+  "oauth_refresh_token", // email_connections: encrypted Google refresh token
   "token_hash", // extension_tokens: hash of the extension's bearer token
   "lease_token", // email_sync_locks
   "request_hash", // application_submissions, reusable_answer_versions: idempotency hashes

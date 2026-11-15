@@ -42,6 +42,8 @@ Requirements: Node.js 24.x, a Supabase project, and an OpenAI API key.
    APP_ENCRYPTION_KEY=          # base64 32 bytes: openssl rand -base64 32
    CRON_SECRET=                 # any long random string; Vercel Cron sends it
    NEXT_PUBLIC_EXTENSION_ID=    # optional: the published extension's ID
+   GOOGLE_CLIENT_ID=            # optional: "Connect Gmail with Google" (see Gmail below)
+   GOOGLE_CLIENT_SECRET=        # optional, server-only; both must be set or the button stays hidden
    ```
 3. **Database**: in the Supabase SQL editor, run each file in `supabase/migrations/` in order, `001` to `019`, as its own query. Each should report success. Migration 012 enables identity-safe recording/approval, 013 saved jobs, 014 flexible documents, 015 preserved submission versions, and 016–017 approved reusable answers with safe conflict responses. Finish017 before using answer capture. Migration018 adds site-specific extension notes while preserving edited comments. Migration019 enables atomic duplicate-aware Master CV imports; it is installed in the configured project (see [verification](docs/interface-import-verification.md)). Run only unapplied migrations; never edit an applied file. Missing archive/library setup blocks the affected writes with a retry message.
 4. **Auth settings** in Supabase:
@@ -49,7 +51,13 @@ Requirements: Node.js 24.x, a Supabase project, and an OpenAI API key.
    - Add `http://localhost:3000/**` to **Redirect URLs** for local development. For production, add `<your site>/auth/callback` and the glob pattern `<your site>/auth/callback\?next=**`, replacing `<your site>` with your production origin. The backslash makes `?` literal; `**` accepts the `next` value, including paths and encoded slashes. The app uses these query strings for email confirmation (`next=/profile`), password reset (`next=/reset-password`) and Google sign-in. See [Supabase's redirect URL rules](https://supabase.com/docs/guides/auth/redirect-urls).
    - Authentication → Providers: enable Email. For Google sign-in, configure a Google OAuth client and its credentials in Supabase, using the Supabase provider callback as Google's authorized redirect URI; follow [Supabase's Google setup](https://supabase.com/docs/guides/auth/social-sign-in/auth-google).
    - Set the minimum password length to 8. **Leave CAPTCHA protection disabled for now**: the app has no challenge widget or `captchaToken` handling, so enabling it would block email/password sign-in, sign-up and password-reset requests. Turnstile integration is pending in [ROADMAP.md](ROADMAP.md); it must collect a challenge token in each form and pass it as `options.captchaToken` in the corresponding Supabase auth call before protection is enabled. See [Supabase's CAPTCHA integration](https://supabase.com/docs/guides/auth/auth-captcha).
-5. **Run**
+5. **Gmail with Google sign-in (optional).** Without these keys, Inbox offers only the IMAP app-password connection. Migration 023 must be applied.
+   - In the [Google Cloud console](https://console.cloud.google.com/) (the project used for Google sign-in is fine), enable the **Gmail API**.
+   - Google Auth Platform → Branding and Audience: an External app with your support email. Data Access: add the scope `https://www.googleapis.com/auth/gmail.readonly` (read-only; Google lists it as restricted). While the app is in **Testing**, add each account that will connect under Test users.
+   - Clients → Create client → **Web application**. Authorized redirect URIs: `https://<your site>/api/gmail/callback` and `http://localhost:3000/api/gmail/callback`.
+   - Put the client ID and secret in `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` (Vercel: Production, then redeploy; locally: `.env.local`, then restart `npm run dev`).
+   - In Testing, Google expires Gmail refresh tokens after 7 days, so the connection asks to be reconnected weekly. Publishing the app (Audience → Publish) removes that limit; unverified, Google shows a warning screen and caps it at 100 users. A public release with this scope needs Google's verification and security assessment.
+6. **Run**
    ```bash
    npm run dev
    ```

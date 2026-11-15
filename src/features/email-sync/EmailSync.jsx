@@ -8,8 +8,9 @@ import ConnectionCard from "@/features/email-sync/ConnectionCard";
 import ScanResults from "@/features/email-sync/ScanResults";
 import { DEFAULT_SCAN_OPTIONS, scanOptionsError, scanRequestBody } from "@/features/email-sync/ScanOptions";
 
-// `guide`, `history` and `review` are server-rendered and passed in as slots
-export default function EmailSync({ connection, guide, history, review }) {
+// `guide`, `history` and `review` are server-rendered and passed in as slots; `gmailAvailable` says
+// whether the server has Google sign-in for Gmail set up
+export default function EmailSync({ connection, gmailAvailable = false, guide, history, review }) {
   const router = useRouter();
   const [scanning, setScanning] = useState(false);
   const [scanOptions, setScanOptions] = useState(DEFAULT_SCAN_OPTIONS);
@@ -46,6 +47,7 @@ export default function EmailSync({ connection, guide, history, review }) {
         <div className="space-y-4">
           <ConnectionCard
             connection={connection}
+            gmailAvailable={gmailAvailable}
             scanning={scanning}
             onScan={handleScan}
             scanOptions={scanOptions}

@@ -12,6 +12,7 @@ export function toConnection(row) {
   if (!row) return null;
   return {
     emailAddress: row.email_address,
+    provider: row.provider === "gmail" ? "gmail" : "imap",
     imapHost: row.imap_host,
     imapPort: row.imap_port,
     lastScanAt: row.last_scan_at,

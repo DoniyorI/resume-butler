@@ -2,46 +2,26 @@ import "server-only";
 import Imap from "imap";
 import { simpleParser } from "mailparser";
 import { IMAP_PORT, isAllowedImapHost, normalizeImapHost } from "@/server/email/imapHosts";
+import { bodyText, gmailSearch, htmlToText, isBulkMail } from "@/server/email/messageText";
 
 // Stop buffering a message past this many bytes (large attachments come after the text)
 const MAX_MESSAGE_BYTES = 64 * 1024;
-const MAX_BODY_CHARS = 3000;
 const DEFAULT_MAX_MESSAGES = 300;
 const SCAN_TIMEOUT_MS = 25_000;
 const IMAP_MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
-// Gmail tabs that never hold application emails (confirmations land in Primary or Updates)
-const GMAIL_EXCLUDED_CATEGORIES = "-category:promotions -category:social -category:forums";
-
-// IMAP SEARCH wants DD-Mon-YYYY; Gmail search wants YYYY/MM/DD. Both use UTC dates here.
+// IMAP SEARCH wants DD-Mon-YYYY (UTC dates here)
 const imapDate = (d) => `${d.getUTCDate()}-${IMAP_MONTHS[d.getUTCMonth()]}-${d.getUTCFullYear()}`;
-const gmailDate = (d) => `${d.getUTCFullYear()}/${d.getUTCMonth() + 1}/${d.getUTCDate()}`;
 
 // `before` is exclusive in both IMAP BEFORE and Gmail before:
 function searchCriteria(imap, { since, before }) {
   if (imap.serverSupports("X-GM-EXT-1")) {
-    return [
-      ["X-GM-RAW", `after:${gmailDate(since)} before:${gmailDate(before)} ${GMAIL_EXCLUDED_CATEGORIES}`],
-    ];
+    return [["X-GM-RAW", gmailSearch({ since, before })]];
   }
   return [
     ["SINCE", imapDate(since)],
     ["BEFORE", imapDate(before)],
   ];
-}
-
-function htmlToText(html) {
-  return html
-    .replace(/<(script|style)[^>]*>[\s\S]*?<\/\1>/gi, " ")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&");
-}
-
-// Mailing-list and bulk headers mark newsletters and job alerts
-function isBulkMail(headers) {
-  const precedence = String(headers.get("precedence") || "").toLowerCase();
-  return headers.has("list") || ["bulk", "list", "junk"].includes(precedence);
 }
 
 async function parseMessage(raw) {
@@ -55,8 +35,8 @@ async function parseMessage(raw) {
     fromAddress: (sender.address || "").toLowerCase(),
     from: parsed.from?.text || "",
     date: parsed.date || null,
-    body: text.replace(/\s+/g, " ").trim().slice(0, MAX_BODY_CHARS),
-    bulk: isBulkMail(parsed.headers),
+    body: bodyText(text),
+    bulk: isBulkMail({ has: (name) => parsed.headers.has(name), get: (name) => parsed.headers.get(name) }),
   };
 }
 
