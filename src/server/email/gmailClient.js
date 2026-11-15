@@ -14,9 +14,9 @@ const DEFAULT_MAX_MESSAGES = 300;
 const SCAN_TIMEOUT_MS = 25_000;
 const PAGE_SIZE = 100;
 // Gmail allows each user about 250 quota units a second and a message read costs 5, so reads are
-// spread out (at most one start every MIN_GAP_MS, about 33 a second) and few run at once
+// spread out (at most one start every MIN_GAP_MS, about 22 a second, half the limit) and few run at once
 const FETCH_CONCURRENCY = 4;
-const MIN_GAP_MS = 30;
+const MIN_GAP_MS = 45;
 const MAX_RETRIES = 3;
 const RETRY_BASE_MS = 1000;
 const REQUEST_TIMEOUT_MS = 10_000;
@@ -288,7 +288,11 @@ export async function fetchGmailEmails(
   do {
     const params = new URLSearchParams({ q, maxResults: String(Math.min(PAGE_SIZE, maxMessages - ids.length)) });
     if (pageToken) params.set("pageToken", pageToken);
-    const page = await call(`${API_URL}/messages?${params}`, auth);
+    let page = await call(`${API_URL}/messages?${params}`, auth);
+    for (let attempt = 0; isRateLimited(page) && attempt < MAX_RETRIES && Date.now() + retryBaseMs * 2 ** attempt < deadline - 5_000; attempt++) {
+      await sleep(retryBaseMs * 2 ** attempt);
+      page = await call(`${API_URL}/messages?${params}`, auth);
+    }
     if (!page.ok) throw gmailError(page, "list");
     for (const { id } of page.body?.messages || []) if (typeof id === "string" && /^[A-Za-z0-9_-]+$/.test(id)) ids.push(id);
     estimate = Number(page.body?.resultSizeEstimate) || estimate;

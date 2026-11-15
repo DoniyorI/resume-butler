@@ -164,6 +164,18 @@ test("rate-limited reads are retried, and a message still refused is left for th
   assert.equal(emails.truncated, 1, "the refused message counts as not processed");
 });
 
+test("a rate-limited listing is retried before the scan gives up", async () => {
+  let lists = 0;
+  const { fetchImpl } = fakeGoogle([
+    [isToken, () => json(200, { access_token: "access" })],
+    [isList, () => (++lists < 3 ? json(429, { error: { code: 429, status: "RESOURCE_EXHAUSTED" } }) : json(200, { messages: [{ id: "x" }] }))],
+    [isGet, (u) => json(200, apiMessage(u.pathname.split("/").pop()))],
+  ]);
+  const emails = await gmail.fetchGmailEmails({ refreshToken: "r" }, { since: new Date("2026-11-01"), before: new Date("2026-11-15"), fetchImpl, minGapMs: 0, retryBaseMs: 1 });
+  assert.equal(lists, 3);
+  assert.equal(emails.length, 1);
+});
+
 test("message reads are spaced out to stay under Gmail's per-user rate", async () => {
   const starts = [];
   const { fetchImpl } = fakeGoogle([
