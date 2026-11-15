@@ -127,7 +127,21 @@ test("the message cap keeps the newest messages and reports what it left out", a
   assert.equal(calls.filter((c) => isList(c.url)).length, 1);
 });
 
-test("revoked or expired Google access asks the user to reconnect, without leaking tokens", async () => {
+test("Google's reason decides the message: only a lost grant asks to reconnect, and the log names step and reason", (t) => {
+  const log = t.mock.method(console, "error", () => {});
+  const apiError = (status, reason) => ({ status, body: { error: { code: status, errors: [{ reason }], status: "PERMISSION_DENIED" } } });
+  assert.equal(gmail.gmailError(apiError(403, "accessNotConfigured"), "list").status, 503);
+  assert.match(gmail.gmailError(apiError(403, "accessNotConfigured")).message, /not set up correctly/);
+  assert.equal(gmail.gmailError(apiError(403, "insufficientPermissions")).status, 400);
+  assert.equal(gmail.gmailError(apiError(403, "userRateLimitExceeded")).status, 503);
+  assert.equal(gmail.gmailError(apiError(403, "somethingNew")).status, 502, "an unknown 403 is not a reconnect");
+  assert.equal(gmail.gmailError({ status: 401, body: { error: "invalid_client" } }, "token refresh").status, 503);
+  assert.deepEqual(log.mock.calls[0].arguments, ["Gmail request failed", { step: "list", status: 403, reason: "accessNotConfigured" }]);
+  assert.equal(gmail.gmailReason({ error: { status: "UNAUTHENTICATED" } }), "UNAUTHENTICATED");
+});
+
+test("revoked or expired Google access asks the user to reconnect, without leaking tokens", async (t) => {
+  t.mock.method(console, "error", () => {});
   const { fetchImpl } = fakeGoogle([[isToken, () => json(400, { error: "invalid_grant", error_description: "Token has been expired or revoked." })]]);
   await assert.rejects(
     gmail.fetchGmailEmails({ refreshToken: "secret-refresh" }, { since: new Date("2026-11-01"), before: new Date("2026-11-15"), fetchImpl }),

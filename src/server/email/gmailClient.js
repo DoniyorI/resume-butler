@@ -60,14 +60,32 @@ async function request(fetchImpl, url, init = {}, timeoutMs = REQUEST_TIMEOUT_MS
   return { status: response.status, ok: response.ok, body };
 }
 
+// Google's machine-readable reason: OAuth errors are a string (invalid_grant), Gmail API errors an object
+export function gmailReason(body) {
+  if (typeof body?.error === "string") return body.error;
+  return body?.error?.errors?.[0]?.reason || body?.error?.details?.find?.((d) => d?.reason)?.reason || body?.error?.status || null;
+}
+
+const REAUTHORIZE = new Set(["invalid_grant", "insufficientPermissions", "ACCESS_TOKEN_SCOPE_INSUFFICIENT", "authError", "UNAUTHENTICATED"]);
+const SERVER_SETUP = new Set(["invalid_client", "unauthorized_client", "accessNotConfigured", "SERVICE_DISABLED", "API_DISABLED"]);
+const RATE_LIMITED = new Set(["rateLimitExceeded", "userRateLimitExceeded", "RESOURCE_EXHAUSTED", "dailyLimitExceeded"]);
+
 /**
- * A failed Google call as a user-safe HttpError. Never includes a token or the response text.
- * invalid_grant (revoked, expired or password changed) and 401/403 mean the user must reconnect.
+ * A failed Google call as a user-safe HttpError, logged with the step and Google's reason code
+ * (never a token or the response text). Only a revoked or expired grant, or missing permission, asks
+ * the user to reconnect; a server setup problem or a rate limit says so instead.
  */
-export function gmailError({ status, body }) {
-  const code = body?.error?.status || body?.error;
-  if (code === "invalid_grant" || status === 401 || status === 403) return new HttpError(400, RECONNECT);
-  if (status === 429) return new HttpError(503, "Gmail is limiting requests right now. Try again in a few minutes.");
+export function gmailError({ status, body }, step = "request") {
+  const reason = gmailReason(body);
+  console.error("Gmail request failed", { step, status, reason: reason || "none" });
+  if (RATE_LIMITED.has(reason) || status === 429) {
+    return new HttpError(503, "Gmail is limiting requests right now. Try again in a few minutes.");
+  }
+  if (SERVER_SETUP.has(reason)) {
+    return new HttpError(503, "Gmail sign-in is not set up correctly on the server. The owner needs to check the Google configuration.");
+  }
+  if (REAUTHORIZE.has(reason) || status === 401) return new HttpError(400, RECONNECT);
+  if (status === 403) return new HttpError(502, "Gmail refused the request. Please try again shortly.");
   return new HttpError(502, "Gmail could not be read. Please try again shortly.");
 }
 
@@ -85,7 +103,7 @@ export async function exchangeGmailCode(code, redirectUri, { fetchImpl = fetch }
     headers: FORM,
     body: tokenBody({ code, redirect_uri: redirectUri, grant_type: "authorization_code" }),
   });
-  if (!result.ok) throw gmailError(result);
+  if (!result.ok) throw gmailError(result, "code exchange");
   return {
     refreshToken: result.body?.refresh_token || null,
     accessToken: result.body?.access_token || null,
@@ -99,7 +117,7 @@ export async function refreshGmailAccess(refreshToken, { fetchImpl = fetch } = {
     headers: FORM,
     body: tokenBody({ refresh_token: refreshToken, grant_type: "refresh_token" }),
   });
-  if (!result.ok || !result.body?.access_token) throw gmailError(result);
+  if (!result.ok || !result.body?.access_token) throw gmailError(result, "token refresh");
   return result.body.access_token;
 }
 
@@ -118,7 +136,7 @@ const authorized = (accessToken) => ({ headers: { Authorization: `Bearer ${acces
 // The address of the mailbox the user granted (gmail.readonly covers the profile)
 export async function gmailProfileEmail(accessToken, { fetchImpl = fetch } = {}) {
   const result = await request(fetchImpl, `${API_URL}/profile`, authorized(accessToken));
-  if (!result.ok) throw gmailError(result);
+  if (!result.ok) throw gmailError(result, "profile");
   const address = String(result.body?.emailAddress || "").trim().toLowerCase();
   if (!address) throw new HttpError(502, "Gmail did not say which address was connected. Please try again.");
   return address;
@@ -255,7 +273,7 @@ export async function fetchGmailEmails(
     const params = new URLSearchParams({ q, maxResults: String(Math.min(PAGE_SIZE, maxMessages - ids.length)) });
     if (pageToken) params.set("pageToken", pageToken);
     const page = await call(`${API_URL}/messages?${params}`, auth);
-    if (!page.ok) throw gmailError(page);
+    if (!page.ok) throw gmailError(page, "list");
     for (const { id } of page.body?.messages || []) if (typeof id === "string" && /^[A-Za-z0-9_-]+$/.test(id)) ids.push(id);
     estimate = Number(page.body?.resultSizeEstimate) || estimate;
     pageToken = typeof page.body?.nextPageToken === "string" ? page.body.nextPageToken : null;
@@ -265,7 +283,7 @@ export async function fetchGmailEmails(
   const messages = await mapLimited(ids.slice(0, maxMessages), FETCH_CONCURRENCY, async (id) => {
     const result = await call(`${API_URL}/messages/${id}?format=full`, auth);
     if (result.status === 404) return null; // deleted between the list and the read
-    if (!result.ok) throw gmailError(result);
+    if (!result.ok) throw gmailError(result, "message");
     return parseGmailMessage(result.body);
   });
 
