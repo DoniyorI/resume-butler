@@ -17,12 +17,13 @@ import RecentApplications from "@/features/dashboard/RecentApplications";
 import SyncCard from "@/features/dashboard/SyncCard";
 import SearchReport from "@/features/dashboard/SearchReport";
 import { searchReport } from "@/features/dashboard/report";
+import CollapsibleSection from "@/features/dashboard/CollapsibleSection";
+import { REPORT_SUMMARY, activitySummary, flowSummary, recentSummary } from "@/features/dashboard/summaries";
 import SectionCards from "@/features/dashboard/SectionCards";
 import {
   ApplicationFlow,
   ApplicationsOverTime,
   Pipeline,
-  StatusBreakdown,
 } from "@/features/dashboard/LazyCharts";
 import { toConnection } from "@/features/email-sync/data";
 import { getPendingSummary } from "@/features/suggestions/data";
@@ -59,8 +60,8 @@ async function softly(load, fallback, what) {
   }
 }
 
-// The home page: today's to-dos first (dated next steps and suggestions, goal,
-// email updates, follow-ups), then the newest applications, then the trends
+// The home page: the headline numbers, then today's to-dos (next steps beside follow-ups,
+// goal and inbox), then collapsible sections: newest applications open, trends and reports closed
 export default async function DashboardPage() {
   const { supabase, user } = await requirePageUser();
   const [rows, { firstName, goal }, connection, pending, upcoming, activities, decideJobs, fitJobs, watched, offers, resumeTitles] = await Promise.all([
@@ -98,6 +99,10 @@ export default async function DashboardPage() {
     today: todayKey(),
   });
 
+  // An inbox with updates waiting is an action, so it leads the right column; otherwise it goes last
+  const syncFirst = Boolean(connection) && pending.count > 0;
+  const syncCard = <SyncCard connection={connection} pendingCount={pending.count} />;
+
   return (
     <div className="flex w-full flex-col gap-4 px-4 pb-10 pt-[85px] md:px-6">
       <div className="flex flex-wrap items-end justify-between gap-2">
@@ -112,36 +117,55 @@ export default async function DashboardPage() {
         </Button>
       </div>
 
-      <TodayCard
-        upcoming={upcoming.items}
-        olderOverdue={upcoming.olderOverdue}
-        suggestions={suggestions}
-        setupPending={upcoming.setupPending}
-      />
-
       <SectionCards stats={stats} />
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-        <GoalCard goal={goal} series={stats.daily.series} />
-        <SyncCard connection={connection} pendingCount={pending.count} />
-        <FollowUps followUps={stats.followUps} className="md:col-span-2 xl:col-span-1" />
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-        <RecentApplications items={stats.recent} total={stats.total} className="xl:col-span-2" />
-        <Pipeline funnel={stats.funnel} total={stats.total} />
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-        <div className="xl:col-span-2">
-          <ApplicationsOverTime series={stats.daily.series} />
+      <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-3">
+        <TodayCard
+          className="xl:col-span-2"
+          upcoming={upcoming.items}
+          olderOverdue={upcoming.olderOverdue}
+          suggestions={suggestions}
+          setupPending={upcoming.setupPending}
+        />
+        <div className="flex flex-col gap-4">
+          {syncFirst && syncCard}
+          <FollowUps followUps={stats.followUps} />
+          <GoalCard goal={goal} series={stats.daily.series} />
+          {!syncFirst && syncCard}
         </div>
-        <StatusBreakdown pie={stats.pie} total={stats.total} />
       </div>
 
-      <ApplicationFlow flow={stats.flow} />
+      <div className="flex flex-col gap-4">
+        <CollapsibleSection
+          id="recent"
+          title="Recent applications"
+          summary={recentSummary(stats.total, stats.recent.length)}
+          defaultOpen
+        >
+          <RecentApplications bare items={stats.recent} total={stats.total} />
+        </CollapsibleSection>
 
-      <SearchReport report={searchReport(rows.applications, rows.history, resumeTitles)} />
+        <CollapsibleSection id="activity" title="Activity" summary={activitySummary(stats.daily.series, todayKey())}>
+          <div className="grid grid-cols-1 gap-6 px-4 sm:px-6 xl:grid-cols-3">
+            <div className="xl:col-span-2">
+              <ApplicationsOverTime bare series={stats.daily.series} />
+            </div>
+            <Pipeline bare funnel={stats.funnel} total={stats.total} />
+          </div>
+        </CollapsibleSection>
+
+        <CollapsibleSection id="flow" title="Application flow" summary={flowSummary(stats.total)}>
+          <div className="px-4 sm:px-6">
+            <ApplicationFlow bare flow={stats.flow} />
+          </div>
+        </CollapsibleSection>
+
+        <CollapsibleSection id="search-report-section" title="Search report" summary={REPORT_SUMMARY}>
+          <div className="px-4 sm:px-6">
+            <SearchReport bare report={searchReport(rows.applications, rows.history, resumeTitles)} />
+          </div>
+        </CollapsibleSection>
+      </div>
     </div>
   );
 }

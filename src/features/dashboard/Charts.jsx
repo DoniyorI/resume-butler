@@ -8,11 +8,8 @@ import {
   BarChart,
   CartesianGrid,
   Cell,
-  Label,
   LabelList,
   Layer,
-  Pie,
-  PieChart,
   Rectangle,
   Sankey,
   Tooltip,
@@ -22,8 +19,6 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   ChartContainer,
-  ChartLegend,
-  ChartLegendContent,
   ChartTooltip,
   ChartTooltipContent,
 } from "@/components/ui/chart";
@@ -33,7 +28,6 @@ import { parseDate } from "@/lib/dates";
 import {
   applicationsChartConfig,
   statusChartConfig,
-  statusKey,
 } from "@/features/dashboard/statusChartConfig";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -71,22 +65,53 @@ function fillDays(series, range) {
   return days;
 }
 
+// A chart's card, or (bare) the same content without the card and title, for use
+// inside a CollapsibleSection that already has the title
+// soleChart: the section's only chart, whose title the section header already shows
+function Frame({ bare, soleChart = false, title, description, aside, className, contentClassName, children }) {
+  if (bare) {
+    return (
+      <div className={className}>
+        <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          {/* A section can hold two charts, so each keeps a small title of its own */}
+          <div className="space-y-0.5">
+            {!soleChart && <h3 className="text-sm font-medium">{title}</h3>}
+            <p className="text-sm text-muted-foreground">{description}</p>
+          </div>
+          {aside}
+        </div>
+        <div className={contentClassName}>{children}</div>
+      </div>
+    );
+  }
+  return (
+    <Card className={className}>
+      <CardHeader className={aside ? "flex flex-col gap-3 space-y-0 sm:flex-row sm:items-start sm:justify-between" : undefined}>
+        <div className="space-y-1.5">
+          <CardTitle className="text-lg">{title}</CardTitle>
+          <CardDescription>{description}</CardDescription>
+        </div>
+        {aside}
+      </CardHeader>
+      <CardContent className={contentClassName}>{children}</CardContent>
+    </Card>
+  );
+}
+
 // Applications per day, with a range switcher (shadcn's interactive area chart)
-export function ApplicationsOverTime({ series }) {
+export function ApplicationsOverTime({ series, bare = false }) {
   const [range, setRange] = useState("30");
   const data = useMemo(() => fillDays(series, range), [series, range]);
   const total = data.reduce((sum, day) => sum + day.count, 0);
 
   return (
-    <Card className="h-full">
-      <CardHeader className="flex flex-col gap-3 space-y-0 sm:flex-row sm:items-start sm:justify-between">
-        <div className="space-y-1.5">
-          <CardTitle className="text-lg">Applications over time</CardTitle>
-          <CardDescription>
-            {total} {total === 1 ? "application" : "applications"}
-            {range === "all" ? " in total" : ` in the last ${range} days`}
-          </CardDescription>
-        </div>
+    <Frame
+      bare={bare}
+      className="h-full"
+      title="Applications over time"
+      description={`${total} ${total === 1 ? "application" : "applications"}${range === "all" ? " in total" : ` in the last ${range} days`}`}
+      contentClassName={bare ? undefined : "px-2 sm:px-6"}
+      aside={
         <Tabs value={range} onValueChange={setRange}>
           <TabsList>
             {RANGES.map((r) => (
@@ -96,106 +121,52 @@ export function ApplicationsOverTime({ series }) {
             ))}
           </TabsList>
         </Tabs>
-      </CardHeader>
-      <CardContent className="px-2 sm:px-6">
-        {data.length === 0 ? (
-          <EmptyState />
-        ) : (
-          <ChartContainer
-            config={applicationsChartConfig}
-            className="aspect-auto h-[250px] w-full xl:h-[300px]"
-          >
-            <AreaChart data={data} margin={{ left: 0, right: 12 }}>
-              <defs>
-                <linearGradient id="fillApplications" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="var(--color-count)" stopOpacity={0.8} />
-                  <stop offset="95%" stopColor="var(--color-count)" stopOpacity={0.1} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid vertical={false} />
-              <XAxis
-                dataKey="date"
-                tickLine={false}
-                axisLine={false}
-                tickMargin={8}
-                minTickGap={32}
-                tickFormatter={shortDate}
-              />
-              <YAxis allowDecimals={false} tickLine={false} axisLine={false} width={28} />
-              <ChartTooltip
-                cursor={false}
-                content={
-                  <ChartTooltipContent
-                    labelFormatter={(_, payload) => shortDate(payload?.[0]?.payload?.date)}
-                    indicator="dot"
-                  />
-                }
-              />
-              <Area
-                dataKey="count"
-                type="monotone"
-                fill="url(#fillApplications)"
-                stroke="var(--color-count)"
-                strokeWidth={2}
-              />
-            </AreaChart>
-          </ChartContainer>
-        )}
-      </CardContent>
-    </Card>
-  );
-}
-
-// Current status of every application, as a donut with the total in the middle
-export function StatusBreakdown({ pie, total }) {
-  const data = pie.map((slice) => ({
-    status: statusKey(slice.label),
-    count: slice.value,
-    fill: `var(--color-${statusKey(slice.label)})`,
-  }));
-
-  return (
-    <Card className="flex flex-col">
-      <CardHeader>
-        <CardTitle className="text-lg">Status breakdown</CardTitle>
-        <CardDescription>Where every application stands today</CardDescription>
-      </CardHeader>
-      <CardContent className="flex-1">
-        {data.length === 0 ? (
-          <EmptyState />
-        ) : (
-          <ChartContainer config={statusChartConfig} className="mx-auto aspect-square max-h-[300px]">
-            <PieChart>
-              <ChartTooltip cursor={false} content={<ChartTooltipContent nameKey="status" hideLabel />} />
-              <Pie
-                data={data}
-                dataKey="count"
-                nameKey="status"
-                innerRadius={65}
-                strokeWidth={4}
-                stroke="hsl(var(--background))"
-              >
-                <Label
-                  content={({ viewBox }) =>
-                    viewBox && "cx" in viewBox ? (
-                      <text x={viewBox.cx} y={viewBox.cy} textAnchor="middle" dominantBaseline="middle">
-                        <tspan x={viewBox.cx} y={viewBox.cy} className="fill-foreground text-3xl font-bold">
-                          {total}
-                        </tspan>
-                        <tspan x={viewBox.cx} y={(viewBox.cy || 0) + 22} className="fill-muted-foreground">
-                          Applications
-                        </tspan>
-                      </text>
-                    ) : null
-                  }
+      }
+    >
+      {data.length === 0 ? (
+        <EmptyState />
+      ) : (
+        <ChartContainer
+          config={applicationsChartConfig}
+          className="aspect-auto h-[250px] w-full xl:h-[300px]"
+        >
+          <AreaChart data={data} margin={{ left: 0, right: 12 }}>
+            <defs>
+              <linearGradient id="fillApplications" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="var(--color-count)" stopOpacity={0.8} />
+                <stop offset="95%" stopColor="var(--color-count)" stopOpacity={0.1} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid vertical={false} />
+            <XAxis
+              dataKey="date"
+              tickLine={false}
+              axisLine={false}
+              tickMargin={8}
+              minTickGap={32}
+              tickFormatter={shortDate}
+            />
+            <YAxis allowDecimals={false} tickLine={false} axisLine={false} width={28} />
+            <ChartTooltip
+              cursor={false}
+              content={
+                <ChartTooltipContent
+                  labelFormatter={(_, payload) => shortDate(payload?.[0]?.payload?.date)}
+                  indicator="dot"
                 />
-              </Pie>
-              <ChartLegend content={<ChartLegendContent nameKey="status" />} />
-            </PieChart>
-          </ChartContainer>
-        )}
-      </CardContent>
-    </Card>
+              }
+            />
+            <Area
+              dataKey="count"
+              type="monotone"
+              fill="url(#fillApplications)"
+              stroke="var(--color-count)"
+              strokeWidth={2}
+            />
+          </AreaChart>
+        </ChartContainer>
+      )}
+    </Frame>
   );
 }
 
@@ -215,7 +186,7 @@ function BarValueLabel({ x, y, width, height, value }) {
 }
 
 // Applied → Reached Out → Interviewed → Offered, as horizontal bars with conversion
-export function Pipeline({ funnel, total }) {
+export function Pipeline({ funnel, total, bare = false }) {
   const data = funnel.map((stage) => ({
     stage: stage.label,
     count: stage.count,
@@ -224,12 +195,11 @@ export function Pipeline({ funnel, total }) {
   }));
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-lg">Pipeline</CardTitle>
-        <CardDescription>Where your applications are now (current status), out of everything you applied to</CardDescription>
-      </CardHeader>
-      <CardContent>
+    <Frame
+      bare={bare}
+      title="Pipeline"
+      description="Where your applications are now (current status), out of everything you applied to"
+    >
         {total === 0 ? (
           <EmptyState />
         ) : (
@@ -253,8 +223,7 @@ export function Pipeline({ funnel, total }) {
             </BarChart>
           </ChartContainer>
         )}
-      </CardContent>
-    </Card>
+    </Frame>
   );
 }
 
@@ -364,18 +333,16 @@ function linkedFlow(flow) {
 }
 
 // Entry streams → recorded interview milestone → shared current outcomes.
-export function ApplicationFlow({ flow }) {
+export function ApplicationFlow({ flow, bare = false }) {
   const data = useMemo(() => linkedFlow(flow), [flow]);
   const hasFlow = data.links.length > 0;
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-lg">Application flow</CardTitle>
-        <CardDescription>
-          {applicationsCount(flow.total)} · Entry → interviews → current outcome
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
+    <Frame
+      bare={bare}
+      soleChart
+      title="Application flow"
+      description={`${applicationsCount(flow.total)} · Entry → interviews → current outcome`}
+    >
         {!hasFlow ? (
           <EmptyState>No applications yet</EmptyState>
         ) : (
@@ -410,7 +377,6 @@ export function ApplicationFlow({ flow }) {
             </p>
           </>
         )}
-      </CardContent>
-    </Card>
+    </Frame>
   );
 }

@@ -32,28 +32,35 @@ export function DashboardSkeleton() {
   return (
     <div className="flex w-full flex-col gap-4 px-4 pb-10 pt-[85px] md:px-6" aria-busy="true">
       <PageTitle />
-      {/* Today: due steps and suggested next steps */}
-      <CardBlock className="h-44" lines={3} />
       <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
         {Array.from({ length: 4 }, (_, i) => (
           <CardBlock key={i} lines={2} />
         ))}
       </div>
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-        <CardBlock className="h-40" />
-        <CardBlock className="h-40" />
-        <CardBlock className="h-40 md:col-span-2 xl:col-span-1" />
+      {/* Today (2/3) beside waiting on a reply, goal and inbox (1/3) */}
+      <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-3">
+        <CardBlock className="h-72 xl:col-span-2" lines={4} />
+        <div className="flex flex-col gap-4">
+          <CardBlock className="h-36" />
+          <CardBlock className="h-28" />
+          <CardBlock className="h-28" />
+        </div>
       </div>
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-        <Skeleton className="h-[330px] rounded-xl xl:col-span-2" />
-        <Skeleton className="h-[330px] rounded-xl" />
-      </div>
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-        <Skeleton className="h-[420px] rounded-xl xl:col-span-2" />
-        <Skeleton className="h-[420px] rounded-xl" />
-      </div>
-      <div>
-        <Skeleton className="h-[480px] rounded-xl" />
+      {/* Collapsible sections: the first one open, three slim headers */}
+      <div className="flex flex-col gap-4">
+        <div className="rounded-lg border bg-card">
+          <div className="flex items-center gap-3 px-6 py-3">
+            <Skeleton className="h-5 w-44" />
+            <Skeleton className="h-4 w-32" />
+          </div>
+          <Skeleton className="mx-6 mb-4 h-[300px] rounded-md" />
+        </div>
+        {Array.from({ length: 3 }, (_, i) => (
+          <div key={i} className="flex items-center gap-3 rounded-lg border bg-card px-6 py-3">
+            <Skeleton className="h-5 w-32" />
+            <Skeleton className="h-4 w-56 max-w-[50%]" />
+          </div>
+        ))}
       </div>
     </div>
   );

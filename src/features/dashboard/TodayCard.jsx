@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { setActivityStatusAction } from "@/features/activities/actions";
 import useLocalToday from "@/features/activities/hooks/useLocalToday";
 import { ACTIVITY_KIND_LABELS, addDays } from "@/features/activities/kinds";
+import { visibleSuggestions } from "@/features/dashboard/visibleSuggestions";
 import { formatShortDate } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 
@@ -73,6 +74,7 @@ function DueRow({ activity, overdue, onDone, busy }) {
 export default function TodayCard({ upcoming, olderOverdue = 0, suggestions, setupPending, className }) {
   const today = useLocalToday();
   const [hidden, setHidden] = useState(() => new Set());
+  const [showAll, setShowAll] = useState(false);
   // Steps whose "Done" is on its way, so a double-click sends it once
   const [busy, setBusy] = useState(() => new Set());
 
@@ -99,6 +101,7 @@ export default function TodayCard({ upcoming, olderOverdue = 0, suggestions, set
 
   const visible = upcoming.filter((a) => !hidden.has(a.id));
   const groups = today ? groupByDay(visible, today) : [];
+  const shown = visibleSuggestions(suggestions, showAll);
   const nothing = today && groups.length === 0 && suggestions.length === 0;
 
   return (
@@ -159,7 +162,7 @@ export default function TodayCard({ upcoming, olderOverdue = 0, suggestions, set
               <Lightbulb className="h-3.5 w-3.5" /> Suggested next steps
             </h3>
             <ul className="-mx-2 divide-y">
-              {suggestions.map((suggestion) => (
+              {shown.items.map((suggestion) => (
                 <li key={suggestion.id}>
                   <Link
                     href={suggestion.href}
@@ -174,6 +177,16 @@ export default function TodayCard({ upcoming, olderOverdue = 0, suggestions, set
                 </li>
               ))}
             </ul>
+            {shown.canToggle && (
+              <button
+                type="button"
+                onClick={() => setShowAll((value) => !value)}
+                aria-expanded={showAll}
+                className="mt-1 rounded-md px-2 py-1 text-sm font-medium text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                {showAll ? "Show fewer" : `Show ${shown.hiddenCount} more`}
+              </button>
+            )}
             {setupPending && (
               <p className="pt-2 text-xs text-muted-foreground">
                 Recording these steps on an application needs migration 020; until then the suggestions are a reminder.

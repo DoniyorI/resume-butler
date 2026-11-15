@@ -21,18 +21,25 @@ function shortDate(value) {
 
 // The newest applications, a jump-off to the full table. `items` come from
 // getDashboardStats().recent.
-export default function RecentApplications({ items, total, className }) {
+export default function RecentApplications({ items, total, className, bare = false }) {
+  const viewAll = (
+    <Button asChild variant="ghost" size="sm" className="h-8 text-brand hover:text-brand">
+      <Link href="/applications">
+        View all {total > 0 && <span className="ml-1 tabular-nums">({total})</span>}
+        <ArrowRight className="ml-1 h-3.5 w-3.5" />
+      </Link>
+    </Button>
+  );
+  // bare: inside a CollapsibleSection, which already carries the title
+  const Wrapper = bare ? "div" : Card;
   return (
-    <Card className={cn("flex flex-col", className)}>
-      <CardHeader className="flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-base">Recent applications</CardTitle>
-        <Button asChild variant="ghost" size="sm" className="h-8 text-brand hover:text-brand">
-          <Link href="/applications">
-            View all {total > 0 && <span className="ml-1 tabular-nums">({total})</span>}
-            <ArrowRight className="ml-1 h-3.5 w-3.5" />
-          </Link>
-        </Button>
-      </CardHeader>
+    <Wrapper className={cn("flex flex-col", className)}>
+      {bare ? null : (
+        <CardHeader className="flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-base">Recent applications</CardTitle>
+          {viewAll}
+        </CardHeader>
+      )}
       <CardContent className="flex-1 px-0 pb-2">
         {items.length === 0 ? (
           <p className="px-6 py-8 text-center text-sm text-muted-foreground">
@@ -80,7 +87,8 @@ export default function RecentApplications({ items, total, className }) {
             </TableBody>
           </Table>
         )}
+        {bare && total > 0 && <div className="flex justify-end px-4 pt-2">{viewAll}</div>}
       </CardContent>
-    </Card>
+    </Wrapper>
   );
 }

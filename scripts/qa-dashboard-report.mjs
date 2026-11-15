@@ -1,7 +1,9 @@
 // Signed-in browser check of the dashboard's descriptive figures and the Search report:
 //   response rate "x of N", offer rate, median days to first response, the Application flow
 //   (Reached Out is not "Awaiting response"), the follow-up card, the four report tables for chosen
-//   groups, "too few to compare", the month link, 375px overflow, a second user's empty report.
+//   groups, "too few to compare", the month link, 375px overflow, a second user's empty report,
+//   and the dashboard's shape: Activity / Application flow / Search report start collapsed and render nothing
+//   until opened, the open state survives a reload, no Status breakdown, "Show N more" in Today.
 // Creates disposable @example.test users and deletes everything it created in `finally`.
 // Never prints the password, keys or tokens.
 //
@@ -126,6 +128,56 @@ try {
 
   await step("0-login", [], async () => { await login(page, email); await page.goto(`${base}/`, { waitUntil: "networkidle" }); });
 
+  const header = (p, title) => p.locator("button[aria-expanded]").filter({ hasText: title }).first();
+  const expanded = async (p, title) => (await header(p, title).getAttribute("aria-expanded")) === "true";
+  const openSection = async (p, title) => { if (!(await expanded(p, title))) await header(p, title).click(); assert.equal(await expanded(p, title), true, `${title} opens`); };
+  const inDom = (p, sel) => p.locator(sel).count();
+
+  await step("0a-collapsed-first-load", ["0-login"], async () => {
+    assert.equal(await expanded(page, "Recent applications"), true, "Recent applications starts open");
+    for (const t of ["Activity", "Application flow", "Search report"]) assert.equal(await expanded(page, t), false, `${t} starts collapsed`);
+    // Summaries are visible while collapsed
+    const summaries = await flat(page.locator("main, body").first());
+    assert.ok(summaries.includes(`${SEED.filter(s => s.offset >= -29).length} applications in the last 30 days`) || /\d+ applications? in the last 30 days/.test(summaries), "Activity summary");
+    assert.ok(summaries.includes(`How your ${SEED.length} applications moved from Applied to now`), "flow summary");
+    assert.ok(summaries.includes("Outcomes by source, job site, resume, month and workplace"), "report summary");
+    // Nothing of the collapsed sections is in the DOM, so the lazy charts have not loaded
+    assert.equal(await inDom(page, "#search-report"), 0, "report not rendered");
+    assert.equal(await inDom(page, "section[data-report-table]"), 0, "report tables not rendered");
+    assert.equal(await inDom(page, "svg.recharts-surface"), 0, "no chart rendered");
+    assert.ok(!summaries.includes("Where your applications are now"), "Activity content absent");
+    await shot(page, "dashboard-desktop-collapsed.png");
+  });
+
+  await step("0b-sections-open-and-persist", ["0a-collapsed-first-load"], async () => {
+    await openSection(page, "Search report");
+    await page.locator("#search-report").waitFor();
+    await page.reload({ waitUntil: "networkidle" });
+    assert.equal(await expanded(page, "Search report"), true, "Search report is still open after a reload");
+    assert.equal(await expanded(page, "Activity"), false, "Activity stays closed");
+    await page.locator("#search-report").waitFor();
+    await openSection(page, "Activity");
+    await openSection(page, "Application flow");
+    await page.getByText("Where your applications are now (current status)").waitFor();
+    await page.waitForFunction(() => [...document.querySelectorAll("svg text")].some(t => /Awaiting response/.test(t.textContent)));
+    const body = await flat(page.locator("main, body").first());
+    assert.ok(!/Status breakdown/i.test(body), "Status breakdown is gone");
+    await shot(page, "dashboard-desktop-all-open.png");
+  });
+
+  await step("0c-today-show-more", ["0-login"], async () => {
+    const items = page.locator('section[aria-label="Suggested next steps"] li');
+    await items.first().waitFor();
+    assert.equal(await items.count(), 4, "four suggestions by default");
+    const more = page.getByRole("button", { name: /^Show \d+ more$/ });
+    const n = Number((await more.innerText()).replace(/\D+/g, ""));
+    assert.ok(n > 0);
+    await more.click();
+    assert.equal(await items.count(), 4 + n, `Show ${n} more reveals them`);
+    await page.getByRole("button", { name: "Show fewer" }).click();
+    assert.equal(await items.count(), 4, "Show fewer returns to four");
+  });
+
   await step("1-cards", ["0-login"], async () => {
     const cards = await flat(page.locator("div.grid.grid-cols-2").first());
     observed.cards = cards;
@@ -137,7 +189,7 @@ try {
     assert.ok(!/Avg\. response time/.test(cards));
   });
 
-  await step("2-copy", ["0-login"], async () => {
+  await step("2-copy", ["0b-sections-open-and-persist"], async () => {
     const body = await flat(page.locator("main, body").first());
     assert.ok(!body.includes("A short follow-up email often gets a response"), "unsupported follow-up claim is gone");
     assert.ok(body.includes("Still at Applied after 14 days."), "factual follow-up line stays");
@@ -146,7 +198,7 @@ try {
     assert.ok(body.includes("Where your applications are now (current status)"), "pipeline says it shows the current status");
   });
 
-  await step("3-flow", ["0-login"], async () => {
+  await step("3-flow", ["0b-sections-open-and-persist"], async () => {
     const applied = SEED.filter(s => s.status === "Applied").length, reached = SEED.filter(s => s.status === "Reached Out").length;
     await page.waitForFunction(() => [...document.querySelectorAll("svg text")].some(t => /Awaiting response/.test(t.textContent)));
     const labels = await page.evaluate(() => [...document.querySelectorAll("svg text")].map(t => t.textContent));
@@ -156,7 +208,7 @@ try {
     assert.equal(num(/^Employer reached out/), reached, `Reached Out has its own node (${reached})`);
   });
 
-  await step("4-report-source", ["0-login"], async () => {
+  await step("4-report-source", ["0b-sections-open-and-persist"], async () => {
     const note = await flat(page.locator("#search-report"));
     assert.ok(note.includes(`for the ${ELIGIBLE.length} of ${SEED.length} applications applied 14 or more days ago`), note.slice(0, 300));
     assert.ok(note.includes("too few to compare") && note.includes("describes your search only"));
@@ -169,7 +221,7 @@ try {
     assert.equal((await tableRow("report-source", "From email"))[2], "too few to compare", "a small group has no percentage");
   });
 
-  await step("5-report-resume-workplace", ["0-login"], async () => {
+  await step("5-report-resume-workplace", ["0b-sections-open-and-persist"], async () => {
     assert.deepEqual(await tableRow("report-resume", RESUME_A), cell(stat(ELIGIBLE.filter(s => s.resume === "A"))));
     assert.deepEqual(await tableRow("report-resume", RESUME_B), cell(stat(ELIGIBLE.filter(s => s.resume === "B"))));
     assert.deepEqual(await tableRow("report-resume", "No resume linked"), cell(stat(ELIGIBLE.filter(s => !s.resume))));
@@ -178,7 +230,7 @@ try {
     assert.deepEqual(await tableRow("report-workplace", "Hybrid"), cell(stat(ELIGIBLE.filter(s => s.workplace === "hybrid"))));
   });
 
-  await step("6-report-month", ["0-login"], async () => {
+  await step("6-report-month", ["0b-sections-open-and-persist"], async () => {
     const months = [...new Set(ELIGIBLE.map(monthLabel))];
     let sum = 0;
     for (const label of months) {
@@ -200,10 +252,18 @@ try {
     await page.setViewportSize({ width: 375, height: 812 });
     try {
       await page.goto(`${base}/`, { waitUntil: "networkidle" });
-      const w = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, inner: window.innerWidth }));
+      const measure = () => page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, inner: window.innerWidth }));
+      const w = await measure();
       observed.mobile = w;
       assert.ok(w.scroll <= w.inner + 1, `horizontal overflow (${w.scroll} > ${w.inner})`);
-      await shot(page, "report-mobile.png");
+      // The open state was saved above, so the sections are open here and must fit too
+      await page.locator("#search-report").waitFor();
+      const open = await measure();
+      observed.mobileOpen = open;
+      assert.ok(open.scroll <= open.inner + 1, `horizontal overflow with sections open (${open.scroll} > ${open.inner})`);
+      const order = await page.evaluate(() => ["Waiting on a reply", "Goal", "Inbox"].map(t => [...document.querySelectorAll("h3, h2")].findIndex(h => h.textContent.includes(t))));
+      observed.mobileOrder = order;
+      await shot(page, "dashboard-mobile.png");
     } finally { await page.setViewportSize({ width: 1280, height: 1000 }); }
   });
 
@@ -221,6 +281,7 @@ try {
       const cards = await flat(second.locator("div.grid.grid-cols-2").first());
       assert.ok(cards.includes("Response rate Not enough history yet"), `no 0% without history (${cards})`);
       assert.ok(!/Response rate 0%/.test(cards));
+      await openSection(second, "Search report");
       const report = await flat(second.locator("#search-report"));
       assert.ok(report.includes("Not enough history yet"), report);
       assert.ok(!report.includes(RESUME_A) && !report.includes("Browser extension"));

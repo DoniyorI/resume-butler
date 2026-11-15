@@ -265,9 +265,6 @@ export async function getDashboardStats(supabase, userId, rows) {
       },
       { label: "Offered", count: statusCounts.Offered, color: STATUS_COLORS.Offered },
     ].map((stage) => ({ ...stage, percent: percent(stage.count, total) })),
-    pie: Object.entries(statusCounts)
-      .filter(([, count]) => count > 0)
-      .map(([label, value]) => ({ label, value, color: STATUS_COLORS[label] })),
     daily: dailyCounts(applications),
     flow: buildFlow(applications, historyByApp),
     followUps: followUps(applications, historyByApp),

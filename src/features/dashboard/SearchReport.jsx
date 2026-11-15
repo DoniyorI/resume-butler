@@ -56,34 +56,49 @@ function ReportTable({ title, rows, groupLabel, id }) {
 
 // Counts and rates from the user's own records, split by source, resume, month
 // and workplace. Descriptive only: no advice, no comparison between small groups.
-export default function SearchReport({ report }) {
+export default function SearchReport({ report, bare = false }) {
+  const description = (
+    <>
+      Counts from your own records, for the {report.included} of {report.total}{" "}
+      {report.total === 1 ? "application" : "applications"} applied {report.windowDays} or more days ago. Responses
+      are Reached Out, Interviewed or Offered at any point; interviews include offers. Groups under{" "}
+      {report.minGroupSize} applications show counts only (too few to compare). This describes your search only and
+      does not predict anything.
+    </>
+  );
+  const body = (
+    <>
+      {report.included === 0 ? (
+        <p className="py-4 text-center text-sm text-muted-foreground">
+          Not enough history yet. Applications appear here {report.windowDays} days after you applied.
+        </p>
+      ) : (
+        <>
+          <ReportTable id="report-source" title="By source" groupLabel="Source" rows={report.bySource} />
+          <ReportTable id="report-site" title="By job site" groupLabel="Site" rows={report.bySite} />
+          <ReportTable id="report-resume" title="By resume used" groupLabel="Resume" rows={report.byResume} />
+          <ReportTable id="report-month" title="By month applied" groupLabel="Month" rows={report.byMonth} />
+          <ReportTable id="report-workplace" title="By workplace type" groupLabel="Workplace" rows={report.byWorkplace} />
+        </>
+      )}
+    </>
+  );
+
+  if (bare) {
+    return (
+      <div id="search-report" className="space-y-5">
+        <p className="text-sm text-muted-foreground">{description}</p>
+        {body}
+      </div>
+    );
+  }
   return (
     <Card id="search-report">
       <CardHeader>
         <CardTitle className="text-lg">Search report</CardTitle>
-        <CardDescription>
-          Counts from your own records, for the {report.included} of {report.total}{" "}
-          {report.total === 1 ? "application" : "applications"} applied {report.windowDays} or more days ago. Responses
-          are Reached Out, Interviewed or Offered at any point; interviews include offers. Groups under{" "}
-          {report.minGroupSize} applications show counts only (too few to compare). This describes your search only and
-          does not predict anything.
-        </CardDescription>
+        <CardDescription>{description}</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-5">
-        {report.included === 0 ? (
-          <p className="py-4 text-center text-sm text-muted-foreground">
-            Not enough history yet. Applications appear here {report.windowDays} days after you applied.
-          </p>
-        ) : (
-          <>
-            <ReportTable id="report-source" title="By source" groupLabel="Source" rows={report.bySource} />
-            <ReportTable id="report-site" title="By job site" groupLabel="Site" rows={report.bySite} />
-            <ReportTable id="report-resume" title="By resume used" groupLabel="Resume" rows={report.byResume} />
-            <ReportTable id="report-month" title="By month applied" groupLabel="Month" rows={report.byMonth} />
-            <ReportTable id="report-workplace" title="By workplace type" groupLabel="Workplace" rows={report.byWorkplace} />
-          </>
-        )}
-      </CardContent>
+      <CardContent className="space-y-5">{body}</CardContent>
     </Card>
   );
 }
