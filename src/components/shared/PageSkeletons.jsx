@@ -180,3 +180,18 @@ export function StudioSkeleton() {
     </div>
   );
 }
+
+// src/app/(app)/applications/[id]/prepare/page.jsx
+export function PrepareSkeleton() {
+  return (
+    <div className="mx-auto flex w-full max-w-4xl flex-col gap-5 px-4 pb-16 pt-[85px] md:px-6" aria-busy="true">
+      <Skeleton className="h-4 w-48" />
+      <Skeleton className="h-8 w-80 max-w-full" />
+      <Skeleton className="h-4 w-72 max-w-full" />
+      <Skeleton className="h-24 w-full rounded-xl" />
+      <CardBlock className="h-56" lines={4} />
+      <CardBlock className="h-40" lines={3} />
+      <CardBlock className="h-32" lines={2} />
+    </div>
+  );
+}

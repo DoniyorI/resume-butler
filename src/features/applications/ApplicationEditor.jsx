@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import {
   Briefcase,
   Building2,
+  ClipboardList,
   Calendar as CalendarIcon,
   ChevronRight,
   ExternalLink,
@@ -53,6 +54,8 @@ const EDITABLE_FIELDS = [
   "appliedDate",
   "jobDetails",
 ];
+// Statuses where an interview is likely or under way; an open interview step also shows the link
+const PREPARE_STATUSES = ["Reached Out", "Pending", "Interviewed", "Offered"];
 const CURRENCIES = ["USD", "CAD", "GBP", "EUR", "AUD", "INR"];
 const EMPLOYMENT_TYPES = ["Full-time", "Part-time", "Contract", "Internship", "Temporary"];
 const PERIOD_LABELS = {
@@ -121,6 +124,7 @@ export default function ApplicationEditor({
   nextSteps,
   offer,
   fit,
+  hasInterviewStep = false,
 }) {
   const [form, dispatch] = useReducer(formReducer, application, initForm);
   const [saved, setSaved] = useState(() => initForm(application));
@@ -226,7 +230,14 @@ export default function ApplicationEditor({
             {form.role && <p className="text-base text-muted-foreground">{form.company}</p>}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {(hasInterviewStep || PREPARE_STATUSES.includes(form.status)) && (
+              <Button asChild variant="outline" size="sm">
+                <Link href={`/applications/${application.id}/prepare`}>
+                  <ClipboardList className="mr-1 h-4 w-4" /> Prepare for interview
+                </Link>
+              </Button>
+            )}
             {dirty && <span className="text-xs text-muted-foreground">Unsaved changes</span>}
             <Button
               variant="ghost"

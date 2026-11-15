@@ -44,6 +44,14 @@ function DueRow({ activity, overdue, onDone, busy }) {
           {overdue && <span className="ml-1.5 rounded bg-red-100 px-1.5 font-medium text-red-700">Overdue</span>}
         </p>
       </Link>
+      {(activity.kind === "interview" || activity.kind === "recruiter_screen") && (
+        <Link
+          href={`/applications/${activity.applicationId}/prepare`}
+          className="shrink-0 text-xs font-medium text-brand hover:underline"
+        >
+          Prepare
+        </Link>
+      )}
       <Button
         size="sm"
         variant="outline"

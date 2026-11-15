@@ -45,7 +45,7 @@ The goal is one place to learn whether a job fits, tailor a resume to it, apply,
 | M8 | Offer closure, full export and spreadsheet import | A10 | Done November 14. Migration 022 is applied. [Verification](docs/offer-export-import-verification.md) |
 | M9 | More reviewed autofill adapters | A6 (continued) | Greenhouse done November 14 (extension 0.7.0). Ashby and Workday remain. [Verification](docs/reviewed-autofill-verification.md) |
 | M10 | Gmail connection | A8 | Waits on the owner's Google Cloud setup |
-| M11 | Interview preparation from the submitted package | B5 | Next (M10 waits on the owner) |
+| M11 | Interview preparation from the submitted package | B5 | Done November 14, no migration. A preparation page per application, built only from quotes of the posting, the Master CV and what was submitted |
 
 Why the order changed, one line each:
 

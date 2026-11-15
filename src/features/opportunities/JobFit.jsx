@@ -2,6 +2,9 @@
 import { useId, useState } from "react";
 import Link from "next/link";
 import { ChevronDown, CircleCheck, CircleDashed, CircleHelp, CircleMinus, CircleDot } from "lucide-react";
+import { CHECK_KINDS, degreeLine, yearsLine } from "@/features/opportunities/fitLines";
+
+export { CHECK_KINDS, degreeLine, yearsLine };
 
 // How a saved job compares with the Master CV (src/server/fit/assessFit.js).
 // Decision support only: it never predicts an interview, suggests wording or
@@ -21,18 +24,8 @@ const STRENGTH = {
   missing: { label: "Not in your Master CV", tone: "text-slate-500" },
 };
 
-export const CHECK_KINDS = {
-  "work-authorization": "Work authorisation",
-  clearance: "Clearance",
-  citizenship: "Citizenship",
-  onsite: "On-site",
-  relocation: "Relocation",
-  travel: "Travel",
-};
-
 const PREFERRED_SHOWN = 4;
 export const EMPTY_CV = /Master CV has no experience/i;
-const article = (term) => (/^[aeiou]/i.test(term) ? "an" : "a");
 
 // The readable name of a requirement or gap row, with its "(or ...)" alternatives
 export function termName(req) {
@@ -99,21 +92,6 @@ function PreferredList({ list }) {
       ) : null}
     </section>
   );
-}
-
-export function yearsLine(years) {
-  if (!years || years.status === "not-stated" || years.required == null) return null;
-  if (years.status === "unknown")
-    return `Asks for ${years.required}+ years; add dates to your experience to compare.`;
-  return `Asks for ${years.required}+ years; your dated experience covers about ${years.have} ${years.have === 1 ? "year" : "years"}.`;
-}
-
-export function degreeLine(degree) {
-  if (!degree || degree.status === "not-stated" || !degree.required) return null;
-  const asks = `Asks for ${article(degree.required)} ${degree.required}`;
-  if (degree.status === "unknown") return `${asks}: add your education to compare.`;
-  if (degree.status === "meets") return `${asks}: ${degree.inProgress ? "in progress" : "shown in your education"}.`;
-  return `${asks}: not shown in your education.`;
 }
 
 function FitDetails({ fit, tailor }) {

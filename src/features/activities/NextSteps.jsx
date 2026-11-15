@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { toast } from "sonner";
 import { Check, ExternalLink, ListTodo, Pencil, Plus, RotateCcw, Trash2, X } from "lucide-react";
 import LocalDateTime from "@/components/shared/LocalDateTime";
@@ -73,6 +74,14 @@ function ActivityRow({ activity, today, onEdit, run: runAction }) {
             >
               <ExternalLink className="h-3 w-3" /> Open link
             </a>
+          )}
+          {open && (activity.kind === "interview" || activity.kind === "recruiter_screen") && (
+            <Link
+              href={`/applications/${activity.applicationId}/prepare`}
+              className="block text-xs font-medium text-brand hover:underline"
+            >
+              Prepare
+            </Link>
           )}
           {activity.notes && (
             <p className="line-clamp-3 whitespace-pre-line text-xs text-foreground/80">{activity.notes}</p>

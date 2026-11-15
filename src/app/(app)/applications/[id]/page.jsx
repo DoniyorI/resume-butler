@@ -68,6 +68,10 @@ export default async function ApplicationDetailPage({ params, searchParams }) {
   });
   const showOffer = Boolean(offer) && (detail.application.status === "Offered" || Boolean(offer.offer));
 
+  const hasInterviewStep = activities.items.some(
+    (a) => a.status === "open" && (a.kind === "interview" || a.kind === "recruiter_screen")
+  );
+
   const fit = await loadFit(supabase, user.id, detail);
   const resumeId = detail.application.resumeId;
 
@@ -76,6 +80,7 @@ export default async function ApplicationDetailPage({ params, searchParams }) {
       application={detail.application}
       statusHistory={detail.statusHistory}
       resumeContent={detail.resumeContent}
+      hasInterviewStep={hasInterviewStep}
       submissionPanel={<SubmissionPanel application={detail.application} />}
       fit={
         fit ? (
