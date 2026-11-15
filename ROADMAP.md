@@ -43,9 +43,9 @@ The goal is one place to learn whether a job fits, tailor a resume to it, apply,
 | M6 | The same fit result in the extension and on application pages | B1 (extension half) | Done November 13, no migration. Extension 0.6.0 needs an unpacked reload. [Verification](docs/fit-everywhere-verification.md) |
 | M7 | Watchlist: target companies' public boards, new postings scored for fit | RB-13 | Done November 14. Migration 021 is applied. [Verification](docs/watchlist-verification.md) |
 | M8 | Offer closure, full export and spreadsheet import | A10 | Done November 14. Migration 022 is applied. [Verification](docs/offer-export-import-verification.md) |
-| M9 | More reviewed autofill adapters | A6 (continued) | Next |
+| M9 | More reviewed autofill adapters | A6 (continued) | Greenhouse done November 14 (extension 0.7.0). Ashby and Workday remain. [Verification](docs/reviewed-autofill-verification.md) |
 | M10 | Gmail connection | A8 | Waits on the owner's Google Cloud setup |
-| M11 | Interview preparation from the submitted package | B5 | Planned |
+| M11 | Interview preparation from the submitted package | B5 | Next (M10 waits on the owner) |
 
 Why the order changed, one line each:
 

@@ -46,3 +46,20 @@ No new migration or permission is needed; existing migrations001–017 remain un
 ## Greenhouse (extension 0.7.0)
 
 Greenhouse (`job-boards.greenhouse.io`, top frame) shares the Lever write procedure through `extension/content/autofill-core.js`. The fixture `tests/fixtures/greenhouse-application.html` is synthetic and models a read-only inspection of a public posting (November 14, 2026): id-based controls with no `name`, React-select comboboxes with required-field shims, file inputs, EEO selects. Run `scripts/qa-reviewed-autofill-greenhouse.mjs` (same `PLAYWRIGHT_MODULE` setup); `qa-reviewed-autofill.mjs` now injects the core before the Lever adapter, and the popup and runtime scripts include a Greenhouse case. Not verified against a live employer form, iframes, or employer-customised markup.
+
+### Greenhouse evidence (November 14, 2026)
+
+| Check | Result |
+|---|---|
+| Tests | 592 pass on Node 26.3.0 and on Node 24 in the `Checks` workflow, including a 33-URL table that the worker's and the popup's URL rules must agree on |
+| Lever after the shared core | `scripts/qa-reviewed-autofill.mjs`: the same 61 checks pass as before the extraction, 0 page errors, 0 submit requests |
+| Greenhouse adapter fixture | `scripts/qa-reviewed-autofill-greenhouse.mjs`: 102 checks pass, 0 page errors, 0 requests, 0 submit events; a React-style controlled field keeps the written value |
+| Popup fixture | `scripts/qa-reviewed-autofill-popup.mjs`: 27 checks pass, including the Greenhouse job page and embed URLs and look-alike URLs that get no panel |
+| Real unpacked MV3 runtime | `scripts/qa-reviewed-autofill-runtime.mjs`: 24 checks pass in Chrome for Testing, filling both the Lever and the Greenhouse fixture through the real popup, a manually typed email kept, 0 employer requests |
+| Lint / isolated production build | Pass |
+| Independent review | No high or medium findings; Lever's behaviour confirmed unchanged line by line. Two low findings fixed: the adapter checks the full origin, and a control outside its field wrapper is left manual |
+
+**Limits.** Top frame only: a Greenhouse form embedded in an iframe on a company's own careers site is not filled. Choices (country, yes/no questions), demographics, files and resume text stay manual. The fixture is synthetic; no live Greenhouse form was filled or submitted.
+
+**To use it:** reload the unpacked extension in `chrome://extensions` (0.7.0).
+

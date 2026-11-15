@@ -3,7 +3,7 @@
 // worker request supplies fill values. The inventory, caps and write procedure
 // live in autofill-core.js. Embedded iframes on company sites are not supported.
 (() => {
-  if (window !== window.top || location.hostname !== "job-boards.greenhouse.io") return;
+  if (window !== window.top || location.origin !== "https://job-boards.greenhouse.io") return;
   const { cleanLabel, manualQuestion, visible, register } = globalThis.RB_autofillCore;
   const contacts = {
     first_name: { sourceKey: "firstName", label: /^first name$/i, types: ["text"] },
@@ -59,7 +59,8 @@
     if (element.getAttribute("role") || element.getAttribute("aria-autocomplete") || element.getAttribute("list") || element.tagName === "SELECT" || ["checkbox", "radio"].includes(type)) {
       return { manual: "Choose or enter this field manually." };
     }
-    if (!label || label.length > 1000) return { manual: "Choose or enter this field manually." };
+    // Without its field wrapper the write-time re-check could not tell the control moved
+    if (!label || label.length > 1000 || !element.closest(".field-wrapper")) return { manual: "Choose or enter this field manually." };
     const contact = Object.hasOwn(contacts, id) ? contacts[id] : null;
     if (contact && contact.label.test(label) && contact.types.includes(type)) return { kind: "profile", sourceKey: contact.sourceKey };
     if (/^question_\d+$/.test(id) && ["text", "url", "textarea"].includes(type)) {
