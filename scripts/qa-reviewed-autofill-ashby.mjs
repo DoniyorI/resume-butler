@@ -74,7 +74,7 @@ try {
   check(inventory.title, "Senior Test Engineer");
   check(inventory.url, url);
   check(inventory.fields.filter(field => field.kind === "profile").map(field => [field.label, field.sourceKey]), [
-    ["Name", "name"], ["Email", "email"], ["LinkedIn Profile", "linkedin"], ["Website", "portfolio"]]);
+    ["Name", "name"], ["Email", "email"], ["Phone", "phone"], ["LinkedIn Profile", "linkedin"], ["Website", "portfolio"]]);
   check(inventory.fields.filter(field => field.kind === "answer").map(field => field.label),
     ["Which time zone do you usually work in?", "Describe a project.", "Tell us how you give feedback to teammates."]);
   const manual = inventory.manual.map(item => `${item.label}: ${item.reason}`);
@@ -97,6 +97,8 @@ try {
     "no per-option, unlabelled or button entries");
   check(inventory.manual.length, 12, "exactly: resume, location, yes/no, arrangement, tools, office, how-heard, 3 survey questions, disabled, repeated");
   check(JSON.stringify(inventory).includes("g-recaptcha"), false);
+  check(await page.evaluate(() => [...document.querySelectorAll("textarea.g-recaptcha-response,textarea#g-recaptcha-response")].filter(item => item.closest("#form")).length), 2, "the recaptcha textareas sit inside the form root");
+  check(await page.evaluate(() => { const box = document.querySelector('input[type="checkbox"].visually-hidden'); const r = box.getBoundingClientRect(); return [getComputedStyle(box).opacity, r.width > 0 && r.height > 0]; }), ["1", true], "the yes/no mirror is hidden by clipping, not opacity or zero size");
 
   // The group ids change on every load; nothing depends on them.
   const groupOf = () => page.locator('input[type="radio"]').first().getAttribute("id");
@@ -121,6 +123,7 @@ try {
   check(result.outcomes.map(item => item.status), Array(4).fill("filled"));
   await page.evaluate(() => window.rerender());
   check(await input("_systemfield_email").inputValue(), "ada@example.test", "a second controlled value survives a re-render");
+  check(await input("_systemfield_phone").inputValue(), "", "an unrequested phone stays blank");
   check(await input(Q(1)).inputValue(), "https://linkedin.com/in/ada");
   check(await input(Q(2)).inputValue(), "https://ada.example.test/");
   check(await input(Q(5)).inputValue(), "I built an API.\nMeasured 25% improvement.");
@@ -147,6 +150,17 @@ try {
   check(result.outcomes[0].status, "preserved");
   check(await input("_systemfield_name").inputValue(), " ");
 
+  await reset(); inventory = await scan();
+  result = await apply(inventory, values(inventory, "phone", "+1 555 0100"));
+  check(result.outcomes[0].status, "filled");
+  check(await input("_systemfield_phone").inputValue(), "+1 555 0100");
+  await reset();
+  await input("_systemfield_phone").fill("+44 20 7946 0000");
+  inventory = await scan();
+  result = await apply(inventory, values(inventory, "phone", "+1 555 0100"));
+  check(result.outcomes[0].status, "preserved");
+  check(await input("_systemfield_phone").inputValue(), "+44 20 7946 0000");
+
   const wasWritten = () => page.evaluate(() => [...document.querySelectorAll("input,textarea")].some(item => item.value === "ada@example.test"));
   for (const mutation of [
     element => { element.disabled = true; }, element => { element.readOnly = true; },
@@ -167,6 +181,58 @@ try {
     check(result.outcomes[0].status === "filled", false, "a changed input must not receive a reviewed value");
     check(await wasWritten(), false);
   }
+
+  const phoneWritten = () => page.evaluate(() => [...document.querySelectorAll("input,textarea")].some(item => item.value === "+1 555 0100"));
+  for (const mutation of [
+    element => { element.disabled = true; }, element => { element.style.display = "none"; }, element => { element.id = "someone-else"; },
+    element => { element.name = "other"; }, element => { element.type = "number"; },
+    element => { element.closest(".ashby-application-form-field-entry").setAttribute("data-field-path", "someone-else"); },
+    element => { document.querySelector('label[for="_systemfield_phone"]').textContent = "Reference's phone"; },
+    element => { document.body.append(element); },
+    element => { document.querySelector(".ashby-survey-form-container .ashby-application-form-section-container").append(element.closest("[data-field-path]")); },
+    element => { element.closest(".ashby-application-form-field-entry").classList.remove("ashby-application-form-field-entry"); },
+  ]) {
+    await reset(); inventory = await scan();
+    await input("_systemfield_phone").evaluate(mutation);
+    result = await apply(inventory, values(inventory, "phone", "+1 555 0100"));
+    check(result.outcomes[0].status === "filled", false, "a changed phone input must not receive a reviewed value");
+    check(await phoneWritten(), false);
+  }
+  // The same moves for email: into the survey container, out of its field entry.
+  for (const mutation of [
+    element => { document.querySelector(".ashby-survey-form-container .ashby-application-form-section-container").append(element.closest("[data-field-path]")); },
+    element => { element.closest(".ashby-application-form-field-entry").classList.remove("ashby-application-form-field-entry"); },
+    element => { const entry = element.closest(".ashby-application-form-field-entry"); entry.after(element); },
+  ]) {
+    await reset(); inventory = await scan();
+    await input("_systemfield_email").evaluate(mutation);
+    result = await apply(inventory, values(inventory, "email", "ada@example.test"));
+    check(result.outcomes[0].status === "filled", false, "an input moved out of its entry or into the survey is not written");
+    check(await wasWritten(), false);
+  }
+  // A phone or email label of the wrong kind, or the wrong control type, is not a profile field.
+  for (const [id, key, edit] of [
+    ["_systemfield_phone", "phone", element => { document.querySelector('label[for="_systemfield_phone"]').textContent = "Phone of your referrer"; }],
+    ["_systemfield_phone", "phone", element => { element.type = "email"; }],
+    ["_systemfield_phone", "phone", element => { element.type = "number"; }],
+  ]) {
+    await reset(); await input(id).evaluate(edit); inventory = await scan();
+    check(inventory.fields.some(field => field.sourceKey === key), false, `${key} needs its label and a tel or text input`);
+  }
+  // A stray label outside the entry that points at the control's id is not its label.
+  await reset();
+  await input("_systemfield_email").evaluate(element => {
+    element.closest(".ashby-application-form-field-entry").querySelector("label").setAttribute("for", "elsewhere");
+    const stray = document.createElement("label"); stray.setAttribute("for", "_systemfield_email"); stray.textContent = "Reference's email"; document.body.append(stray);
+  });
+  inventory = await scan();
+  check(inventory.fields.filter(field => field.sourceKey === "email").map(field => field.label), ["Email"], "a label outside the field entry is ignored for the question title");
+  await reset();
+  await input("_systemfield_email").evaluate(element => {
+    const stray = document.createElement("label"); stray.setAttribute("for", "_systemfield_email"); stray.textContent = "Reference's email"; document.body.prepend(stray);
+  });
+  inventory = await scan();
+  check(inventory.fields.filter(field => field.sourceKey === "email").map(field => field.label), ["Email"], "the entry's own label wins over an earlier stray one");
 
   // Moving the input under a different question entry changes its identity.
   await reset(); inventory = await scan();

@@ -32,15 +32,16 @@
   };
 
   function labelFor(element) {
-    const id = element.id;
-    const label = id ? [...document.querySelectorAll("label[for]")].find(item => item.getAttribute("for") === id) : null;
+    const id = element.id, entry = entryOf(element);
+    // A label[for] counts only inside the control's own field entry
+    const label = id && entry ? [...entry.querySelectorAll("label[for]")].find(item => item.getAttribute("for") === id) : null;
     if (label) {
       const copy = label.cloneNode(true);
       copy.querySelectorAll("input,textarea,select").forEach(child => child.remove());
       const text = cleanLabel(copy.textContent);
       if (text) return text;
     }
-    return titleOf(entryOf(element)) || cleanLabel(element.getAttribute("aria-label"));
+    return titleOf(entry) || cleanLabel(element.getAttribute("aria-label"));
   }
 
   const signature = element => JSON.stringify([element.id, element.name, element.type, labelFor(element), element.maxLength,
@@ -96,7 +97,8 @@
       const title = short(titleOf(entryOf(group)) || "Yes/No question");
       return { label: title, reason: group.closest(".ashby-survey-form-container") || manualQuestion.test(title) ? "Complete this field yourself." : "Choose or enter this field manually." };
     }),
-    owner: (element, root) => root.contains(element) ? root : null,
+    // A control moved into the survey container, or out of its field entry, is no longer the one reviewed
+    owner: (element, root) => root.contains(element) && !element.closest(".ashby-survey-form-container") && element.closest(ENTRY) ? root : null,
     formSignature: root => JSON.stringify([root.id, root.getAttribute("role"), root.getAttribute("aria-labelledby"), location.pathname]),
     question: element => element.closest(ENTRY),
     identity: element => element.id || element.name,
