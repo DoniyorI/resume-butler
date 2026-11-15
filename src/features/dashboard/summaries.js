@@ -15,3 +15,9 @@ export function countRecent(series, today, days = 30) {
 export function activitySummary(series, today) {
   return `${plural(countRecent(series, today), "application")} in the last 30 days`;
 }
+
+// The "Pipeline and timing" line: the median wait for a first reply, or why there is none yet
+export function timingSummary(medianResponseDays) {
+  if (medianResponseDays === null || medianResponseDays === undefined) return "No replies yet";
+  return `Median ${plural(medianResponseDays, "day")} to first reply`;
+}

@@ -27,8 +27,9 @@ const NAV_LINKS = [
   { href: "/email-sync", label: "Inbox" },
 ];
 
-// The current section: "/" only on the dashboard, the rest by prefix
-const isActive = (pathname, href) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
+// The current section: the dashboard is "/" and its Insights view, the rest by prefix
+const isActive = (pathname, href) =>
+  href === "/" ? pathname === "/" || pathname.startsWith("/insights") : pathname.startsWith(href);
 
 // "doniyor.ismatilloev@gmail.com" -> "DI"
 function initials(email) {

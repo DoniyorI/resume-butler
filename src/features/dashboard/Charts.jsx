@@ -16,6 +16,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   ChartContainer,
@@ -82,7 +83,7 @@ function Frame({ title, description, aside, className, contentClassName, childre
 }
 
 // Applications per day, with a range switcher (shadcn's interactive area chart)
-export function ApplicationsOverTime({ series }) {
+export function ApplicationsOverTime({ series, compact = false, viewAllHref }) {
   const [range, setRange] = useState("30");
   const data = useMemo(() => fillDays(series, range), [series, range]);
   const total = data.reduce((sum, day) => sum + day.count, 0);
@@ -94,15 +95,22 @@ export function ApplicationsOverTime({ series }) {
       description={`${total} ${total === 1 ? "application" : "applications"}${range === "all" ? " in total" : ` in the last ${range} days`}`}
       contentClassName="px-2 sm:px-6"
       aside={
-        <Tabs value={range} onValueChange={setRange}>
-          <TabsList>
-            {RANGES.map((r) => (
-              <TabsTrigger key={r.value} value={r.value} className="text-xs">
-                {r.label}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
+        <div className="flex flex-wrap items-center gap-3">
+          <Tabs value={range} onValueChange={setRange}>
+            <TabsList>
+              {RANGES.map((r) => (
+                <TabsTrigger key={r.value} value={r.value} className="text-xs">
+                  {r.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+          {viewAllHref && (
+            <Link href={viewAllHref} className="text-sm font-medium text-brand hover:underline">
+              View insights &rarr;
+            </Link>
+          )}
+        </div>
       }
     >
       {data.length === 0 ? (
@@ -110,7 +118,7 @@ export function ApplicationsOverTime({ series }) {
       ) : (
         <ChartContainer
           config={applicationsChartConfig}
-          className="aspect-auto h-[250px] w-full xl:h-[300px]"
+          className={compact ? "aspect-auto h-[190px] w-full" : "aspect-auto h-[250px] w-full xl:h-[300px]"}
         >
           <AreaChart data={data} margin={{ left: 0, right: 12 }}>
             <defs>
@@ -168,7 +176,8 @@ function BarValueLabel({ x, y, width, height, value }) {
 }
 
 // Applied → Reached Out → Interviewed → Offered, as horizontal bars with conversion
-export function Pipeline({ funnel, total }) {
+// timing: an optional line under the bars (the median days to first response)
+export function Pipeline({ funnel, total, timing }) {
   const data = funnel.map((stage) => ({
     stage: stage.label,
     count: stage.count,
@@ -204,6 +213,7 @@ export function Pipeline({ funnel, total }) {
             </BarChart>
           </ChartContainer>
         )}
+        {timing && <p className="mt-4 border-t pt-3 text-sm text-muted-foreground">{timing}</p>}
     </Frame>
   );
 }
@@ -358,4 +368,9 @@ export function ApplicationFlow({ flow }) {
         )}
     </Frame>
   );
+}
+
+// The compact Applications over time card on the dashboard, linking to the full one
+export function ActivityOverview({ series }) {
+  return <ApplicationsOverTime series={series} compact viewAllHref="/insights?tab=activity" />;
 }

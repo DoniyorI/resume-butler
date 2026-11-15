@@ -1,12 +1,13 @@
 import Link from "next/link";
-import { Briefcase, CalendarDays, ChevronRight, Clock, Target, TrendingUp } from "lucide-react";
+import { Briefcase, CalendarDays, ChevronRight, Target, TrendingUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { RESPONSE_WINDOW_DAYS } from "@/features/dashboard/data";
 import { MIN_GROUP_SIZE } from "@/features/dashboard/report";
+import GoalStat from "@/features/dashboard/GoalStat";
 import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 // With `href` the whole card is one link (nothing inside it is interactive)
-function SectionCard({ icon: Icon, label, value, badge, footer, href }) {
+export function SectionCard({ icon: Icon, label, value, badge, footer, href }) {
   const card = (
     <Card
       className={`h-full bg-gradient-to-t from-brand/5 to-card shadow-sm ${href ? "transition-colors group-hover:border-brand/40 group-hover:bg-muted/30" : ""}`}
@@ -40,8 +41,7 @@ function SectionCard({ icon: Icon, label, value, badge, footer, href }) {
 }
 
 // Headline numbers, in the style of shadcn's dashboard section cards
-export default function SectionCards({ stats }) {
-  const hasResponseTime = stats.medianResponseDays !== null;
+export default function SectionCards({ stats, goal }) {
   const hasWindow = stats.responseEligible > 0;
   // Under MIN_GROUP_SIZE the card shows the counts only, as the Search report does
   const showRate = stats.responseEligible >= MIN_GROUP_SIZE;
@@ -81,17 +81,7 @@ export default function SectionCards({ stats }) {
         value={rateValue(stats.offers, stats.offerRate)}
         footer={rateFooter(stats.offers, "reached an offer")}
       />
-      <SectionCard
-        icon={Clock}
-        label="Median days to first response"
-        href="/insights?tab=flow"
-        value={hasResponseTime ? `${stats.medianResponseDays} days` : "—"}
-        footer={
-          hasResponseTime
-            ? `From ${stats.responseTimeSamples} ${stats.responseTimeSamples === 1 ? "response" : "responses"}, Applied to first reply`
-            : "No responses with a recorded date yet"
-        }
-      />
+      <GoalStat goal={goal} series={stats.daily.series} />
     </div>
   );
 }

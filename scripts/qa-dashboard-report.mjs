@@ -2,8 +2,12 @@
 //   response rate "x of N", offer rate, median days to first response, the Application flow
 //   (Reached Out is not "Awaiting response"), the follow-up card, the four report tables for chosen
 //   groups, "too few to compare", the month link, 375px overflow, a second user's empty report,
-//   the dashboard's shape (no charts, report or collapsible sections; an Insights card; stat cards link
-//   to /insights; "Show N more" in Today) and /insights (?tab=activity|flow|report, invalid tab falls back).
+//   the dashboard's shape (Overview | Insights header with aria-current, goal as the fourth stat card,
+//   a compact Activity chart, no "Waiting on a reply" card, the Inbox and More insights sidebar whose
+//   bottom never passes the main column's at 1280x900, DOM order on a phone, "Show N more" in Today)
+//   and /insights (same header, nav keeps Dashboard active, median days card on Activity,
+//   ?tab=activity|flow|report, invalid tab falls back). Seeds ~20 applications with long role names,
+//   a weekly goal and a connected inbox row (dummy password; nothing connects to it).
 // Creates disposable @example.test users and deletes everything it created in `finally`.
 // Never prints the password, keys or tokens.
 //
@@ -44,6 +48,16 @@ const replyAt = (offset, after) => { const d = dateOf(offset + after); d.setHour
 
 const RESUME_A = `Report A ${run}`, RESUME_B = `Report B ${run}`;
 // offset: days ago the application was made (negative); history: [status, days after applying]
+const LONG_ROLES = [
+  "Senior Staff Software Engineer, Platform Reliability and Developer Productivity",
+  "Principal Machine Learning Engineer (Applied Research, Ranking and Recommendations)",
+  "Full Stack Software Engineer II - Payments Orchestration and Ledger Services",
+  "Engineering Manager, Data Infrastructure and Streaming Analytics Platform",
+  "Backend Engineer, Distributed Systems (Hybrid, New York or Remote within the US)",
+  "Site Reliability Engineer III, Observability and Incident Response Tooling",
+  "Frontend Engineer, Design Systems and Accessibility (Contract to Hire)",
+  "Software Development Engineer in Test, Mobile Release Engineering",
+];
 const SEED = [
   { n: 1, offset: -60, status: "Offered", source: "manual", resume: "A", workplace: "remote", history: [["Applied", 0], ["Reached Out", 5], ["Interviewed", 12], ["Offered", 30]] },
   { n: 2, offset: -55, status: "Rejected", source: "manual", resume: "A", workplace: "remote", history: [["Applied", 0], ["Interviewed", 8], ["Rejected", 20]] },
@@ -58,7 +72,10 @@ const SEED = [
   // Applied inside the last 14 days: shown in the totals, left out of every rate and the report
   { n: 11, offset: -5, status: "Applied", source: "manual", resume: "A", workplace: "remote", history: [["Applied", 0]] },
   { n: 12, offset: -2, status: "Applied", source: "extension", resume: "B", workplace: "remote", history: [["Applied", 0]] },
+  // Recent, long-named applications (applied inside the window, so no rate, report or median changes)
+  ...LONG_ROLES.map((role, i) => ({ n: 13 + i, offset: -(1 + i), status: "Applied", source: i % 2 ? "extension" : "manual", resume: i % 3 ? "A" : "B", workplace: "remote", history: [["Applied", 0]], role })),
 ];
+const GOAL_TARGET = 12;
 const ELIGIBLE = SEED.filter(s => s.offset <= -20);
 // What the seed implies, worked out here and not by the app's code
 const everAny = (s, list) => s.history.some(([status]) => list.includes(status));
@@ -80,10 +97,12 @@ async function step(name, needs, fn) {
   const missing = needs.filter(n => steps[n] !== "pass");
   if (missing.length) { steps[name] = `not reached (needs ${missing.join(",")})`; return; }
   try { await fn(); steps[name] = "pass"; }
-  catch (error) { steps[name] = `fail: ${error.message.split("\n")[0].slice(0, 400)}`; }
+  catch (error) { steps[name] = `fail: ${error.message.split("\n").slice(0, 3).join(" | ").slice(0, 500)}`; }
 }
 async function shot(page, name) {
   const path = join(shots, name);
+  // Charts draw with a 1.5 s animation; wait it out so the image shows the whole line
+  await page.waitForTimeout(2000);
   await page.screenshot({ path, fullPage: true }).catch(() => {});
   screenshots.push(path);
 }
@@ -98,13 +117,20 @@ try {
   for (const [key, title] of [["A", RESUME_A], ["B", RESUME_B]]) resumes[key] = check(await admin.from("resumes").insert({ user_id: userId, title }).select("id").single()).id;
   for (const s of SEED) {
     const row = check(await admin.from("applications").insert({
-      user_id: userId, company: `Report Co ${s.n}`, role: "Engineer", status: s.status, applied_date: dayKey(s.offset), source: s.source,
+      user_id: userId, company: `Report Co ${s.n}`, role: s.role || "Engineer", status: s.status, applied_date: dayKey(s.offset), source: s.source,
       source_site: s.site || null, workplace_type: s.workplace, resume_id: s.resume ? resumes[s.resume] : null,
     }).select("id").single());
     // The insert trigger logged one row at "now"; replace it with the dated history
     check(await admin.from("application_status_history").delete().eq("application_id", row.id).select("id"));
     check(await admin.from("application_status_history").insert(s.history.map(([status, after]) => ({ application_id: row.id, status, changed_at: replyAt(s.offset, after) }))).select("id"));
   }
+
+  // A weekly goal and a connected inbox; the inbox row never connects (the password is not real and the page never reads it)
+  check(await admin.from("profiles").update({ goal_period: "week", goal_target: GOAL_TARGET }).eq("id", userId).select("id"));
+  try {
+    check(await admin.from("email_connections").insert({ user_id: userId, email_address: `inbox-${run}@example.test`, app_password: "qa-not-a-real-password", last_scan_at: new Date().toISOString() }).select("id"));
+    observed.inboxSeeded = true;
+  } catch (error) { observed.inboxSeeded = `no: ${error.message.slice(0, 120)}`; }
 
   browser = await chromium.launch({ channel: "chrome", headless: true });
   const page = await browser.newPage({ viewport: { width: 1280, height: 1000 } });
@@ -131,32 +157,72 @@ try {
   const inDom = (p, sel) => p.locator(sel).count();
   const insights = (p, tab) => p.goto(`${base}/insights${tab ? `?tab=${tab}` : ""}`, { waitUntil: "networkidle" });
 
+  const headerCheck = async (p, active) => {
+    const links = p.locator('nav[aria-label="Dashboard views"] a');
+    assert.deepEqual(await links.allInnerTexts(), ["Overview", "Insights"], "header tabs");
+    assert.equal(await links.nth(0).getAttribute("href"), "/");
+    assert.equal(await links.nth(1).getAttribute("href"), "/insights");
+    assert.equal(await p.locator('nav[aria-label="Dashboard views"] a[aria-current="page"]').innerText(), active, `${active} tab is current`);
+    assert.equal(await p.locator("h1").innerText(), "Dashboard");
+    assert.equal(await p.locator('a[href="/applications"]').filter({ hasText: "All applications" }).count(), 1, "All applications button");
+    assert.equal(await p.locator("main").getByText("Back to dashboard").count(), 0);
+  };
+
   await step("0a-dashboard-shape", ["0-login"], async () => {
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto(`${base}/`, { waitUntil: "networkidle" });
+    await page.locator("svg.recharts-surface").first().waitFor();
     const body = await flat(page.locator("main, body").first());
+    await headerCheck(page, "Overview");
     assert.equal(await inDom(page, "section[aria-label][id] button[aria-expanded], [id$=\"-panel\"][hidden]"), 0, "no collapsible sections");
     assert.equal(await inDom(page, "#search-report"), 0, "no report");
     assert.equal(await inDom(page, "section[data-report-table]"), 0, "no report tables");
-    assert.equal(await inDom(page, "svg.recharts-surface"), 0, "no chart");
+    assert.ok(await inDom(page, "svg.recharts-surface") >= 1, "the Activity chart is on the overview");
+    assert.ok(body.includes("Applications over time"), "Activity card");
+    assert.equal(await page.locator('a[href="/insights?tab=activity"]').filter({ hasText: "View insights" }).count(), 1, "Activity card links to insights");
     assert.ok(!body.includes("Where your applications are now"), "Pipeline absent");
     assert.ok(!/Status breakdown/i.test(body), "Status breakdown is gone");
+    assert.ok(!body.includes("Waiting on a reply"), "no Waiting on a reply card");
     assert.ok(body.includes("Recent applications") && /View all \(\d+\)/.test(body), "Recent applications card with View all (N)");
     assert.ok(await page.locator("tbody tr").count() <= 6, "at most 6 recent rows");
-    // The Insights card: three rows, each a link to its tab, with a summary
-    const card = page.getByText("Charts and a report of your own records").locator("xpath=ancestor::div[contains(@class,'border')][1]");
+    assert.ok(!body.includes("Median days to first response"), "median moved off the overview");
+    assert.equal(await page.locator("nav[aria-label=Main] a[aria-current=page]").innerText(), "Dashboard", "nav: Dashboard");
+    // More insights: three rows, each a link to its tab, with a summary
+    const card = page.locator("div.rounded-lg", { has: page.locator("h3", { hasText: "More insights" }) });
     const text = await flat(card);
-    assert.ok(/\d+ applications? in the last 30 days/.test(text), text);
+    assert.ok(text.includes("Pipeline and timing") && text.includes(`Median ${median} days to first reply`), text);
     assert.ok(text.includes(`How ${SEED.length} applications moved`), text);
     assert.ok(text.includes("Outcomes by source, resume and more"), text);
-    for (const tab of ["activity", "flow", "report"]) assert.equal(await card.locator(`a[href="/insights?tab=${tab}"]`).count(), 1, `Insights card links to ${tab}`);
-    await shot(page, "dashboard-desktop.png");
+    for (const tab of ["activity", "flow", "report"]) assert.equal(await card.locator(`a[href="/insights?tab=${tab}"]`).count(), 1, `More insights links to ${tab}`);
+    // Inbox card (a connection row was seeded)
+    if (observed.inboxSeeded === true) { const inbox = await flat(page.locator("div.rounded-lg", { has: page.locator("h3", { hasText: "Inbox" }) }).first()); assert.ok(inbox.includes("Scan now") && inbox.includes(`inbox-${run}@example.test`), inbox); }
+    // Layout: the sidebar never ends below the main column (no hole under the main column)
+    const grid = page.locator("div.grid.items-start").first();
+    const bottoms = await grid.evaluate(el => { const [main, side] = el.children; return { main: main.getBoundingClientRect().bottom + scrollY, side: side.getBoundingClientRect().bottom + scrollY, mainTop: main.getBoundingClientRect().top, sideTop: side.getBoundingClientRect().top }; });
+    observed.columnBottoms = bottoms;
+    assert.ok(bottoms.main >= bottoms.side, `main column bottom ${bottoms.main} < sidebar bottom ${bottoms.side}`);
+    assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector("div.grid.items-start").children[1]).position), "sticky", "sidebar is sticky");
+    // The activity line spans the whole 30-day range once drawn (a full-page screenshot
+    // resizes the page and restarts the animation, so measure in the page instead)
+    await page.locator(".recharts-area-curve").first().scrollIntoViewIfNeeded();
+    await page.waitForTimeout(2000);
+    const span = await page.evaluate(() => {
+      const curve = document.querySelector(".recharts-area-curve").getBoundingClientRect();
+      const grid = document.querySelector(".recharts-cartesian-grid").getBoundingClientRect();
+      return { curveRight: curve.right, gridRight: grid.right, gridLeft: grid.left };
+    });
+    observed.activitySpan = span;
+    assert.ok(span.curveRight >= span.gridRight - (span.gridRight - span.gridLeft) * 0.05, `activity line stops early (${JSON.stringify(span)})`);
+    await page.screenshot({ path: join(shots, "dash-activity-viewport.png") });
+    await shot(page, "dash-overview-desktop.png");
   });
 
   await step("0b-insights-links", ["0a-dashboard-shape"], async () => {
-    for (const [label, tab] of [["Search report", "report"], ["Application flow", "flow"], ["Activity", "activity"]]) {
+    for (const [label, tab, active] of [["Search report", "report", "Search report"], ["Application flow", "flow", "Application flow"], ["Pipeline and timing", "activity", "Activity"]]) {
       await page.goto(`${base}/`, { waitUntil: "networkidle" });
       await page.locator(`a[href="/insights?tab=${tab}"]`).filter({ hasText: label }).first().click();
       await page.waitForURL(`**/insights?tab=${tab}`);
-      assert.equal(await page.locator('[role="tablist"]').first().locator('[data-state="active"]').innerText(), label, `${tab} tab is active`);
+      assert.equal(await page.locator('[role="tablist"]').first().locator('[data-state="active"]').innerText(), active, `${tab} tab is active`);
     }
     // Stat cards are links too
     await page.goto(`${base}/`, { waitUntil: "networkidle" });
@@ -174,9 +240,19 @@ try {
       assert.equal(await inDom(page, "#search-report"), 0, "report not rendered on Activity");
     }
     const body = await flat(page.locator("main, body").first());
-    assert.ok(body.includes("Counts and charts from your own records. Descriptive only."), "subtitle");
-    assert.equal(await page.locator('a[href="/"]').filter({ hasText: "Dashboard" }).count() > 0, true, "back link");
-    await shot(page, "insights-activity-desktop.png");
+    await headerCheck(page, "Insights");
+    assert.equal(await page.locator("nav[aria-label=Main] a[aria-current=page]").innerText(), "Dashboard", "nav keeps Dashboard active on /insights");
+    assert.ok(!body.includes("Counts and charts from your own records"), "old title is gone");
+    // The median moved here from the overview, as a line under the Pipeline bars
+    await insights(page, "activity");
+    await page.getByText("from Applied to first reply").waitFor();
+    const activity = await flat(page.locator("main, body").first());
+    const medianLine = `Median ${median} days from Applied to first reply, from ${replyDays.length} ${replyDays.length === 1 ? "reply" : "replies"}.`;
+    assert.ok(activity.includes(medianLine), `median line (${medianLine})`);
+    await shot(page, "dash-insights-desktop.png");
+    // Overview tab link goes back
+    await page.locator('nav[aria-label="Dashboard views"] a', { hasText: "Overview" }).click();
+    await page.waitForURL(`${base}/`);
     // Flow
     await insights(page, "flow");
     await page.waitForFunction(() => [...document.querySelectorAll("svg text")].some(t => /Awaiting response/.test(t.textContent)));
@@ -212,7 +288,11 @@ try {
     assert.ok(cards.includes(`Total applications ${SEED.length}`), cards);
     assert.ok(cards.includes(`Response rate ${pct(total.responses)}% ${total.responses} of ${total.apps} applied 14+ days ago heard back`), `response rate (${cards})`);
     assert.ok(cards.includes(`Offer rate ${pct(total.offers)}% ${total.offers} of ${total.apps} applied 14+ days ago reached an offer`), `offer rate (${cards})`);
-    assert.ok(cards.includes(`Median days to first response ${median} days From ${replyDays.length} responses`), `median (${cards}; expected ${median} from ${replyDays})`);
+    const goalText = cards.match(/This week's goal (\d+) of (\d+)/);
+    assert.ok(goalText && Number(goalText[2]) === GOAL_TARGET, `goal stat shows "x of ${GOAL_TARGET}" (${cards})`);
+    assert.ok(/in a row|no streak yet/.test(cards) && /to go by Sunday|Goal hit/.test(cards), `goal footer (${cards})`);
+    assert.equal(await page.getByRole("button", { name: "Edit goal" }).count(), 1, "edit pencil");
+    assert.equal(await page.locator("a", { has: page.getByRole("button", { name: "Edit goal" }) }).count(), 0, "goal card is not a link");
     assert.ok(!/Avg\. response time/.test(cards));
   });
 
@@ -220,9 +300,7 @@ try {
     await page.goto(`${base}/`, { waitUntil: "networkidle" });
     const body = await flat(page.locator("main, body").first());
     assert.ok(!body.includes("A short follow-up email often gets a response"), "unsupported follow-up claim is gone");
-    assert.ok(body.includes("Still at Applied after 14 days."), "factual follow-up line stays");
-    const waiting = SEED.filter(s => s.status === "Applied" && s.offset <= -14).length;
-    assert.ok(body.includes(`Waiting on a reply ${waiting}`), `waiting count ${waiting}`);
+    assert.ok(!body.includes("Waiting on a reply"), "follow-up card is gone; Today carries the follow-ups");
     await insights(page, "activity");
     await page.getByText("Where your applications are now (current status)").waitFor();
   });
@@ -292,19 +370,19 @@ try {
       observed.mobile = w;
       assert.ok(w.scroll <= w.inner + 1, `dashboard horizontal overflow (${w.scroll} > ${w.inner})`);
       observed.mobileOrder = await page.evaluate(() => {
-        const titles = ["Today", "Waiting on a reply", "Recent applications", "Goal", "Inbox", "Insights"];
-        const found = titles.map(t => { const h = [...document.querySelectorAll("h3, h2")].find(h => h.textContent.trim().startsWith(t)); return h ? [t, Math.round(h.getBoundingClientRect().top + scrollY)] : [t, null]; });
+        const titles = ["Today", "Applications over time", "Recent applications", "Inbox", "More insights"];
+        const found = titles.map(t => { const h = [...document.querySelectorAll("h3, h2")].find(h => h.textContent.trim() === t); return h ? [t, Math.round(h.getBoundingClientRect().top + scrollY)] : [t, null]; });
         return found.filter(([, y]) => y !== null).sort((a, b) => a[1] - b[1]).map(([t]) => t);
       });
-      await shot(page, "dashboard-mobile.png");
-      for (const tab of ["activity", "flow", "report"]) {
+      assert.deepEqual(observed.mobileOrder, ["Today", "Applications over time", "Recent applications", "Inbox", "More insights"], "phone order");
+      await shot(page, "dash-overview-mobile.png");      for (const tab of ["activity", "flow", "report"]) {
         await insights(page, tab);
         if (tab === "report") await page.locator("#search-report").waitFor();
         if (tab === "activity") await page.getByText("Where your applications are now (current status)").waitFor();
         const m = await measure();
         observed[`mobile-${tab}`] = m;
         assert.ok(m.scroll <= m.inner + 1, `insights ${tab} horizontal overflow (${m.scroll} > ${m.inner})`);
-        if (tab === "report") await shot(page, "insights-mobile.png");
+        if (tab === "report") await shot(page, "dash-insights-mobile.png");
       }
     } finally { await page.setViewportSize({ width: 1280, height: 1000 }); }
   });
@@ -323,6 +401,8 @@ try {
       const cards = await flat(second.locator("div.grid.grid-cols-2").first());
       assert.ok(cards.includes("Response rate Not enough history yet"), `no 0% without history (${cards})`);
       assert.ok(!/Response rate 0%/.test(cards));
+      assert.ok(cards.includes("Goal No goal set") && await second.getByRole("button", { name: "Set a goal" }).count() === 1, `unset goal (${cards})`);
+      await shot(second, "dash-overview-goal-unset.png");
       await second.goto(`${base}/insights?tab=report`, { waitUntil: "networkidle" });
       await second.locator("#search-report").waitFor();
       const report = await flat(second.locator("#search-report"));
@@ -339,7 +419,7 @@ try {
   const left = {};
   try {
     for (const userId of createdUsers) {
-      const tables = ["application_activities", "application_suggestions", "applications", "resumes"];
+      const tables = ["email_connections", "application_activities", "application_suggestions", "applications", "resumes"];
       for (const table of tables) {
         const { error } = await admin.from(table).delete().eq("user_id", userId);
         if (error && !MISSING.includes(error.code)) throw new Error(`${table}: ${error.message}`);

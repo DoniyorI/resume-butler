@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, useTransition } from "react";
 import { Flame, Loader2, Pencil, Target } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -56,38 +56,6 @@ function goalProgress(goal, perDay, today) {
   // Days left in the week, today included
   const daysLeft = weekly ? 7 - ((today.getDay() + 6) % 7) : 1;
   return { done, remaining, streak, daysLeft, weekly };
-}
-
-function Ring({ value, max }) {
-  const size = 76;
-  const stroke = 8;
-  const radius = (size - stroke) / 2;
-  const circumference = 2 * Math.PI * radius;
-  const fraction = max ? Math.min(1, value / max) : 0;
-  return (
-    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90" aria-hidden>
-      <circle
-        cx={size / 2}
-        cy={size / 2}
-        r={radius}
-        fill="none"
-        stroke="hsl(var(--muted))"
-        strokeWidth={stroke}
-      />
-      <circle
-        cx={size / 2}
-        cy={size / 2}
-        r={radius}
-        fill="none"
-        stroke="#559F87"
-        strokeWidth={stroke}
-        strokeLinecap="round"
-        strokeDasharray={circumference}
-        strokeDashoffset={circumference * (1 - fraction)}
-        className="transition-[stroke-dashoffset] duration-500 motion-reduce:transition-none"
-      />
-    </svg>
-  );
 }
 
 function GoalForm({ goal, onDone }) {
@@ -173,10 +141,11 @@ function GoalForm({ goal, onDone }) {
 }
 
 /**
- * "Apply to N jobs a day/week": progress this period, the streak, and what's
- * left. `series` is [{ date: "YYYY-MM-DD", count }] of applied dates.
+ * The goal as the fourth stat card: "x of N" for this day or week, with what is left and the streak
+ * beneath. `series` is [{ date: "YYYY-MM-DD", count }] of applied dates. The card is not a link: its
+ * edit button opens the goal editor.
  */
-export default function GoalCard({ goal, series }) {
+export default function GoalStat({ goal, series }) {
   const [open, setOpen] = useState(false);
   // "Today" is the viewer's local day, known only in the browser
   const [today, setToday] = useState(null);
@@ -186,20 +155,17 @@ export default function GoalCard({ goal, series }) {
   const progress = goal && today ? goalProgress(goal, perDay, today) : null;
   const hit = progress && progress.remaining === 0;
 
-  const editButton = (
+  const editor = (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
         {goal ? (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 text-muted-foreground"
-            aria-label="Edit goal"
-          >
+          <Button variant="ghost" size="icon" className="ml-auto h-6 w-6 text-muted-foreground" aria-label="Edit goal">
             <Pencil className="h-3.5 w-3.5" />
           </Button>
         ) : (
-          <Button size="sm">Set a goal</Button>
+          <Button size="sm" variant="outline" className="h-7 px-2.5 text-xs">
+            Set a goal
+          </Button>
         )}
       </PopoverTrigger>
       <PopoverContent align="end" className="w-64">
@@ -208,60 +174,46 @@ export default function GoalCard({ goal, series }) {
     </Popover>
   );
 
+  const label = !goal ? "Goal" : goal.period === "day" ? "Today's goal" : "This week's goal";
+  const footer = !goal
+    ? "A daily or weekly target, with pace and streak"
+    : !progress
+      ? "\u00a0"
+      : [
+          hit
+            ? "Goal hit. Nice work."
+            : progress.weekly
+              ? `${progress.remaining} to go by Sunday`
+              : `${progress.remaining} more today`,
+          progress.streak > 0
+            ? `${progress.streak} ${progress.weekly ? "week" : "day"}${progress.streak === 1 ? "" : "s"} in a row`
+            : "no streak yet",
+        ].join(" \u00b7 ");
+
   return (
-    <Card className="flex flex-col">
-      <CardHeader className="flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <Target className="h-4 w-4 text-brand" />{" "}
-          {goal?.period === "day" ? "Today's goal" : "This week's goal"}
-        </CardTitle>
-        {goal && editButton}
+    <Card className="h-full bg-gradient-to-t from-brand/5 to-card shadow-sm">
+      <CardHeader className="space-y-1 p-4">
+        <CardDescription className="flex items-center gap-1.5">
+          <Target className="h-4 w-4" /> {label}
+          {goal && editor}
+        </CardDescription>
+        <div className="flex flex-wrap items-center gap-2">
+          {goal ? (
+            <CardTitle className="text-2xl font-semibold tabular-nums">
+              {progress ? progress.done : "\u2013"} of {goal.target}
+            </CardTitle>
+          ) : (
+            <>
+              <CardTitle className="text-base font-semibold">No goal set</CardTitle>
+              {editor}
+            </>
+          )}
+        </div>
+        <p className="flex items-center gap-1 text-xs text-muted-foreground">
+          {goal && progress && progress.streak > 0 && <Flame className="h-3.5 w-3.5 shrink-0 text-orange-500" aria-hidden="true" />}
+          <span>{footer}</span>
+        </p>
       </CardHeader>
-      <CardContent className="flex flex-1 items-center">
-        {!goal ? (
-          <div className="flex w-full items-center justify-between gap-3">
-            <p className="text-sm text-muted-foreground">
-              Set a daily or weekly target and track your pace and streak here.
-            </p>
-            {editButton}
-          </div>
-        ) : (
-          <div className="flex w-full items-center gap-4">
-            <div className="relative shrink-0">
-              <Ring value={progress?.done ?? 0} max={goal.target} />
-              <span className="absolute inset-0 flex flex-col items-center justify-center leading-none">
-                <span className="text-lg font-semibold tabular-nums">{progress?.done ?? "–"}</span>
-                <span className="text-[11px] text-muted-foreground">of {goal.target}</span>
-              </span>
-            </div>
-            <div className="min-w-0 space-y-1">
-              <p className="text-sm font-medium">
-                {!progress
-                  ? " "
-                  : hit
-                    ? "Goal hit. Nice work."
-                    : progress.weekly
-                      ? `${progress.remaining} to go by Sunday`
-                      : `${progress.remaining} more today`}
-              </p>
-              {progress && !hit && progress.weekly && (
-                <p className="text-xs text-muted-foreground">
-                  About {Math.ceil(progress.remaining / progress.daysLeft)} a day for the {progress.daysLeft}{" "}
-                  {progress.daysLeft === 1 ? "day" : "days"} left
-                </p>
-              )}
-              {progress && (
-                <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <Flame className={cn("h-3.5 w-3.5", progress.streak > 0 ? "text-orange-500" : "")} />
-                  {progress.streak > 0
-                    ? `${progress.streak} ${progress.weekly ? "week" : "day"}${progress.streak === 1 ? "" : "s"} in a row`
-                    : `No streak yet. Hit it ${progress.weekly ? "this week" : "today"} to start one.`}
-                </p>
-              )}
-            </div>
-          </div>
-        )}
-      </CardContent>
     </Card>
   );
 }

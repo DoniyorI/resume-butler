@@ -27,27 +27,42 @@ function PageTitle({ actions = true }) {
   );
 }
 
+// The Overview | Insights header shared by both dashboard pages
+function DashboardHeaderSkeleton() {
+  return (
+    <div className="flex flex-wrap items-end justify-between gap-3">
+      <div className="space-y-3">
+        <div className="space-y-2">
+          <Skeleton className="h-6 w-28" />
+          <Skeleton className="h-4 w-64 max-w-full" />
+        </div>
+        <Skeleton className="h-10 w-48" />
+      </div>
+      <Skeleton className="h-9 w-36" />
+    </div>
+  );
+}
+
 // src/app/(app)/page.jsx
 export function DashboardSkeleton() {
   return (
     <div className="flex w-full flex-col gap-4 px-4 pb-10 pt-[85px] md:px-6" aria-busy="true">
-      <PageTitle />
+      <DashboardHeaderSkeleton />
       <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
         {Array.from({ length: 4 }, (_, i) => (
-          <CardBlock key={i} lines={2} />
+          <CardBlock key={i} lines={3} />
         ))}
       </div>
-      {/* Today and recent applications (2/3) beside the action cards and Insights (1/3) */}
+      {/* Today, activity and recent applications (2/3) beside the inbox and insights links (1/3) */}
       <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-3">
         <div className="flex flex-col gap-4 xl:col-span-2">
           <CardBlock className="h-72" lines={4} />
+          <CardBlock className="h-64" lines={3} />
           <CardBlock className="h-72" lines={4} />
         </div>
         <div className="flex flex-col gap-4">
           <CardBlock className="h-36" />
-          <CardBlock className="h-28" />
-          <CardBlock className="h-28" />
-          <CardBlock className="h-36" />
+          <CardBlock className="h-40" />
         </div>
       </div>
     </div>
@@ -58,12 +73,11 @@ export function DashboardSkeleton() {
 export function InsightsSkeleton() {
   return (
     <div className="flex w-full flex-col gap-4 px-4 pb-10 pt-[85px] md:px-6" aria-busy="true">
-      <div className="space-y-2">
-        <Skeleton className="h-3 w-20" />
-        <Skeleton className="h-6 w-32" />
-        <Skeleton className="h-4 w-72 max-w-full" />
-      </div>
+      <DashboardHeaderSkeleton />
       <Skeleton className="h-10 w-80 max-w-full" />
+      <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+        <CardBlock lines={3} />
+      </div>
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
         <Skeleton className="h-[420px] rounded-xl xl:col-span-2" />
         <Skeleton className="h-[330px] rounded-xl" />

@@ -38,12 +38,12 @@ export default function SyncCard({ connection, pendingCount }) {
   if (!connection) {
     return (
       <Card className="flex flex-col">
-        <CardHeader className="pb-2">
+        <CardHeader className="p-4 pb-2">
           <CardTitle className="flex items-center gap-2 text-base">
             <Mail className="h-4 w-4 text-brand" /> Inbox
           </CardTitle>
         </CardHeader>
-        <CardContent className="flex flex-1 items-center justify-between gap-3">
+        <CardContent className="flex flex-1 items-center justify-between gap-3 p-4 pt-0">
           <p className="text-sm text-muted-foreground">
             Connect your inbox to find confirmations, interviews and rejections automatically.
           </p>
@@ -59,7 +59,7 @@ export default function SyncCard({ connection, pendingCount }) {
 
   return (
     <Card className="flex flex-col">
-      <CardHeader className="flex-row items-center justify-between space-y-0 pb-2">
+      <CardHeader className="flex-row items-center justify-between space-y-0 p-4 pb-2">
         <CardTitle className="flex items-center gap-2 text-base">
           <Mail className="h-4 w-4 text-brand" /> Inbox
         </CardTitle>
@@ -72,7 +72,7 @@ export default function SyncCard({ connection, pendingCount }) {
           {scanning ? "Scanning" : "Scan now"}
         </Button>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="space-y-2 p-4 pt-0">
         <p className="truncate text-xs text-muted-foreground" title={connection.emailAddress}>
           {connection.emailAddress}
           {lastScan ? `, last scanned ${lastScan}` : ", not scanned yet"}
@@ -81,7 +81,7 @@ export default function SyncCard({ connection, pendingCount }) {
         {pendingCount > 0 ? (
           <Link
             href="/email-sync#review"
-            className="flex items-center justify-between gap-2 rounded-md border border-brand/30 bg-brand/5 px-3 py-2 text-sm hover:bg-brand/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="flex items-center justify-between gap-2 rounded-md border border-brand/30 bg-brand/5 px-3 py-1.5 text-sm hover:bg-brand/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           >
             <span className="flex items-center gap-2">
               <Inbox className="h-4 w-4 text-brand" />
@@ -90,7 +90,7 @@ export default function SyncCard({ connection, pendingCount }) {
             <span className="text-xs font-medium text-brand">Review</span>
           </Link>
         ) : (
-          <p className="flex items-center gap-2 rounded-md bg-muted/50 px-3 py-2 text-sm text-muted-foreground">
+          <p className="flex items-center gap-2 rounded-md bg-muted/50 px-3 py-1.5 text-sm text-muted-foreground">
             <Inbox className="h-4 w-4" /> Nothing waiting for review
           </p>
         )}

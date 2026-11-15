@@ -61,7 +61,6 @@ export function median(values) {
 
 // No reply after this long is worth a follow-up email
 export const FOLLOW_UP_AFTER_DAYS = 14;
-const FOLLOW_UP_LIMIT = 6;
 const RECENT_LIMIT = 6;
 
 // Applications still at "Applied" (never moved on) two weeks or more after
@@ -84,11 +83,6 @@ export function waitingOnReply(applications, historyByApp, now = Date.now()) {
     })
     .filter((app) => app && app.daysWaiting >= FOLLOW_UP_AFTER_DAYS)
     .sort((a, b) => b.daysWaiting - a.daysWaiting);
-}
-
-function followUps(applications, historyByApp) {
-  const waiting = waitingOnReply(applications, historyByApp);
-  return { total: waiting.length, items: waiting.slice(0, FOLLOW_UP_LIMIT) };
 }
 
 // Days from applying to the first reply (Reached Out, Interviewed or Offered
@@ -269,7 +263,6 @@ export async function getDashboardStats(supabase, userId, rows) {
     ].map((stage) => ({ ...stage, percent: percent(stage.count, total) })),
     daily: dailyCounts(applications),
     flow: buildFlow(applications, historyByApp),
-    followUps: followUps(applications, historyByApp),
     // Newest first (the query's order), for the dashboard's mini table
     recent: applications.slice(0, RECENT_LIMIT).map((app) => ({
       id: app.id,
