@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { addSkill } from "@/features/cv/actions";
-import { BANDS, CHECK_KINDS, EMPTY_CV, degreeLine, termName, yearsLine } from "@/features/opportunities/JobFit";
+import { BANDS, CHECK_KINDS, EMPTY_CV, degreeLine, languageLine, termName, yearsLine } from "@/features/opportunities/JobFit";
 
 const ROWS_SHOWN = 6;
 const FOOTER = "Fit compares this posting with your Master CV. It is not a prediction of an interview.";
@@ -246,6 +246,7 @@ export default function FitCard({ fit, skills, onAdd }) {
   const background = [
     ["short", "unknown"].includes(assessment.years?.status) ? yearsLine(assessment.years) : null,
     ["short", "unknown"].includes(assessment.degree?.status) ? degreeLine(assessment.degree) : null,
+    assessment.language?.status === "short" ? languageLine(assessment.language) : null,
   ].filter(Boolean);
   const allShown = gaps.backed > 0 && gaps.shown === gaps.backed;
 

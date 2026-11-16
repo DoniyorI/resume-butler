@@ -34,3 +34,21 @@ These are the cases the engine is known to get wrong. They are stated so the res
 - **Best fit ranks the 200 most recently saved jobs.**
 - **The rewrite guardrail** is stricter than before for Go, Node, Express and AI, and laxer only for lower-case "react", "jest", "flask", "angular" and "tailwind", which now read as ordinary words.
 - **The extension popup** still shows keyword coverage, not this result. Bringing fit to the extension and to application pages is M6.
+
+## Knockouts and sections that are not requirements (November 16, 2026)
+
+Found by reading the owner's own applications: a role in Seoul that required Korean and 5+ years read "Not enough to tell", and its one requirement, "system design", came from the interview-process section.
+
+- **Interview-process sections are ignored** ("Our process", "Interview process", "Hiring process"), like company boilerplate.
+- **Spoken languages.** A required sentence that names a language other than English with a fluency cue ("fluent in", "proficiency in", "speaking") is reported in `language`. If the Master CV never mentions that language the job is rated Low fit and the reason says why; if it does, nothing changes. A language under a nice-to-have heading is quoted as a check and not scored.
+- **Location** is a new check: a sentence saying where the candidate must be ("must be based in", "located or willing to work from") is quoted for the user. It is never scored, because the engine does not compare places.
+- **Few named skills.** A posting with fewer than three recognised skills is rated Stretch when its years exceed the dated experience, and otherwise stays "Not enough to tell", now saying when the years are met.
+- **These rules only lower a band.** Nothing new can raise one.
+
+Evidence: 15 new engine, wording, summary and popup tests (699 pass on Node 26.3.0); `scripts/qa-fit-stats-alerts.mjs` passed every step against the local app with a disposable account, which it deleted. Extension 0.8.2 shows the language line and the two new check labels; reload the unpacked extension.
+
+Still wrong, by design or not yet handled:
+
+- **Plain-language postings** ("strong backend fundamentals", "2+ years of software engineering") still read "Not enough to tell" when the years are met: the engine only knows named skills.
+- **A language is matched by its capitalised name**, so "Chinese market" in a sentence that also says "proficient in SQL" reads as a language requirement, and a language is "mentioned" if its name appears anywhere in the Master CV.
+- **English is never a language requirement**, and a location is never compared with the profile's location.

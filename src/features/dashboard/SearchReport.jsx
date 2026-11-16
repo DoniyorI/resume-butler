@@ -62,8 +62,11 @@ export default function SearchReport({ report }) {
       Counts from your own records, for the {report.included} of {report.total}{" "}
       {report.total === 1 ? "application" : "applications"} applied {report.windowDays} or more days ago. Responses
       are Reached Out, Interviewed or Offered at any point; interviews include offers. Groups under{" "}
-      {report.minGroupSize} applications show counts only (too few to compare). This describes your search only and
-      does not predict anything.
+      {report.minGroupSize} applications show counts only (too few to compare).
+      {report.outreach > 0
+        ? ` ${report.outreach} more ${report.outreach === 1 ? "row" : "rows"} began with a recruiter reaching out, not with an application, and ${report.outreach === 1 ? "is" : "are"} left out.`
+        : ""}{" "}
+      This describes your search only and does not predict anything.
     </>
   );
   const body = (

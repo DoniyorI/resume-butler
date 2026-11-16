@@ -2,19 +2,13 @@ import { requirePageUser } from "@/server/auth";
 import { getDashboardStats, loadDashboardRows, loadResumeTitles } from "@/features/dashboard/data";
 import { searchReport } from "@/features/dashboard/report";
 import { parseInsightTab } from "@/features/dashboard/insightTabs";
+import { timingLine } from "@/features/dashboard/summaries";
 import DashboardHeader from "@/features/dashboard/DashboardHeader";
 import InsightsTabs from "@/features/dashboard/InsightsTabs";
 import SearchReport from "@/features/dashboard/SearchReport";
 import { ApplicationFlow, ApplicationsOverTime, Pipeline } from "@/features/dashboard/LazyCharts";
 
 export const metadata = { title: "Insights" };
-
-// The median from Applied to the first reply, with how many replies it rests on
-function timingLine(stats) {
-  if (stats.medianResponseDays === null) return "No replies with a recorded date yet, so no median time to first reply.";
-  const n = stats.responseTimeSamples;
-  return `Median ${stats.medianResponseDays} days from Applied to first reply, from ${n} ${n === 1 ? "reply" : "replies"}.`;
-}
 
 // Charts and a report of the user's own records, one tab at a time (?tab=activity|flow|report).
 // Only the open tab is rendered, so its charts load on demand.
@@ -38,7 +32,7 @@ export default async function InsightsPage({ searchParams }) {
         <div className="xl:col-span-2">
           <ApplicationsOverTime series={stats.daily.series} />
         </div>
-        <Pipeline funnel={stats.funnel} total={stats.total} timing={timingLine(stats)} />
+        <Pipeline funnel={stats.funnel} total={stats.total} timing={timingLine(stats.medianResponseDays, stats.responseTimeSamples)} />
       </div>
     );
   }

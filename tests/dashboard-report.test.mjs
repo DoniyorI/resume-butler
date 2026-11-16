@@ -80,3 +80,18 @@ test("empty input", () => {
   assert.deepEqual(r.bySource, []);
   assert.equal(r.byMonth.length, 6);
 });
+
+test("rows that started with a recruiter reaching out are counted apart, not as applications", () => {
+  const withOutreach = [
+    ...apps,
+    app("o1", "2026-10-02", { source: "email", status: "Reached Out" }),
+    app("o2", "2026-10-03", { source: "email", status: "Reached Out" }),
+  ];
+  const history = [...rows, { application_id: "o1", status: "Reached Out" }, { application_id: "o2", status: "Reached Out" }];
+  const r = searchReport(withOutreach, history, [], NOW);
+  assert.equal(r.total, 12);
+  assert.equal(r.included, 8);
+  assert.equal(r.outreach, 2);
+  assert.equal(find(r.bySource, "From email"), undefined);
+  assert.equal(find(r.byMonth, "Oct 2026").applications, 6);
+});

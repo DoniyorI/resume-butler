@@ -108,7 +108,11 @@ export default async function DashboardPage() {
         </div>
         <div className="flex min-w-0 flex-col gap-4 xl:sticky xl:top-[85px]">
           <SyncCard connection={connection} pendingCount={pending.count} />
-          <InsightsCard total={stats.total} medianResponseDays={stats.medianResponseDays} />
+          <InsightsCard
+            total={stats.total}
+            medianResponseDays={stats.medianResponseDays}
+            responseTimeSamples={stats.responseTimeSamples}
+          />
         </div>
       </div>
     </div>

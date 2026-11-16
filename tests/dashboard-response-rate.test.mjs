@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { median, responseSummary, RESPONSE_WINDOW_DAYS } from "@/features/dashboard/data";
+import { median, responseSummary, startedAsOutreach, RESPONSE_WINDOW_DAYS } from "@/features/dashboard/data";
 
 const NOW = Date.parse("2026-11-14T12:00:00");
 const daysAgo = (n) => {
@@ -15,22 +15,55 @@ test("window is 14 days", () => assert.equal(RESPONSE_WINDOW_DAYS, 14));
 test("a response is any reply in the current status or the history", () => {
   const applications = [
     app("a", "Applied"), // never heard back
-    app("b", "Reached Out"), // a recruiter reached out
+    app("b", "Reached Out"), // applied, then a recruiter replied
     app("c", "Interviewed"),
     app("d", "Offered"),
     app("e", "Rejected"), // interviewed, then rejected: still heard back
     app("f", "Rejected"), // rejected straight from Applied: no reply counted
-    app("g", "Withdrew"), // recruiter reached out, then withdrew
     app("h", "Pending"),
   ];
-  const byApp = history({ e: ["Applied", "Interviewed", "Rejected"], f: ["Applied", "Rejected"], g: ["Reached Out", "Withdrew"], h: ["Applied", "Pending"] });
+  const byApp = history({ b: ["Applied", "Reached Out"], e: ["Applied", "Interviewed", "Rejected"], f: ["Applied", "Rejected"], h: ["Applied", "Pending"] });
   assert.deepEqual(responseSummary(applications, byApp, NOW), {
-    eligible: 8,
-    responses: 5,
-    responseRate: Math.round((5 / 8) * 100),
+    eligible: 7,
+    responses: 4,
+    responseRate: Math.round((4 / 7) * 100),
     offers: 1,
-    offerRate: Math.round((1 / 8) * 100),
+    offerRate: Math.round((1 / 7) * 100),
+    outreach: 0,
   });
+});
+
+test("a row that started with a recruiter reaching out was never applied to, so it is not in the rate", () => {
+  const applications = [
+    app("a", "Applied"),
+    app("j", "Reached Out"), // applied first: a reply
+    app("b", "Reached Out"), // a job alert or recruiter email, logged as it arrived
+    app("g", "Withdrew"), // recruiter reached out, then withdrew
+    app("i", "Interviewed"), // recruiter reached out, then an interview
+    app("k", "Reached Out"), // no history at all: the current status is where it started
+    app("recent", "Reached Out", 3),
+  ];
+  const byApp = history({ j: ["Applied", "Reached Out"], b: ["Reached Out"], g: ["Reached Out", "Withdrew"], i: ["Reached Out", "Interviewed"], recent: ["Reached Out"] });
+  assert.deepEqual(responseSummary(applications, byApp, NOW), {
+    eligible: 2,
+    responses: 1,
+    responseRate: 50,
+    offers: 0,
+    offerRate: 0,
+    outreach: 4, // b, g, i, k; the recent one is outside the window either way
+  });
+  assert.equal(startedAsOutreach(applications[2], byApp), true);
+  assert.equal(startedAsOutreach(applications[1], byApp), false);
+});
+
+test("the earliest history row decides where a row started, whatever order rows arrive in", () => {
+  const byApp = new Map([
+    ["x", [
+      { application_id: "x", status: "Reached Out", changed_at: "2026-10-02T10:00:00Z" },
+      { application_id: "x", status: "Applied", changed_at: "2026-10-01T10:00:00Z" },
+    ]],
+  ]);
+  assert.equal(startedAsOutreach(app("x", "Reached Out"), byApp), false);
 });
 
 test("the 14 day boundary: applied exactly 14 days ago counts, 13 does not", () => {
@@ -43,7 +76,7 @@ test("the 14 day boundary: applied exactly 14 days ago counts, 13 does not", () 
 
 test("no applications old enough gives null rates, never 0%", () => {
   for (const s of [responseSummary([], new Map(), NOW), responseSummary([app("a", "Offered", 3)], new Map(), NOW)]) {
-    assert.deepEqual(s, { eligible: 0, responses: 0, responseRate: null, offers: 0, offerRate: null });
+    assert.deepEqual(s, { eligible: 0, responses: 0, responseRate: null, offers: 0, offerRate: null, outreach: 0 });
   }
 });
 

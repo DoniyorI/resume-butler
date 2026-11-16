@@ -96,8 +96,22 @@ test("years and degree sentences", async () => {
   assert.doesNotMatch(text(ui), /Asks for/);
 });
 
+test("a required language the Master CV does not mention gets its own sentence", async () => {
+  let ui = await setup(() => withFit({ ...baseFit, band: "low", language: { required: ["Korean", "Japanese"], missing: ["Korean"], status: "short" } }));
+  await ui.run();
+  assert.match(text(ui), /Asks for Korean, not mentioned in your Master CV/);
+  assert.doesNotMatch(text(ui), /Japanese/);
+  ui = await setup(() => withFit({ ...baseFit, language: { required: ["Korean"], missing: [], status: "meets" } }));
+  await ui.run();
+  assert.doesNotMatch(text(ui), /Korean/);
+  // An older server sends no language field
+  ui = await setup(() => withFit(baseFit));
+  await ui.run();
+  assert.doesNotMatch(text(ui), /not mentioned in your Master CV/);
+});
+
 test("checks are quoted verbatim with labels, and the footer is present", async () => {
-  const kinds = { "work-authorization": "Work authorisation", clearance: "Clearance", citizenship: "Citizenship", onsite: "On-site", relocation: "Relocation", travel: "Travel" };
+  const kinds = { "work-authorization": "Work authorisation", clearance: "Clearance", citizenship: "Citizenship", onsite: "On-site", relocation: "Relocation", travel: "Travel", location: "Location", language: "Language" };
   const checks = Object.keys(kinds).map(kind => ({ kind, quote: `Quote for ${kind}, "exactly" & <b>so</b>` }));
   const ui = await setup(() => withFit({ ...baseFit, checks }));
   await ui.run();

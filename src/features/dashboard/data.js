@@ -15,8 +15,8 @@ export function groupHistoryByApplication(statusHistory) {
   return byApp;
 }
 
-// Statuses that mean an employer replied. "Reached Out" is a recruiter
-// reaching out, so it counts as a reply too.
+// Statuses that mean an employer replied to an application. "Reached Out"
+// after applying is a reply; a row that began there is not (startedAsOutreach).
 export const RESPONSE_STATUSES = ["Reached Out", "Interviewed", "Offered"];
 
 // True when the current status or any status in the history is one of `statuses`
@@ -34,12 +34,29 @@ export function isInResponseWindow(app, now = Date.now()) {
   return Boolean(applied) && Math.floor((now - applied.getTime()) / DAY_MS) >= RESPONSE_WINDOW_DAYS;
 }
 
+// True when the row's first recorded status is "Reached Out": a recruiter email
+// or job alert logged as it arrived. The user never applied, so it is neither
+// an application waiting on a reply nor a reply to one.
+export function startedAsOutreach(app, historyByApp) {
+  const history = historyByApp.get(app.id) || [];
+  if (!history.length) return app.status === "Reached Out";
+  const dated = history.filter((h) => Number.isFinite(Date.parse(h.changed_at)));
+  const first =
+    dated.length === history.length
+      ? dated.reduce((a, b) => (Date.parse(b.changed_at) < Date.parse(a.changed_at) ? b : a))
+      : history[0];
+  return first.status === "Reached Out";
+}
+
 // Counts behind the response and offer rates. Both use the same applications:
-// the ones applied RESPONSE_WINDOW_DAYS or more ago. A rate is null when there
-// are none, so the card never shows a made-up 0%. A reply is the current status
-// or any earlier one in the history (interviewed then rejected still heard back).
+// the ones applied RESPONSE_WINDOW_DAYS or more ago, leaving out rows that
+// started with a recruiter reaching out (counted in `outreach`). A rate is null
+// when there are none, so the card never shows a made-up 0%. A reply is the
+// current status or any earlier one in the history (interviewed then rejected
+// still heard back).
 export function responseSummary(applications, historyByApp = new Map(), now = Date.now()) {
-  const eligible = applications.filter((app) => isInResponseWindow(app, now));
+  const inWindow = applications.filter((app) => isInResponseWindow(app, now));
+  const eligible = inWindow.filter((app) => !startedAsOutreach(app, historyByApp));
   const responses = eligible.filter((app) => everHad(app, historyByApp, RESPONSE_STATUSES)).length;
   const offers = eligible.filter((app) => everHad(app, historyByApp, ["Offered"])).length;
   return {
@@ -48,6 +65,7 @@ export function responseSummary(applications, historyByApp = new Map(), now = Da
     responseRate: eligible.length ? percent(responses, eligible.length) : null,
     offers,
     offerRate: eligible.length ? percent(offers, eligible.length) : null,
+    outreach: inWindow.length - eligible.length,
   };
 }
 
@@ -234,7 +252,7 @@ export async function getDashboardStats(supabase, userId, rows) {
 
   const times = responseTimes(applications, historyByApp);
   const medianResponseDays = median(times);
-  const { eligible, responses, responseRate, offers, offerRate } = responseSummary(applications, historyByApp);
+  const { eligible, responses, responseRate, offers, offerRate, outreach } = responseSummary(applications, historyByApp);
 
   return {
     total,
@@ -242,6 +260,7 @@ export async function getDashboardStats(supabase, userId, rows) {
     responseRate,
     responses,
     responseEligible: eligible,
+    responseOutreach: outreach,
     offerRate,
     offers,
     thisWeek,

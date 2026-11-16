@@ -38,6 +38,12 @@ export function fitSummary(fit) {
       status: degree.status,
       ...(degree.inProgress ? { inProgress: true } : {}),
     },
+    // Language names come from the posting; only whether the CV mentions them is sent
+    language: {
+      required: (fit.language?.required || []).slice(0, MAX_PREFERRED_NAMES),
+      missing: (fit.language?.missing || []).slice(0, MAX_PREFERRED_NAMES),
+      status: fit.language?.status || "not-stated",
+    },
     checks: (fit.checks || []).filter((check) => check?.quote).map(({ kind, quote }) => ({ kind, quote })),
   };
 }

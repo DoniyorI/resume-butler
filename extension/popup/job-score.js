@@ -21,7 +21,7 @@
     if (!values.length) container.textContent = empty;
   };
   const BANDS = { strong: "Strong fit", good: "Good fit", stretch: "Stretch", low: "Low fit", unknown: "Not enough to tell" };
-  const CHECKS = { "work-authorization": "Work authorisation", clearance: "Clearance", citizenship: "Citizenship", onsite: "On-site", relocation: "Relocation", travel: "Travel" };
+  const CHECKS = { "work-authorization": "Work authorisation", clearance: "Clearance", citizenship: "Citizenship", onsite: "On-site", relocation: "Relocation", travel: "Travel", location: "Location", language: "Language" };
   const list = value => Array.isArray(value) ? value.filter(item => typeof item === "string" && item) : [];
   const renderFit = (fit, source) => {
     const lines = $("job-fit-lines");
@@ -49,6 +49,8 @@
       else if (years?.status === "unknown" && years.required != null) add("", `Asks for ${years.required}+ years; add dates to your experience to compare.`);
       const degree = fit.degree;
       if (degree?.status === "short" && degree.required) add("", `Asks for a ${degree.required}, ${degree.inProgress ? "only in progress in your education" : "not shown in your education"}`);
+      const languages = list(fit.language?.missing);
+      if (fit.language?.status === "short" && languages.length) add("", `Asks for ${languages.join(", ")}, not mentioned in your Master CV`);
       const checks = Array.isArray(fit.checks) ? fit.checks.filter(check => check && typeof check.quote === "string") : [];
       if (checks.length) {
         add("Only you can judge:", "");

@@ -1,6 +1,13 @@
 import { sourceSiteLabel } from "@/lib/jobDetails";
 import { parseDate } from "@/lib/dates";
-import { groupHistoryByApplication, everHad, isInResponseWindow, RESPONSE_STATUSES, RESPONSE_WINDOW_DAYS } from "@/features/dashboard/data";
+import {
+  groupHistoryByApplication,
+  everHad,
+  isInResponseWindow,
+  startedAsOutreach,
+  RESPONSE_STATUSES,
+  RESPONSE_WINDOW_DAYS,
+} from "@/features/dashboard/data";
 
 // Groups with fewer applications than this show counts only, no percentage
 export const MIN_GROUP_SIZE = 5;
@@ -58,7 +65,9 @@ function monthEnd(d) {
 // user can list, and a group under MIN_GROUP_SIZE has no percentage.
 export function searchReport(applications, history, resumes = [], now = Date.now()) {
   const historyByApp = history instanceof Map ? history : groupHistoryByApplication(history);
-  const eligible = applications.filter((app) => isInResponseWindow(app, now));
+  // Rows that began with a recruiter reaching out were never applied to: counted apart
+  const inWindow = applications.filter((app) => isInResponseWindow(app, now));
+  const eligible = inWindow.filter((app) => !startedAsOutreach(app, historyByApp));
   const make = (key, label, apps, extra) => row(key, label, apps, historyByApp, extra);
 
   const sources = groupBy(eligible, (app) => app.source || "none");
@@ -101,6 +110,7 @@ export function searchReport(applications, history, resumes = [], now = Date.now
     minGroupSize: MIN_GROUP_SIZE,
     total: applications.length,
     included: eligible.length,
+    outreach: inWindow.length - eligible.length,
     bySource,
     bySite,
     byResume,

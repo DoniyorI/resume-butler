@@ -2,9 +2,9 @@
 import { useId, useState } from "react";
 import Link from "next/link";
 import { ChevronDown, CircleCheck, CircleDashed, CircleHelp, CircleMinus, CircleDot } from "lucide-react";
-import { CHECK_KINDS, degreeLine, yearsLine } from "@/features/opportunities/fitLines";
+import { CHECK_KINDS, degreeLine, languageLine, yearsLine } from "@/features/opportunities/fitLines";
 
-export { CHECK_KINDS, degreeLine, yearsLine };
+export { CHECK_KINDS, degreeLine, languageLine, yearsLine };
 
 // How a saved job compares with the Master CV (src/server/fit/assessFit.js).
 // Decision support only: it never predicts an interview, suggests wording or
@@ -98,7 +98,7 @@ function FitDetails({ fit, tailor }) {
   const required = fit.requirements.filter((req) => req.importance === "required");
   const preferred = fit.requirements.filter((req) => req.importance === "preferred");
   const missingRequired = required.some((req) => req.strength === "missing");
-  const background = [yearsLine(fit.years), degreeLine(fit.degree)].filter(Boolean);
+  const background = [yearsLine(fit.years), degreeLine(fit.degree), languageLine(fit.language)].filter(Boolean);
   const checks = (fit.checks || []).filter((check) => check?.quote);
   const resume = fit.resume;
   const labels = new Map(fit.requirements.map((req) => [req.term, req.label || req.term]));

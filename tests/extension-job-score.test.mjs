@@ -66,7 +66,7 @@ const cvRows = () => ({
   profiles: [{ id: owner, cv_sections: { revision: 0, titles: {}, customSections: [{ id: "custom:00000000-0000-4000-8000-000000000099", title: "Private Company", type: "text", items: [{ id: resumeId, text: "Hidden Bullet Secret: built SecretProject services in Python and Docker" }] }] } }],
   cv_skills: [{ user_id: owner, name: "PostgreSQL" }],
 });
-const expectedKeys = ["band", "reason", "counts", "missing", "listed", "preferredMissing", "notShown", "years", "degree", "checks"];
+const expectedKeys = ["band", "reason", "counts", "missing", "listed", "preferredMissing", "notShown", "years", "degree", "language", "checks"];
 
 test("fit for a resume source has the contract's shape and the resume's gaps", async () => {
   const result = await getJobScore(database({ resumes: [resume()], ...cvRows() }), owner, { jobDescription: posting, resumeId });
@@ -125,6 +125,7 @@ test("fitSummary caps its lists and keeps only readable names, counts and postin
     requirements: [...many(20, "required", "missing"), ...many(10, "required", "listed"), ...many(10, "preferred", "missing")],
     years: { required: 3, have: 1, status: "short" },
     degree: { required: "bachelor's degree", status: "short", inProgress: true },
+    language: { required: ["Korean", "Japanese"], missing: ["Korean"], status: "short", extra: "x" },
     checks: [{ kind: "onsite", quote: "Onsite 3 days", extra: "x" }],
     resume: { shown: [], notShown: Array.from({ length: 12 }, (_, i) => `tl${i}`) },
   });
@@ -135,6 +136,7 @@ test("fitSummary caps its lists and keeps only readable names, counts and postin
   assert.equal(summary.notShown[0], "Tl0");
   assert.deepEqual(summary.degree, { required: "Bachelor's degree", status: "short", inProgress: true });
   assert.deepEqual(summary.checks, [{ kind: "onsite", quote: "Onsite 3 days" }]);
+  assert.deepEqual(summary.language, { required: ["Korean", "Japanese"], missing: ["Korean"], status: "short" });
   assert.equal(JSON.stringify(summary).includes("private quote"), false);
   assert.equal(JSON.stringify(summary).includes("Private Co"), false);
   assert.equal(fitSummary(null), null);

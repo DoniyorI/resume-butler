@@ -2,6 +2,10 @@
 
 Save openings before applying, choose a working resume, compare job keywords, and automatically track submissions on LinkedIn Easy Apply, Greenhouse, Lever and Ashby. Version0.5.0 includes updated LinkedIn capture; reviewed filling is available on English Lever, Greenhouse and Ashby application forms. Plain Manifest V3: no build step.
 
+## Language and location lines (0.8.2)
+
+The Fit panel adds a sentence when the posting requires a spoken language your Master CV does not mention ("Asks for Korean, not mentioned in your Master CV"), and "Only you can judge" now labels **Location** and **Language** lines quoted from the posting. No new permission; an older server simply sends neither. Reload the unpacked extension after updating.
+
 ## Fit panel (0.6.0)
 
 The popup's **Fit** panel (button **Check fit**) now compares the posting with your Master CV and shows a band (Strong fit, Good fit, Stretch, Low fit, or Not enough to tell), the reason, required skills your Master CV lacks or only lists, years and degree gaps, and eligibility lines (work authorisation, clearance and so on) quoted from the posting for you to judge. If you chose a resume, it also says what that resume leaves out. Against an older server, or when no fit is available, it falls back to keyword coverage. A saved posting with an empty stored description now shows the freshly captured one. Reload the unpacked extension after updating.

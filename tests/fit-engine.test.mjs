@@ -518,6 +518,7 @@ test("the same input gives a deep-equal, JSON-safe result", () => {
     "counts",
     "years",
     "degree",
+    "language",
     "checks",
     "resume",
   ]);
@@ -698,4 +699,120 @@ test("a role phrase inside an or-group leaves the skill alternatives intact", ()
   const react = none.requirements.find((req) => req.term === "react");
   assert.deepEqual(react.alternatives, ["vue"]);
   assert.ok(!terms(none).some((term) => ["frontend", "backend", "vue"].includes(term)));
+});
+
+// 13. Knockouts: sections that are not requirements, languages, location, years alone
+const threeSkills = "Requirements:\n- Python\n- SQL\n- Docker";
+const backsThree = () => cvWith({ shown: ["Python", "SQL", "Docker"] });
+const shortCv = () =>
+  cvWith({
+    experience: [
+      {
+        id: "e1",
+        company: "Harbor Analytics",
+        position: "Software Engineer",
+        startDate: "2025-01-01",
+        endDate: "",
+        currentlyWorking: true,
+        bullets: ["Answered partner questions and wrote onboarding guides"],
+      },
+    ],
+  });
+
+test("an interview-process section is not read as requirements", () => {
+  const posting = `${threeSkills}
+
+Our Process
+Virtual onsite: two technical sessions with a coding and system design exercise, then a Kubernetes review.`;
+  const result = fit(posting, backsThree());
+  assert.deepEqual(terms(result).sort(), ["docker", "python", "sql"]);
+
+  const inline = `${threeSkills}\n\nInterview process: a system design round and a GraphQL take-home.`;
+  assert.deepEqual(terms(fit(inline, backsThree())).sort(), ["docker", "python", "sql"]);
+});
+
+test("a required language the Master CV does not mention is quoted and rates the job low", () => {
+  const posting = `${threeSkills}\n- Must be fluent in English and Korean`;
+  const result = fit(posting, backsThree());
+  assert.deepEqual(result.language, { required: ["Korean"], missing: ["Korean"], status: "short" });
+  assert.deepEqual(
+    result.checks.find((check) => check.kind === "language"),
+    { kind: "language", quote: "Must be fluent in English and Korean" }
+  );
+  assert.equal(result.band, "low");
+  assert.match(result.reason, /asks for Korean, which your Master CV doesn't mention/);
+});
+
+test("a required language the Master CV mentions is met and leaves the band alone", () => {
+  const posting = `${threeSkills}\n- Professional proficiency in Japanese and Korean`;
+  const cv = cvWith({ shown: ["Python", "SQL", "Docker"], listed: ["Korean", "Japanese (fluent)"] });
+  const result = fit(posting, cv);
+  assert.deepEqual(result.language, { required: ["Japanese", "Korean"], missing: [], status: "meets" });
+  assert.equal(result.band, "strong");
+});
+
+test("English, programming languages and nice-to-have languages are not language requirements", () => {
+  const none = { required: [], missing: [], status: "not-stated" };
+  for (const line of [
+    "Fluent in English, written and spoken",
+    "Proficient in Python and native mobile development with Swift",
+    "Polish the product with our designers",
+  ]) {
+    const result = fit(`${threeSkills}\n- ${line}`, backsThree());
+    assert.deepEqual(result.language, none, line);
+    assert.equal(result.checks.some((check) => check.kind === "language"), false, line);
+    assert.equal(result.band, "strong", line);
+  }
+
+  const preferred = fit(`${threeSkills}\n\nNice to have:\n- Fluent in Spanish`, backsThree());
+  assert.deepEqual(preferred.language, none);
+  assert.equal(preferred.band, "strong");
+  assert.deepEqual(
+    preferred.checks.find((check) => check.kind === "language"),
+    { kind: "language", quote: "Fluent in Spanish" }
+  );
+});
+
+test("a place the candidate must be in is quoted as a location check", () => {
+  const sentence = "You’re located or willing to work from Seoul, South Korea.";
+  const result = fit(`${threeSkills}\n${sentence}`, backsThree());
+  assert.deepEqual(
+    result.checks.find((check) => check.kind === "location"),
+    { kind: "location", quote: sentence }
+  );
+  assert.equal(result.band, "strong"); // quoted for the user to judge, never scored
+
+  const based = fit(`${threeSkills}\nCandidates must be based in the Chicago area.`, backsThree());
+  assert.equal(based.checks.find((check) => check.kind === "location")?.quote, "Candidates must be based in the Chicago area.");
+
+  const company = fit(`${threeSkills}\nWe are based in Denver and love Python.`, backsThree());
+  assert.equal(company.checks.some((check) => check.kind === "location"), false);
+});
+
+test("a posting naming few skills is still rated a stretch when its years exceed the dated experience", () => {
+  const posting = "You have 5+ years of experience in partner engineering or a similar customer-facing role.";
+  const result = fit(posting, shortCv());
+  assert.equal(result.years.status, "short");
+  assert.equal(result.band, "stretch");
+  assert.equal(
+    result.reason,
+    `This posting names too few specific requirements to compare. It asks for 5+ years; your dated experience covers about ${result.years.have} years.`
+  );
+});
+
+test("a posting naming few skills whose years are met stays unknown and says so", () => {
+  const posting = "2+ years of software engineering experience. Strong programming fundamentals.";
+  const result = fit(posting, backsThree());
+  assert.equal(result.band, "unknown");
+  assert.equal(
+    result.reason,
+    "This posting names too few specific requirements to compare. Your dated experience (about 7.8 years) covers the 2+ years it asks for."
+  );
+});
+
+test("a missing required language rates a posting low even when it names few skills", () => {
+  const posting = "You have 5+ years of experience in partner engineering.\nMust be fluent in English and Korean";
+  const result = fit(posting, shortCv());
+  assert.equal(result.band, "low");
+  assert.match(result.reason, /asks for Korean, which your Master CV doesn't mention/);
 });

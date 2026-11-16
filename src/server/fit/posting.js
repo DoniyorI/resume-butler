@@ -79,6 +79,10 @@ const HEADINGS = [
     ["(?:reasonable\\s+)?accommodations", false],
     ["privacy\\s+(?:notice|policy)", false],
     ["how\\s+to\\s+apply", false],
+    // How the company interviews is not what the candidate must have
+    ["(?:our\\s+)?(?:interview|hiring|recruiting|recruitment|selection)\\s+process", true],
+    ["our\\s+process", true],
+    ["interview\\s+(?:stages|steps|loop)", false],
   ].map(([source, loose]) => ({ source, loose, category: IGNORED })),
   // Neutral headings end a preferred or boilerplate part; their text counts as required
   ...[
@@ -376,6 +380,71 @@ export function countedText(sentences) {
     .join("\n");
 }
 
+// Spoken languages a posting can ask for. English is left out: a posting
+// written in English that asks for English is not a line worth flagging.
+const LANGUAGES = [
+  "Arabic",
+  "Bengali",
+  "Cantonese",
+  "Chinese",
+  "Czech",
+  "Danish",
+  "Dutch",
+  "Farsi",
+  "Finnish",
+  "French",
+  "German",
+  "Greek",
+  "Hebrew",
+  "Hindi",
+  "Hungarian",
+  "Indonesian",
+  "Italian",
+  "Japanese",
+  "Korean",
+  "Malay",
+  "Mandarin",
+  "Norwegian",
+  "Persian",
+  "Polish",
+  "Portuguese",
+  "Punjabi",
+  "Romanian",
+  "Russian",
+  "Spanish",
+  "Swahili",
+  "Swedish",
+  "Tagalog",
+  "Tamil",
+  "Telugu",
+  "Thai",
+  "Turkish",
+  "Ukrainian",
+  "Urdu",
+  "Vietnamese",
+];
+// Capitalised only: "Polish" the language, not "polish the product"
+const LANGUAGE_NAME = new RegExp(`\\b(?:${LANGUAGES.join("|")})\\b`, "g");
+// Words that make a named language something the candidate must speak
+const LANGUAGE_CUE =
+  /\b(?:fluen(?:t|cy)|proficien(?:t|cy)|bilingual|native(?:[-\s]level)?|speak(?:s|ers?|ing)?|spoken|conversational|business[-\s]level|language\s+skills?)\b/i;
+
+const languagesIn = (text) => (LANGUAGE_CUE.test(text) ? [...new Set(text.match(LANGUAGE_NAME) || [])] : []);
+
+/**
+ * The spoken languages the posting requires, in order of appearance. Only
+ * required sentences count: a language in a nice-to-have list or in the
+ * company's own description is not a requirement.
+ */
+export function readLanguages(sentences) {
+  const found = [];
+  for (const sentence of sentences) {
+    if (sentence.category !== REQUIRED) continue;
+    for (const name of languagesIn(sentence.text)) if (!found.includes(name)) found.push(name);
+  }
+  return found;
+}
+
 // Sentences only the user can judge. Quoted, never scored.
 const CHECKS = [
   {
@@ -392,6 +461,19 @@ const CHECKS = [
   },
   { kind: "relocation", re: /\breloca(?:te|tion|ting)\b/i },
   { kind: "travel", re: /\btravel/i, also: /\d{1,3}\s?(?:%|percent)/i },
+  // Where the candidate must be: "must be based in Chicago", "you're located
+  // or willing to work from Seoul". Not where the company says it is.
+  {
+    kind: "location",
+    re: /\b(?:must|needs?\s+to|should|required\s+to|able\s+to|willing\s+to|you(?:['’]re|\s+are)|candidates?|applicants?)\b[^.;\n]{0,40}?\b(?:located|based|resid(?:e|es|ing|ent)|live|living|work(?:ing)?\s+from)\b/i,
+    also: /\b(?:located|based|resid(?:e|es|ing|ent)|live|living|from)\s+(?:(?:in|within|near|around)\s+)?(?:the\s+)?[A-Z][A-Za-z.]+/,
+  },
+  // A spoken language other than English, outside the company's boilerplate
+  {
+    kind: "language",
+    re: LANGUAGE_CUE,
+    test: (sentence) => sentence.category !== IGNORED && languagesIn(sentence.text).length > 0,
+  },
 ];
 const CHECK_CAP = 200;
 
@@ -399,11 +481,14 @@ export function findChecks(sentences) {
   const checks = [];
   for (const check of CHECKS) {
     for (const sentence of sentences) {
-      const m = sentence.text.match(check.re);
-      if (!m || (check.also && !check.also.test(sentence.text))) continue;
+      // A list item is quoted without its dash
+      const text = sentence.text.replace(/^[-–*]\s+/, "");
+      const m = text.match(check.re);
+      if (!m || (check.also && !check.also.test(text))) continue;
+      if (check.test && !check.test(sentence)) continue;
       checks.push({
         kind: check.kind,
-        quote: clipAround(sentence.text, m.index, m.index + m[0].length, CHECK_CAP),
+        quote: clipAround(text, m.index, m.index + m[0].length, CHECK_CAP),
       });
       break;
     }

@@ -6,7 +6,8 @@ import { requirePageUser } from "@/server/auth";
 import ApplicationsHeader from "@/features/applications/ApplicationsHeader";
 import ApplicationTable from "@/features/applications/ApplicationTable";
 import ApplicationTableSkeleton from "@/features/applications/ApplicationTableSkeleton";
-import { getApplicationsPage } from "@/features/applications/data";
+import { getAlertRows, getApplicationsPage } from "@/features/applications/data";
+import AlertRowsReview from "@/features/applications/AlertRowsReview";
 import {
   APPLICATIONS_PAGE_SIZE,
   hasActiveFilters,
@@ -21,10 +22,11 @@ export const metadata = { title: "Applications" };
 
 async function ApplicationsList({ params }) {
   const { supabase, user } = await requirePageUser();
-  const [{ applications, total, allTotal, statusCounts }, pendingSuggestions, unmatched] = await Promise.all([
+  const [{ applications, total, allTotal, statusCounts }, pendingSuggestions, unmatched, alertRows] = await Promise.all([
     getApplicationsPage(supabase, user.id, params),
     getPendingSummary(supabase, user.id),
     getUnresolvedExtensionEvents(supabase),
+    getAlertRows(supabase, user.id),
   ]);
 
   // Accepted or declined offers for the rows on this page; none before
@@ -54,6 +56,7 @@ async function ApplicationsList({ params }) {
       <ApplicationsHeader total={total} allTotal={allTotal} filtered={hasActiveFilters(params)} />
       <SuggestionsBanner count={pendingSuggestions.count} latestAt={pendingSuggestions.latestAt} />
       <ExtensionMatchReview events={unmatched} />
+      <AlertRowsReview rows={alertRows} />
       <ApplicationTable
         applications={rowsWithOffers}
         total={total}

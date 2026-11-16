@@ -3,7 +3,13 @@ import { extractYearsRequirement } from "@/server/ats/keywords";
 import { matchSkills, skillLabel } from "@/server/ats/skills";
 import { resumeToText } from "@/server/ats/resumeText";
 import { visibleResumeContent } from "@/features/resumes/resumeDocument";
-import { countedText, findChecks, readRequirements, readSentences } from "@/server/fit/posting";
+import {
+  countedText,
+  findChecks,
+  readLanguages,
+  readRequirements,
+  readSentences,
+} from "@/server/fit/posting";
 import {
   DEGREE_TERMS,
   cvIsEmpty,
@@ -97,7 +103,22 @@ function degreeSummary(requirements, education, today) {
   return { required, status: "short" };
 }
 
+// A spoken language the posting requires is met when the Master CV mentions it
+// anywhere (a skill, a bullet, a custom section). Nothing is inferred.
+function languageSummary(sentences, index) {
+  const required = readLanguages(sentences);
+  if (!required.length) return { required, missing: [], status: "not-stated" };
+  const mentions = (name) => {
+    const re = new RegExp(`\\b${name}\\b`, "i");
+    return index.units.some((unit) => re.test(unit.text));
+  };
+  const missing = required.filter((name) => !mentions(name));
+  return { required, missing, status: missing.length ? "short" : "meets" };
+}
+
 const plural = (n, one, many) => (n === 1 ? one : many);
+const listOf = (items) =>
+  items.length < 3 ? items.join(" and ") : `${items.slice(0, -1).join(", ")} and ${items[items.length - 1]}`;
 const article = (term) => (/^[aeiou]/i.test(term) ? "an" : "a");
 
 function bandFor(counts, years, degree) {
@@ -181,15 +202,29 @@ export function assessFit({ jobDescription, cv, resumeContent = null, today = ne
   const counts = { required: tally(requirements, "required"), preferred: tally(requirements, "preferred") };
   const years = yearsSummary(countedText(sentences), masterCv, today);
   const degree = degreeSummary(requirements, masterCv.education || [], today);
+  const language = languageSummary(sentences, index);
 
   let band = "unknown";
   let reason;
-  if (cvIsEmpty(masterCv)) {
+  const empty = cvIsEmpty(masterCv);
+  if (empty) {
     reason = "Your Master CV has no experience, projects or skills yet.";
   } else if (counts.required.total < MIN_REQUIRED_TERMS) {
+    // Too few named skills to compare, but a stated years requirement still says something
     reason = "This posting names too few specific requirements to compare.";
+    if (years.status === "short") {
+      band = "stretch";
+      reason += ` It asks for ${years.required}+ years; your dated experience covers about ${years.have} ${plural(years.have, "year", "years")}.`;
+    } else if (years.status === "meets") {
+      reason += ` Your dated experience (about ${years.have} ${plural(years.have, "year", "years")}) covers the ${years.required}+ years it asks for.`;
+    }
   } else {
     ({ band, reason } = bandFor(counts, years, degree));
+  }
+  // A required spoken language the CV never mentions outweighs skill coverage
+  if (!empty && language.status === "short") {
+    band = "low";
+    reason += ` The posting asks for ${listOf(language.missing)}, which your Master CV doesn't mention, so this is rated low.`;
   }
 
   return {
@@ -200,6 +235,7 @@ export function assessFit({ jobDescription, cv, resumeContent = null, today = ne
     counts,
     years,
     degree,
+    language,
     checks: findChecks(sentences),
     resume: resumeContent ? compareResume(requirements, resumeContent) : null,
   };

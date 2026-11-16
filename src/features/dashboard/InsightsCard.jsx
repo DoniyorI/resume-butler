@@ -4,9 +4,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { plural, timingSummary } from "@/features/dashboard/summaries";
 
 // Links into /insights, one row per tab, with a one-line summary.
-export default function InsightsCard({ total, medianResponseDays, className }) {
+export default function InsightsCard({ total, medianResponseDays, responseTimeSamples, className }) {
   const rows = [
-    { tab: "activity", icon: Activity, label: "Pipeline and timing", summary: timingSummary(medianResponseDays) },
+    { tab: "activity", icon: Activity, label: "Pipeline and timing", summary: timingSummary(medianResponseDays, responseTimeSamples) },
     {
       tab: "flow",
       icon: GitBranch,

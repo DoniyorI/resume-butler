@@ -5,6 +5,7 @@ import { requirePageUser } from "@/server/auth";
 import { APPLICATION_STATUSES, DEFAULT_STATUS } from "@/lib/constants";
 import { formatShortDate } from "@/lib/dates";
 import { APPLICATIONS_PAGE_SIZE, hasActiveFilters } from "@/features/applications/listParams";
+import { findAlertRows } from "@/features/applications/alertRows";
 
 const LIST_COLUMNS = "id, company, role, status, location, applied_date, comments, portal_link";
 const SEARCH_COLUMNS = ["company", "role", "location"];
@@ -86,6 +87,44 @@ export async function getApplicationsPage(supabase, userId, params) {
       APPLICATION_STATUSES.map((status, i) => [status, statusRes[i].count || 0])
     ),
   };
+}
+
+// Email-created rows that look like job alerts instead of applications, for
+// the review above the table (alertRows.js decides). Fails soft: on a read
+// error the page just has no review.
+export async function getAlertRows(supabase, userId) {
+  try {
+    const { data, error } = await supabase
+      .from("applications")
+      .select("id, company, role, status, comments, source, resume_id")
+      .eq("user_id", userId)
+      .in("status", ["Reached Out", "Pending"])
+      .order("applied_date", { ascending: false, nullsFirst: false })
+      .order("id")
+      .limit(300);
+    if (error) throw error;
+    // Narrow first, so the history read is for at most 100 rows
+    const candidates = findAlertRows(data || [], new Map());
+    if (!candidates.length) return [];
+    const wanted = new Set(candidates.map((row) => row.id));
+    const { data: history, error: historyError } = await supabase
+      .from("application_status_history")
+      .select("application_id, status, applications!inner(user_id)")
+      .eq("applications.user_id", userId)
+      .in("application_id", [...wanted]);
+    if (historyError) throw historyError;
+    const byApp = new Map();
+    for (const entry of history || []) {
+      byApp.set(entry.application_id, [...(byApp.get(entry.application_id) || []), entry]);
+    }
+    return findAlertRows(
+      (data || []).filter((row) => wanted.has(row.id)),
+      byApp
+    );
+  } catch (error) {
+    console.warn("Could not look for alert rows:", error.message);
+    return [];
+  }
 }
 
 function toDetail(row) {
