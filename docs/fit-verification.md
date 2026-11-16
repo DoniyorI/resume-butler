@@ -47,6 +47,8 @@ Found by reading the owner's own applications: a role in Seoul that required Kor
 
 Evidence: 15 new engine, wording, summary and popup tests (699 pass on Node 26.3.0); `scripts/qa-fit-stats-alerts.mjs` passed every step against the local app with a disposable account, which it deleted. Extension 0.8.2 shows the language line and the two new check labels; reload the unpacked extension.
 
+**A fault found after the first deploy.** In production the language requirement was never detected, although tests, lint, the build and the browser check against the dev server all passed. The language-name regex was built from a constant template literal, and Next 14's production minifier folded it into a string in which `\\b` became a backslash and a backspace. It is now a regex literal, `tests/regex-template-guard.test.mjs` refuses a `RegExp` built from a template literal containing `\\b`, and the browser check was re-run against a production build (`next start -p 3001`, `QA_APP_ORIGIN=http://localhost:3001`), where every step passed. A check against the dev server alone does not show what the minifier changes.
+
 Still wrong, by design or not yet handled:
 
 - **Plain-language postings** ("strong backend fundamentals", "2+ years of software engineering") still read "Not enough to tell" when the years are met: the engine only knows named skills.

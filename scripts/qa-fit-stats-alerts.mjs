@@ -6,6 +6,7 @@
 // or tokens.
 //
 // QA_PLAYWRIGHT_MODULE=/opt/homebrew/lib/node_modules/playwright node --use-system-ca --import ./tests/register.mjs scripts/qa-fit-stats-alerts.mjs [screenshotDir]
+// Add QA_APP_ORIGIN=http://localhost:3001 to check a production build.
 import assert from "node:assert/strict";
 import { randomBytes } from "node:crypto";
 import { mkdir } from "node:fs/promises";
@@ -15,9 +16,11 @@ import nextEnv from "@next/env";
 import { createClient } from "@supabase/supabase-js";
 
 nextEnv.loadEnvConfig(process.cwd());
-const base = "http://localhost:3000";
+// 3000 is the dev server; 3001 is a production build (`next start -p 3001`),
+// which is the one that catches what the minifier changes
+const base = process.env.QA_APP_ORIGIN || "http://localhost:3000";
 if (new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).hostname !== "tlmabncoijnuxymxohgu.supabase.co") throw new Error("This check is restricted to the named QA project.");
-if ((process.env.QA_APP_ORIGIN || base) !== base) throw new Error("This check only runs against http://localhost:3000.");
+if (!["http://localhost:3000", "http://localhost:3001"].includes(base)) throw new Error("This check only runs against http://localhost:3000 or http://localhost:3001.");
 
 const shots = process.argv[2] || "/tmp/resume-butler-fit-stats-alerts-qa";
 await mkdir(shots, { recursive: true });

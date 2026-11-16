@@ -109,7 +109,8 @@ function languageSummary(sentences, index) {
   const required = readLanguages(sentences);
   if (!required.length) return { required, missing: [], status: "not-stated" };
   const mentions = (name) => {
-    const re = new RegExp(`\\b${name}\\b`, "i");
+    // Plain strings, not a template literal: see tests/regex-template-guard.test.mjs
+    const re = new RegExp("\\b" + name + "\\b", "i");
     return index.units.some((unit) => re.test(unit.text));
   };
   const missing = required.filter((name) => !mentions(name));

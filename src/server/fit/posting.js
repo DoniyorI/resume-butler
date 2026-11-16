@@ -382,49 +382,12 @@ export function countedText(sentences) {
 
 // Spoken languages a posting can ask for. English is left out: a posting
 // written in English that asks for English is not a line worth flagging.
-const LANGUAGES = [
-  "Arabic",
-  "Bengali",
-  "Cantonese",
-  "Chinese",
-  "Czech",
-  "Danish",
-  "Dutch",
-  "Farsi",
-  "Finnish",
-  "French",
-  "German",
-  "Greek",
-  "Hebrew",
-  "Hindi",
-  "Hungarian",
-  "Indonesian",
-  "Italian",
-  "Japanese",
-  "Korean",
-  "Malay",
-  "Mandarin",
-  "Norwegian",
-  "Persian",
-  "Polish",
-  "Portuguese",
-  "Punjabi",
-  "Romanian",
-  "Russian",
-  "Spanish",
-  "Swahili",
-  "Swedish",
-  "Tagalog",
-  "Tamil",
-  "Telugu",
-  "Thai",
-  "Turkish",
-  "Ukrainian",
-  "Urdu",
-  "Vietnamese",
-];
-// Capitalised only: "Polish" the language, not "polish the product"
-const LANGUAGE_NAME = new RegExp(`\\b(?:${LANGUAGES.join("|")})\\b`, "g");
+// A regex literal on purpose: built from a template literal, the production
+// minifier turned its \b into a backspace and no language was ever found
+// (tests/regex-template-guard.test.mjs). Capitalised only: "Polish" the
+// language, not "polish the product".
+const LANGUAGE_NAME =
+  /\b(?:Arabic|Bengali|Cantonese|Chinese|Czech|Danish|Dutch|Farsi|Finnish|French|German|Greek|Hebrew|Hindi|Hungarian|Indonesian|Italian|Japanese|Korean|Malay|Mandarin|Norwegian|Persian|Polish|Portuguese|Punjabi|Romanian|Russian|Spanish|Swahili|Swedish|Tagalog|Tamil|Telugu|Thai|Turkish|Ukrainian|Urdu|Vietnamese)\b/g;
 // Words that make a named language something the candidate must speak
 const LANGUAGE_CUE =
   /\b(?:fluen(?:t|cy)|proficien(?:t|cy)|bilingual|native(?:[-\s]level)?|speak(?:s|ers?|ing)?|spoken|conversational|business[-\s]level|language\s+skills?)\b/i;
